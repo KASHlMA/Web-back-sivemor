@@ -1,0 +1,14 @@
+.DS_Store
+.env
+
+# Backend
+backend/.gradle
+backend/build
+
+# Web admin
+web-admin/node_modules
+web-admin/dist
+
+# Root leftovers
+build
+out

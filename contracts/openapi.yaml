@@ -1,0 +1,72 @@
+openapi: 3.1.0
+info:
+  title: SIVEMOR Platform API
+  version: 0.1.0
+servers:
+  - url: http://localhost:8080/api/v1
+paths:
+  /auth/login:
+    post:
+      summary: Authenticate an administrator or technician.
+  /auth/refresh:
+    post:
+      summary: Rotate a refresh token and obtain a new access token.
+  /auth/logout:
+    post:
+      summary: Revoke the current refresh token.
+  /mobile/orders:
+    get:
+      summary: List order units assigned to the authenticated technician.
+  /mobile/checklists/current:
+    get:
+      summary: Return the active checklist template with sections and questions.
+  /mobile/inspections:
+    post:
+      summary: Create a technician draft inspection for an assigned order unit.
+  /mobile/inspections/{id}:
+    get:
+      summary: Load a technician draft inspection.
+    put:
+      summary: Update answers, notes, and progress for a technician draft inspection.
+  /mobile/inspections/{id}/evidences:
+    post:
+      summary: Upload section evidence for a draft inspection.
+  /mobile/inspections/{id}/submit:
+    post:
+      summary: Submit a completed inspection draft.
+  /admin/users:
+    get:
+      summary: List platform users.
+    post:
+      summary: Create a platform user.
+  /admin/regions:
+    get:
+      summary: List regions.
+    post:
+      summary: Create a region.
+  /admin/clients:
+    get:
+      summary: List client companies.
+    post:
+      summary: Create a client company.
+  /admin/vehicles:
+    get:
+      summary: List vehicle units.
+    post:
+      summary: Create a vehicle unit.
+  /admin/orders:
+    get:
+      summary: List verification orders.
+    post:
+      summary: Create a verification order.
+  /admin/payments:
+    get:
+      summary: List payment records.
+    post:
+      summary: Create a payment record.
+  /admin/reports:
+    get:
+      summary: Query submitted reports with administrative filters.
+  /admin/dashboard/failures:
+    get:
+      summary: Return failure-focused dashboard metrics.

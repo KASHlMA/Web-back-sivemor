@@ -8,6 +8,8 @@ import com.sivemor.platform.domain.User
 import com.sivemor.platform.domain.UserRepository
 import com.sivemor.platform.security.JwtService
 import com.sivemor.platform.service.AuditService
+import io.swagger.v3.oas.annotations.Operation
+import io.swagger.v3.oas.annotations.tags.Tag
 import jakarta.validation.Valid
 import jakarta.validation.constraints.NotBlank
 import org.springframework.http.ResponseEntity
@@ -53,18 +55,22 @@ data class LogoutResponse(
 )
 
 @RestController
+@Tag(name = "Auth", description = "Authentication and token lifecycle endpoints")
 @RequestMapping("/api/v1/auth")
 class AuthController(
     private val authService: AuthService
 ) {
+    @Operation(summary = "Authenticate an administrator or technician")
     @PostMapping("/login")
     fun login(@Valid @RequestBody request: LoginRequest): ResponseEntity<AuthResponse> =
         ResponseEntity.ok(authService.login(request))
 
+    @Operation(summary = "Rotate a refresh token and obtain a new access token")
     @PostMapping("/refresh")
     fun refresh(@Valid @RequestBody request: RefreshRequest): ResponseEntity<AuthResponse> =
         ResponseEntity.ok(authService.refresh(request))
 
+    @Operation(summary = "Revoke the current refresh token")
     @PostMapping("/logout")
     fun logout(@Valid @RequestBody request: LogoutRequest): ResponseEntity<LogoutResponse> =
         ResponseEntity.ok(authService.logout(request))

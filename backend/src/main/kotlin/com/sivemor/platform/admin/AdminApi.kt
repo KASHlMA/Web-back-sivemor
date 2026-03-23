@@ -27,6 +27,10 @@ import com.sivemor.platform.domain.VerificationOrderRepository
 import com.sivemor.platform.domain.VerificationOrderStatus
 import com.sivemor.platform.security.AppUserPrincipal
 import com.sivemor.platform.service.AuditService
+import io.swagger.v3.oas.annotations.Operation
+import io.swagger.v3.oas.annotations.Parameter
+import io.swagger.v3.oas.annotations.security.SecurityRequirement
+import io.swagger.v3.oas.annotations.tags.Tag
 import jakarta.validation.Valid
 import jakarta.validation.constraints.DecimalMin
 import jakarta.validation.constraints.Email
@@ -197,29 +201,38 @@ data class DashboardFailuresResponse(
 )
 
 @RestController
+@Tag(name = "Admin", description = "Administrative management and reporting endpoints")
+@SecurityRequirement(name = "bearerAuth")
 @RequestMapping("/api/v1/admin")
 class AdminController(
     private val adminService: AdminService
 ) {
+    @Operation(summary = "List platform users")
     @GetMapping("/users")
     fun users(): List<UserResponse> = adminService.listUsers()
 
+    @Operation(summary = "Create a platform user")
     @PostMapping("/users")
     @ResponseStatus(HttpStatus.CREATED)
     fun createUser(
+        @Parameter(hidden = true)
         @AuthenticationPrincipal principal: AppUserPrincipal,
         @Valid @RequestBody request: UserUpsertRequest
     ): UserResponse = adminService.createUser(principal.id, request)
 
+    @Operation(summary = "Update a platform user")
     @PutMapping("/users/{id}")
     fun updateUser(
+        @Parameter(hidden = true)
         @AuthenticationPrincipal principal: AppUserPrincipal,
         @PathVariable id: Long,
         @Valid @RequestBody request: UserUpsertRequest
     ): UserResponse = adminService.updateUser(principal.id, id, request)
 
+    @Operation(summary = "Archive a platform user")
     @DeleteMapping("/users/{id}")
     fun deleteUser(
+        @Parameter(hidden = true)
         @AuthenticationPrincipal principal: AppUserPrincipal,
         @PathVariable id: Long
     ): ResponseEntity<Unit> {
@@ -227,25 +240,32 @@ class AdminController(
         return ResponseEntity.noContent().build()
     }
 
+    @Operation(summary = "List regions")
     @GetMapping("/regions")
     fun regions(): List<RegionResponse> = adminService.listRegions()
 
+    @Operation(summary = "Create a region")
     @PostMapping("/regions")
     @ResponseStatus(HttpStatus.CREATED)
     fun createRegion(
+        @Parameter(hidden = true)
         @AuthenticationPrincipal principal: AppUserPrincipal,
         @Valid @RequestBody request: RegionUpsertRequest
     ): RegionResponse = adminService.createRegion(principal.id, request)
 
+    @Operation(summary = "Update a region")
     @PutMapping("/regions/{id}")
     fun updateRegion(
+        @Parameter(hidden = true)
         @AuthenticationPrincipal principal: AppUserPrincipal,
         @PathVariable id: Long,
         @Valid @RequestBody request: RegionUpsertRequest
     ): RegionResponse = adminService.updateRegion(principal.id, id, request)
 
+    @Operation(summary = "Archive a region")
     @DeleteMapping("/regions/{id}")
     fun deleteRegion(
+        @Parameter(hidden = true)
         @AuthenticationPrincipal principal: AppUserPrincipal,
         @PathVariable id: Long
     ): ResponseEntity<Unit> {
@@ -253,25 +273,32 @@ class AdminController(
         return ResponseEntity.noContent().build()
     }
 
+    @Operation(summary = "List client companies")
     @GetMapping("/clients")
     fun clients(): List<ClientResponse> = adminService.listClients()
 
+    @Operation(summary = "Create a client company")
     @PostMapping("/clients")
     @ResponseStatus(HttpStatus.CREATED)
     fun createClient(
+        @Parameter(hidden = true)
         @AuthenticationPrincipal principal: AppUserPrincipal,
         @Valid @RequestBody request: ClientUpsertRequest
     ): ClientResponse = adminService.createClient(principal.id, request)
 
+    @Operation(summary = "Update a client company")
     @PutMapping("/clients/{id}")
     fun updateClient(
+        @Parameter(hidden = true)
         @AuthenticationPrincipal principal: AppUserPrincipal,
         @PathVariable id: Long,
         @Valid @RequestBody request: ClientUpsertRequest
     ): ClientResponse = adminService.updateClient(principal.id, id, request)
 
+    @Operation(summary = "Archive a client company")
     @DeleteMapping("/clients/{id}")
     fun deleteClient(
+        @Parameter(hidden = true)
         @AuthenticationPrincipal principal: AppUserPrincipal,
         @PathVariable id: Long
     ): ResponseEntity<Unit> {
@@ -279,25 +306,32 @@ class AdminController(
         return ResponseEntity.noContent().build()
     }
 
+    @Operation(summary = "List vehicle units")
     @GetMapping("/vehicles")
     fun vehicles(): List<VehicleResponse> = adminService.listVehicles()
 
+    @Operation(summary = "Create a vehicle unit")
     @PostMapping("/vehicles")
     @ResponseStatus(HttpStatus.CREATED)
     fun createVehicle(
+        @Parameter(hidden = true)
         @AuthenticationPrincipal principal: AppUserPrincipal,
         @Valid @RequestBody request: VehicleUpsertRequest
     ): VehicleResponse = adminService.createVehicle(principal.id, request)
 
+    @Operation(summary = "Update a vehicle unit")
     @PutMapping("/vehicles/{id}")
     fun updateVehicle(
+        @Parameter(hidden = true)
         @AuthenticationPrincipal principal: AppUserPrincipal,
         @PathVariable id: Long,
         @Valid @RequestBody request: VehicleUpsertRequest
     ): VehicleResponse = adminService.updateVehicle(principal.id, id, request)
 
+    @Operation(summary = "Archive a vehicle unit")
     @DeleteMapping("/vehicles/{id}")
     fun deleteVehicle(
+        @Parameter(hidden = true)
         @AuthenticationPrincipal principal: AppUserPrincipal,
         @PathVariable id: Long
     ): ResponseEntity<Unit> {
@@ -305,25 +339,32 @@ class AdminController(
         return ResponseEntity.noContent().build()
     }
 
+    @Operation(summary = "List verification orders")
     @GetMapping("/orders")
     fun orders(): List<OrderResponse> = adminService.listOrders()
 
+    @Operation(summary = "Create a verification order")
     @PostMapping("/orders")
     @ResponseStatus(HttpStatus.CREATED)
     fun createOrder(
+        @Parameter(hidden = true)
         @AuthenticationPrincipal principal: AppUserPrincipal,
         @Valid @RequestBody request: OrderUpsertRequest
     ): OrderResponse = adminService.createOrder(principal.id, request)
 
+    @Operation(summary = "Update a verification order")
     @PutMapping("/orders/{id}")
     fun updateOrder(
+        @Parameter(hidden = true)
         @AuthenticationPrincipal principal: AppUserPrincipal,
         @PathVariable id: Long,
         @Valid @RequestBody request: OrderUpsertRequest
     ): OrderResponse = adminService.updateOrder(principal.id, id, request)
 
+    @Operation(summary = "Archive a verification order")
     @DeleteMapping("/orders/{id}")
     fun deleteOrder(
+        @Parameter(hidden = true)
         @AuthenticationPrincipal principal: AppUserPrincipal,
         @PathVariable id: Long
     ): ResponseEntity<Unit> {
@@ -331,25 +372,32 @@ class AdminController(
         return ResponseEntity.noContent().build()
     }
 
+    @Operation(summary = "List payment records")
     @GetMapping("/payments")
     fun payments(): List<PaymentResponse> = adminService.listPayments()
 
+    @Operation(summary = "Create a payment record")
     @PostMapping("/payments")
     @ResponseStatus(HttpStatus.CREATED)
     fun createPayment(
+        @Parameter(hidden = true)
         @AuthenticationPrincipal principal: AppUserPrincipal,
         @Valid @RequestBody request: PaymentUpsertRequest
     ): PaymentResponse = adminService.createPayment(principal.id, request)
 
+    @Operation(summary = "Update a payment record")
     @PutMapping("/payments/{id}")
     fun updatePayment(
+        @Parameter(hidden = true)
         @AuthenticationPrincipal principal: AppUserPrincipal,
         @PathVariable id: Long,
         @Valid @RequestBody request: PaymentUpsertRequest
     ): PaymentResponse = adminService.updatePayment(principal.id, id, request)
 
+    @Operation(summary = "Archive a payment record")
     @DeleteMapping("/payments/{id}")
     fun deletePayment(
+        @Parameter(hidden = true)
         @AuthenticationPrincipal principal: AppUserPrincipal,
         @PathVariable id: Long
     ): ResponseEntity<Unit> {
@@ -357,6 +405,7 @@ class AdminController(
         return ResponseEntity.noContent().build()
     }
 
+    @Operation(summary = "Query submitted reports with administrative filters")
     @GetMapping("/reports")
     fun reports(
         @RequestParam(required = false) companyId: Long?,
@@ -382,6 +431,7 @@ class AdminController(
         onlyFailures = onlyFailures
     )
 
+    @Operation(summary = "Return failure-focused dashboard metrics")
     @GetMapping("/dashboard/failures")
     fun dashboardFailures(): DashboardFailuresResponse = adminService.dashboardFailures()
 }

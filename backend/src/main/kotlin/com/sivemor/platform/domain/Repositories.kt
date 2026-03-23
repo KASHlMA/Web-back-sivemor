@@ -57,7 +57,6 @@ interface OrderUnitRepository : JpaRepository<OrderUnit, Long> {
 }
 
 interface ChecklistTemplateRepository : JpaRepository<ChecklistTemplate, Long> {
-    @EntityGraph(attributePaths = ["sections", "sections.questions"])
     fun findByCurrentTrueAndArchivedFalse(): ChecklistTemplate?
 }
 
@@ -76,15 +75,7 @@ interface InspectionRepository : JpaRepository<Inspection, Long> {
             "orderUnit",
             "orderUnit.vehicleUnit",
             "technician",
-            "template",
-            "template.sections",
-            "template.sections.questions",
-            "answers",
-            "answers.question",
-            "sectionNotes",
-            "sectionNotes.section",
-            "evidences",
-            "evidences.section"
+            "template"
         ]
     )
     @Query("select inspection from Inspection inspection where inspection.id = :id and inspection.archived = false")
@@ -99,9 +90,7 @@ interface InspectionRepository : JpaRepository<Inspection, Long> {
             "verificationOrder.region",
             "orderUnit",
             "orderUnit.vehicleUnit",
-            "technician",
-            "answers",
-            "evidences"
+            "technician"
         ]
     )
     fun findAllByStatusAndArchivedFalseOrderBySubmittedAtDesc(status: InspectionStatus): List<Inspection>

@@ -36,6 +36,13 @@ This workspace is the `sivemor-platform` repository. It contains:
    - Web admin: `http://localhost:3000`
    - Backend API: `http://localhost:8080/api/v1`
    - Backend health: `http://localhost:8080/actuator/health`
+   - Swagger UI: `http://localhost:8080/swagger-ui.html`
+
+4. To call secured endpoints from Swagger UI:
+
+   - Authenticate against `POST /api/v1/auth/login`
+   - Copy the returned `accessToken`
+   - Paste it into Swagger UI via the `Authorize` button as a Bearer token
 
 ## Seed users
 

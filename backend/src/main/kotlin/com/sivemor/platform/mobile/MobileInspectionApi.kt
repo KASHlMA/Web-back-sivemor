@@ -20,6 +20,12 @@ import com.sivemor.platform.domain.UserRepository
 import com.sivemor.platform.domain.VerificationOrderStatus
 import com.sivemor.platform.security.AppUserPrincipal
 import com.sivemor.platform.service.AuditService
+import io.swagger.v3.oas.annotations.Operation
+import io.swagger.v3.oas.annotations.Parameter
+import io.swagger.v3.oas.annotations.media.Content
+import io.swagger.v3.oas.annotations.media.Schema
+import io.swagger.v3.oas.annotations.security.SecurityRequirement
+import io.swagger.v3.oas.annotations.tags.Tag
 import jakarta.validation.Valid
 import jakarta.validation.constraints.Min
 import jakarta.validation.constraints.NotNull
@@ -150,47 +156,70 @@ data class SubmissionResponse(
 )
 
 @RestController
+@Tag(name = "Mobile", description = "Technician mobile inspection endpoints")
+@SecurityRequirement(name = "bearerAuth")
 @RequestMapping("/api/v1/mobile")
 class MobileInspectionController(
     private val mobileInspectionService: MobileInspectionService
 ) {
+    @Operation(summary = "List order units assigned to the authenticated technician")
     @GetMapping("/orders")
-    fun orders(@AuthenticationPrincipal principal: AppUserPrincipal): List<AssignedOrderResponse> =
+    fun orders(
+        @Parameter(hidden = true)
+        @AuthenticationPrincipal principal: AppUserPrincipal
+    ): List<AssignedOrderResponse> =
         mobileInspectionService.listAssignedOrders(principal.id)
 
+    @Operation(summary = "Return the active checklist template with sections and questions")
     @GetMapping("/checklists/current")
     fun currentChecklist(): ChecklistTemplateResponse = mobileInspectionService.getCurrentChecklist()
 
+    @Operation(summary = "Create a technician draft inspection for an assigned order unit")
     @PostMapping("/inspections")
     @ResponseStatus(HttpStatus.CREATED)
     fun createInspection(
+        @Parameter(hidden = true)
         @AuthenticationPrincipal principal: AppUserPrincipal,
         @Valid @RequestBody request: CreateInspectionRequest
     ): InspectionDraftResponse = mobileInspectionService.createInspection(principal.id, request)
 
+    @Operation(summary = "Load a technician draft inspection")
     @GetMapping("/inspections/{id}")
     fun getInspection(
+        @Parameter(hidden = true)
         @AuthenticationPrincipal principal: AppUserPrincipal,
         @PathVariable id: Long
     ): InspectionDraftResponse = mobileInspectionService.getDraftInspection(principal.id, id)
 
+    @Operation(summary = "Update answers, notes, and progress for a technician draft inspection")
     @PutMapping("/inspections/{id}")
     fun updateInspection(
+        @Parameter(hidden = true)
         @AuthenticationPrincipal principal: AppUserPrincipal,
         @PathVariable id: Long,
         @Valid @RequestBody request: UpdateInspectionRequest
     ): InspectionDraftResponse = mobileInspectionService.updateDraftInspection(principal.id, id, request)
 
+    @Operation(summary = "Upload section evidence for a draft inspection")
     @PostMapping(
         "/inspections/{id}/evidences",
         consumes = [MediaType.MULTIPART_FORM_DATA_VALUE]
     )
     fun addEvidence(
+        @Parameter(hidden = true)
         @AuthenticationPrincipal principal: AppUserPrincipal,
         @PathVariable id: Long,
+        @Parameter(
+            description = "Evidence file to attach to the inspection draft",
+            required = true,
+            content = [Content(schema = Schema(type = "string", format = "binary"))]
+        )
         @RequestPart("file") file: MultipartFile,
+        @Parameter(description = "Checklist section receiving the evidence", required = true)
         @RequestParam sectionId: Long,
+        @Parameter(description = "Optional technician comment for the uploaded evidence")
         @RequestParam(required = false) comment: String?,
+        @Parameter(description = "Optional ISO-8601 timestamp indicating when the evidence was captured")
         @RequestParam(required = false)
         @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME)
         capturedAt: Instant?
@@ -203,8 +232,10 @@ class MobileInspectionController(
         capturedAt = capturedAt
     )
 
+    @Operation(summary = "Submit a completed inspection draft")
     @PostMapping("/inspections/{id}/submit")
     fun submitInspection(
+        @Parameter(hidden = true)
         @AuthenticationPrincipal principal: AppUserPrincipal,
         @PathVariable id: Long
     ): SubmissionResponse = mobileInspectionService.submitInspection(principal.id, id)

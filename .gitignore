@@ -1,6 +1,8 @@
 .DS_Store
 .env
 
+.gradle-local
+
 # Backend
 backend/.gradle
 backend/build

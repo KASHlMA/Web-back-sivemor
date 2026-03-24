@@ -3,7 +3,6 @@ import DeleteOutlineIcon from "@mui/icons-material/DeleteOutline";
 import EditOutlinedIcon from "@mui/icons-material/EditOutlined";
 import {
   Alert,
-  Box,
   Button,
   Checkbox,
   Dialog,
@@ -11,8 +10,8 @@ import {
   DialogContent,
   DialogTitle,
   FormControlLabel,
+  Link,
   MenuItem,
-  Paper,
   Stack,
   Table,
   TableBody,
@@ -28,6 +27,15 @@ import { Controller, useForm, type FieldValues, type Path } from "react-hook-for
 import { useMemo, useState, type ReactNode } from "react";
 import { z, type ZodTypeAny } from "zod";
 import { api } from "../lib/api";
+import { brandTokens } from "../lib/brand";
+import {
+  EmptyState,
+  PagePanel,
+  PageTitleBar,
+  PrimaryActionButton,
+  SearchField,
+  StatusChip
+} from "./AdminPrimitives";
 
 export type SelectOption = {
   label: string;
@@ -37,6 +45,7 @@ export type SelectOption = {
 export type ColumnDefinition<T> = {
   header: string;
   render: (row: T) => ReactNode;
+  searchableText?: (row: T) => string;
 };
 
 export type FieldDefinition<F extends FieldValues = FieldValues> = {
@@ -75,6 +84,7 @@ export function ResourceTablePage<T extends { id: number }>({
   const [editingRow, setEditingRow] = useState<T | null>(null);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [feedbackError, setFeedbackError] = useState<string | null>(null);
+  const [search, setSearch] = useState("");
 
   const query = useQuery({
     queryKey,
@@ -123,6 +133,22 @@ export function ResourceTablePage<T extends { id: number }>({
     [editingRow, title]
   );
 
+  const filteredRows = useMemo(() => {
+    const rows = query.data ?? [];
+    const normalizedSearch = search.trim().toLowerCase();
+
+    if (!normalizedSearch) {
+      return rows;
+    }
+
+    return rows.filter((row) =>
+      columns.some((column) => {
+        const source = column.searchableText?.(row) ?? String(column.render(row));
+        return source.toLowerCase().includes(normalizedSearch);
+      })
+    );
+  }, [columns, query.data, search]);
+
   const closeDialog = () => {
     setDialogOpen(false);
     setEditingRow(null);
@@ -154,72 +180,85 @@ export function ResourceTablePage<T extends { id: number }>({
 
   return (
     <Stack spacing={3}>
-      <Box display="flex" justifyContent="space-between" alignItems="flex-start" gap={2}>
-        <Box>
-          <Typography variant="h4" fontWeight={700}>
-            {title}
-          </Typography>
-          {description ? (
-            <Typography color="text.secondary">{description}</Typography>
-          ) : null}
-        </Box>
-        <Button startIcon={<AddIcon />} variant="contained" onClick={openCreateDialog}>
-          Nuevo
-        </Button>
-      </Box>
-
       {feedbackError ? <Alert severity="error">{feedbackError}</Alert> : null}
 
-      <Paper sx={{ overflowX: "auto" }}>
-        <Table>
-          <TableHead>
-            <TableRow>
-              {columns.map((column) => (
-                <TableCell key={column.header}>{column.header}</TableCell>
-              ))}
-              <TableCell align="right">Acciones</TableCell>
-            </TableRow>
-          </TableHead>
-          <TableBody>
-            {(query.data ?? []).map((row) => (
-              <TableRow key={row.id} hover>
-                {columns.map((column) => (
-                  <TableCell key={column.header}>{column.render(row)}</TableCell>
-                ))}
-                <TableCell align="right">
-                  <Button size="small" startIcon={<EditOutlinedIcon />} onClick={() => openEditDialog(row)}>
-                    Editar
-                  </Button>
-                  <Button
-                    size="small"
-                    color="error"
-                    startIcon={<DeleteOutlineIcon />}
-                    onClick={() => {
-                      if (window.confirm(`¿Archivar registro de ${title.toLowerCase()}?`)) {
-                        void deleteMutation.mutateAsync(row.id);
-                      }
-                    }}
-                  >
-                    Eliminar
-                  </Button>
-                </TableCell>
-              </TableRow>
-            ))}
-            {!query.isLoading && (query.data?.length ?? 0) === 0 ? (
+      <PagePanel>
+        <PageTitleBar
+          title={title}
+          subtitle={description}
+          search={<SearchField value={search} onChange={(event) => setSearch(event.target.value)} />}
+          actions={
+            <PrimaryActionButton startIcon={<AddIcon />} onClick={openCreateDialog}>
+              Agregar Nuevo
+            </PrimaryActionButton>
+          }
+        />
+
+        <Stack sx={{ overflowX: "auto", px: { xs: 1.5, md: 2.5 }, py: 1.5 }}>
+          <Table>
+            <TableHead>
               <TableRow>
-                <TableCell colSpan={columns.length + 1}>
-                  <Typography color="text.secondary">
-                    No hay registros disponibles.
-                  </Typography>
-                </TableCell>
+                {columns.map((column) => (
+                  <TableCell key={column.header} sx={{ color: brandTokens.colors.shellText }}>
+                    {column.header}
+                  </TableCell>
+                ))}
+                <TableCell align="right">Acciones</TableCell>
               </TableRow>
-            ) : null}
-          </TableBody>
-        </Table>
-      </Paper>
+            </TableHead>
+            <TableBody>
+              {filteredRows.map((row) => (
+                <TableRow key={row.id} hover>
+                  {columns.map((column) => (
+                    <TableCell key={column.header} sx={{ color: brandTokens.colors.shellText }}>
+                      {column.render(row)}
+                    </TableCell>
+                  ))}
+                  <TableCell align="right">
+                    <Button
+                      size="small"
+                      startIcon={<EditOutlinedIcon />}
+                      onClick={() => openEditDialog(row)}
+                      sx={{ color: brandTokens.colors.shellText }}
+                    >
+                      Editar
+                    </Button>
+                    <Button
+                      size="small"
+                      startIcon={<DeleteOutlineIcon />}
+                      sx={{ color: brandTokens.colors.danger }}
+                      onClick={() => {
+                        if (window.confirm(`¿Archivar registro de ${title.toLowerCase()}?`)) {
+                          void deleteMutation.mutateAsync(row.id);
+                        }
+                      }}
+                    >
+                      Eliminar
+                    </Button>
+                  </TableCell>
+                </TableRow>
+              ))}
+              {!query.isLoading && filteredRows.length === 0 ? (
+                <TableRow>
+                  <TableCell colSpan={columns.length + 1}>
+                    <EmptyState
+                      title={search ? "No hay coincidencias" : "No hay registros disponibles"}
+                      description={
+                        search
+                          ? "Prueba con otro término o limpia la búsqueda para volver a ver todos los registros."
+                          : "Cuando existan elementos en este módulo aparecerán aquí."
+                      }
+                    />
+                  </TableCell>
+                </TableRow>
+              ) : null}
+            </TableBody>
+          </Table>
+        </Stack>
+      </PagePanel>
 
       <Dialog open={dialogOpen} onClose={closeDialog} fullWidth maxWidth="md">
-        <DialogTitle>{dialogTitle}</DialogTitle>
+        <DialogTitle sx={{ bgcolor: "#93b7a9", color: brandTokens.colors.title }}>{dialogTitle}</DialogTitle>
         <DialogContent>
           <Stack spacing={2} sx={{ pt: 1 }}>
             {fields.map((field) => {
@@ -299,13 +338,12 @@ export function ResourceTablePage<T extends { id: number }>({
         </DialogContent>
         <DialogActions>
           <Button onClick={closeDialog}>Cancelar</Button>
-          <Button
-            variant="contained"
+          <PrimaryActionButton
             onClick={() => void onSubmit()}
             disabled={createMutation.isPending || updateMutation.isPending}
           >
             Guardar
-          </Button>
+          </PrimaryActionButton>
         </DialogActions>
       </Dialog>
     </Stack>
@@ -316,3 +354,48 @@ export const schemaHelpers = {
   optionalText: z.string().optional().or(z.literal("")),
   requiredText: (label: string) => z.string().min(1, `${label} es obligatorio`)
 };
+
+export function renderStatusValue(value: string | boolean | null | undefined) {
+  if (typeof value === "boolean") {
+    return <StatusChip label={value ? "Activo" : "Inactivo"} tone={value ? "success" : "danger"} />;
+  }
+
+  if (!value) {
+    return <Typography color="text.secondary">-</Typography>;
+  }
+
+  const normalized = value.toUpperCase();
+  const map: Record<string, { label: string; tone: "neutral" | "success" | "warning" | "danger" }> = {
+    ADMIN: { label: "Administrador", tone: "neutral" },
+    TECHNICIAN: { label: "Técnico", tone: "neutral" },
+    OPEN: { label: "Abierto", tone: "warning" },
+    IN_PROGRESS: { label: "En progreso", tone: "warning" },
+    COMPLETED: { label: "Completado", tone: "success" },
+    CANCELLED: { label: "Cancelado", tone: "danger" },
+    PENDING: { label: "Pendiente", tone: "warning" },
+    PAID: { label: "Pagado", tone: "success" },
+    N2: { label: "N2", tone: "neutral" },
+    N3: { label: "N3", tone: "neutral" },
+    PASS: { label: "Aprobado", tone: "success" },
+    FAIL: { label: "Con fallas", tone: "danger" }
+  };
+
+  const resolved = map[normalized];
+  return resolved ? <StatusChip label={resolved.label} tone={resolved.tone} /> : <Typography>{value}</Typography>;
+}
+
+export function renderLinkedText(value: string) {
+  return (
+    <Link
+      component="button"
+      underline="always"
+      sx={{
+        color: brandTokens.colors.shellDark,
+        fontWeight: 700,
+        textAlign: "left"
+      }}
+    >
+      {value}
+    </Link>
+  );
+}

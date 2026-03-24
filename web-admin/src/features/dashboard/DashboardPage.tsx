@@ -1,8 +1,9 @@
 import {
+  alpha,
+  Box,
   Card,
   CardContent,
   Grid,
-  Paper,
   Stack,
   Table,
   TableBody,
@@ -12,7 +13,9 @@ import {
   Typography
 } from "@mui/material";
 import { useQuery } from "@tanstack/react-query";
+import { PagePanel, PageTitleBar, StatusChip } from "../../components/AdminPrimitives";
 import { api } from "../../lib/api";
+import { brandTokens } from "../../lib/brand";
 
 type DashboardFailuresResponse = {
   totalSubmitted: number;
@@ -44,11 +47,6 @@ export function DashboardPage() {
 
   return (
     <Stack spacing={3}>
-      <BoxHeader
-        title="Resumen de fallas"
-        description="Vista priorizada de unidades con problemas, fallas por región y reportes recientes."
-      />
-
       <Grid container spacing={2}>
         <Grid item xs={12} md={4}>
           <MetricCard label="Inspecciones enviadas" value={data?.totalSubmitted ?? 0} />
@@ -61,85 +59,95 @@ export function DashboardPage() {
         </Grid>
       </Grid>
 
-      <Grid container spacing={2}>
-        <Grid item xs={12} lg={4}>
-          <Paper sx={{ p: 3, height: "100%" }}>
-            <Typography variant="h6" fontWeight={700} gutterBottom>
-              Fallas por región
-            </Typography>
-            <Stack spacing={1.5}>
-              {(data?.failuresByRegion ?? []).map((item) => (
-                <Stack
-                  key={item.label}
-                  direction="row"
-                  justifyContent="space-between"
-                  sx={{ p: 1.5, borderRadius: 2, backgroundColor: "rgba(15,23,42,0.04)" }}
-                >
-                  <Typography>{item.label}</Typography>
-                  <Typography fontWeight={700}>{item.count}</Typography>
-                </Stack>
-              ))}
-            </Stack>
-          </Paper>
-        </Grid>
-        <Grid item xs={12} lg={8}>
-          <Paper sx={{ p: 3 }}>
-            <Typography variant="h6" fontWeight={700} gutterBottom>
-              Reportes fallidos recientes
-            </Typography>
-            <Table>
-              <TableHead>
-                <TableRow>
-                  <TableCell>Pedido</TableCell>
-                  <TableCell>Empresa</TableCell>
-                  <TableCell>Región</TableCell>
-                  <TableCell>Técnico</TableCell>
-                  <TableCell>Unidad</TableCell>
-                  <TableCell>Fallas</TableCell>
-                </TableRow>
-              </TableHead>
-              <TableBody>
-                {(data?.recentFailures ?? []).map((report) => (
-                  <TableRow key={report.inspectionId}>
-                    <TableCell>{report.orderNumber}</TableCell>
-                    <TableCell>{report.clientCompanyName}</TableCell>
-                    <TableCell>{report.regionName}</TableCell>
-                    <TableCell>{report.technicianName}</TableCell>
-                    <TableCell>{report.vehiclePlate}</TableCell>
-                    <TableCell>{report.failureCount}</TableCell>
-                  </TableRow>
+      <PagePanel>
+        <PageTitleBar
+          title="Resumen de fallas"
+          subtitle="Vista priorizada de unidades con problemas, fallas por región y reportes recientes."
+        />
+        <Grid container spacing={0}>
+          <Grid item xs={12} lg={4} sx={{ borderRight: { lg: `1px solid ${brandTokens.colors.border}` } }}>
+            <Box sx={{ p: 3 }}>
+              <Typography variant="h5" gutterBottom>
+                Fallas por región
+              </Typography>
+              <Stack spacing={1.25}>
+                {(data?.failuresByRegion ?? []).map((item) => (
+                  <Stack
+                    key={item.label}
+                    direction="row"
+                    justifyContent="space-between"
+                    sx={{
+                      px: 1.5,
+                      py: 1.1,
+                      borderRadius: 1,
+                      backgroundColor: alpha(brandTokens.colors.panelAlt, 0.8),
+                      border: `1px solid ${brandTokens.colors.border}`
+                    }}
+                  >
+                    <Typography>{item.label}</Typography>
+                    <StatusChip label={String(item.count)} tone="warning" />
+                  </Stack>
                 ))}
-              </TableBody>
-            </Table>
-          </Paper>
+              </Stack>
+            </Box>
+          </Grid>
+          <Grid item xs={12} lg={8}>
+            <Box sx={{ p: 3, overflowX: "auto" }}>
+              <Typography variant="h5" gutterBottom>
+                Reportes fallidos recientes
+              </Typography>
+              <Table>
+                <TableHead>
+                  <TableRow>
+                    <TableCell>Pedido</TableCell>
+                    <TableCell>Empresa</TableCell>
+                    <TableCell>Región</TableCell>
+                    <TableCell>Técnico</TableCell>
+                    <TableCell>Unidad</TableCell>
+                    <TableCell>Fallas</TableCell>
+                  </TableRow>
+                </TableHead>
+                <TableBody>
+                  {(data?.recentFailures ?? []).map((report) => (
+                    <TableRow key={report.inspectionId}>
+                      <TableCell>{report.orderNumber}</TableCell>
+                      <TableCell>{report.clientCompanyName}</TableCell>
+                      <TableCell>{report.regionName}</TableCell>
+                      <TableCell>{report.technicianName}</TableCell>
+                      <TableCell>{report.vehiclePlate}</TableCell>
+                      <TableCell>
+                        <StatusChip label={String(report.failureCount)} tone={report.failureCount > 0 ? "danger" : "success"} />
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </Box>
+          </Grid>
         </Grid>
-      </Grid>
+      </PagePanel>
     </Stack>
   );
 }
 
 function MetricCard({ label, value }: { label: string; value: number }) {
   return (
-    <Card sx={{ borderRadius: 3 }}>
+    <Card
+      sx={{
+        borderRadius: 1.5,
+        border: `1px solid ${brandTokens.colors.border}`,
+        boxShadow: brandTokens.shadow,
+        backgroundColor: brandTokens.colors.panel
+      }}
+    >
       <CardContent>
-        <Typography color="text.secondary" gutterBottom>
+        <Typography sx={{ color: brandTokens.colors.shellText }} gutterBottom>
           {label}
         </Typography>
-        <Typography variant="h3" fontWeight={800}>
+        <Typography variant="h3" fontWeight={800} sx={{ color: brandTokens.colors.title }}>
           {value}
         </Typography>
       </CardContent>
     </Card>
-  );
-}
-
-function BoxHeader({ title, description }: { title: string; description: string }) {
-  return (
-    <Stack spacing={0.5}>
-      <Typography variant="h4" fontWeight={700}>
-        {title}
-      </Typography>
-      <Typography color="text.secondary">{description}</Typography>
-    </Stack>
   );
 }

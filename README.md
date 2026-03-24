@@ -25,20 +25,34 @@ This workspace is the `sivemor-platform` repository. It contains:
    cp .env.example .env
    ```
 
-2. Start the platform stack:
+2. Start the production-like platform stack:
 
    ```bash
    docker compose up --build
    ```
 
-3. Open the admin UI:
+   This flow builds immutable images for the backend and web admin. It is useful when you want to test the stack close to deployment behavior.
+
+3. Start the live-reload development stack:
+
+   ```bash
+   docker compose -f docker-compose.yml -f docker-compose.dev.yml up --build
+   ```
+
+   This flow keeps MySQL the same, but runs:
+   - the backend from source with Gradle `bootRun --continuous`
+   - the web admin with Vite dev server and bind-mounted source
+
+   In this mode, frontend edits should refresh automatically and backend code changes should trigger rebuild/restart behavior without manually stopping containers.
+
+4. Open the admin UI:
 
    - Web admin: `http://localhost:3000`
    - Backend API: `http://localhost:8080/api/v1`
    - Backend health: `http://localhost:8080/actuator/health`
    - Swagger UI: `http://localhost:8080/swagger-ui.html`
 
-4. To call secured endpoints from Swagger UI:
+5. To call secured endpoints from Swagger UI:
 
    - Authenticate against `POST /api/v1/auth/login`
    - Copy the returned `accessToken`
@@ -58,3 +72,4 @@ This workspace is the `sivemor-platform` repository. It contains:
 - The Android app lives in a separate repository and should target the backend through `http://10.0.2.2:8080/api/v1` when running in the Android emulator.
 - Technicians are restricted to draft capture flows only. The mobile API does not expose final report browsing.
 - Evidence is stored in MySQL as binary data with metadata and checksum tracking.
+- In live-reload Docker mode, dependency changes may still require container recreation or a fresh `docker compose ... up --build`.

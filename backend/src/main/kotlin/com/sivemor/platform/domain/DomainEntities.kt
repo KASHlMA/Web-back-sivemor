@@ -41,6 +41,7 @@ enum class VerificationOrderStatus {
 
 enum class InspectionStatus {
     DRAFT,
+    PAUSED,
     SUBMITTED
 }
 

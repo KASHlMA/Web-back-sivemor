@@ -38,6 +38,7 @@ import org.springframework.web.bind.annotation.GetMapping
 import org.springframework.web.bind.annotation.PathVariable
 import org.springframework.web.bind.annotation.PostMapping
 import org.springframework.web.bind.annotation.PutMapping
+import org.springframework.web.bind.annotation.DeleteMapping
 import org.springframework.web.bind.annotation.RequestBody
 import org.springframework.web.bind.annotation.RequestMapping
 import org.springframework.web.bind.annotation.RequestParam
@@ -232,6 +233,34 @@ class MobileInspectionController(
         capturedAt = capturedAt
     )
 
+    @Operation(summary = "Remove a previously uploaded evidence from a draft inspection")
+    @DeleteMapping("/inspections/{id}/evidences/{evidenceId}")
+    fun deleteEvidence(
+        @Parameter(hidden = true)
+        @AuthenticationPrincipal principal: AppUserPrincipal,
+        @PathVariable id: Long,
+        @PathVariable evidenceId: Long
+    ): InspectionDraftResponse = mobileInspectionService.deleteEvidence(principal.id, id, evidenceId)
+
+    @Operation(summary = "Pause an in-progress draft inspection")
+    @PostMapping("/inspections/{id}/pause")
+    fun pauseInspection(
+        @Parameter(hidden = true)
+        @AuthenticationPrincipal principal: AppUserPrincipal,
+        @PathVariable id: Long
+    ): InspectionDraftResponse = mobileInspectionService.pauseInspection(principal.id, id)
+
+    @Operation(summary = "Abandon a draft inspection and archive it")
+    @DeleteMapping("/inspections/{id}")
+    @ResponseStatus(HttpStatus.NO_CONTENT)
+    fun abandonInspection(
+        @Parameter(hidden = true)
+        @AuthenticationPrincipal principal: AppUserPrincipal,
+        @PathVariable id: Long
+    ) {
+        mobileInspectionService.abandonInspection(principal.id, id)
+    }
+
     @Operation(summary = "Submit a completed inspection draft")
     @PostMapping("/inspections/{id}/submit")
     fun submitInspection(
@@ -317,7 +346,7 @@ class MobileInspectionService(
 
     @Transactional(readOnly = true)
     fun getDraftInspection(technicianId: Long, inspectionId: Long): InspectionDraftResponse =
-        requireDraftInspection(technicianId, inspectionId).toDraftResponse()
+        requireAvailableInspection(technicianId, inspectionId).toDraftResponse()
 
     @Transactional
     fun updateDraftInspection(
@@ -325,7 +354,9 @@ class MobileInspectionService(
         inspectionId: Long,
         request: UpdateInspectionRequest
     ): InspectionDraftResponse {
-        val inspection = requireDraftInspection(technicianId, inspectionId)
+        val inspection = requireAvailableInspection(technicianId, inspectionId).also {
+            it.status = InspectionStatus.DRAFT
+        }
         val sectionsById = inspection.template.sections.filter { !it.archived }.associateBy { it.id ?: 0L }
         val questionsById = inspection.template.sections
             .flatMap { it.questions }
@@ -396,7 +427,9 @@ class MobileInspectionService(
             throw BadRequestException("Evidence file cannot be empty")
         }
 
-        val inspection = requireDraftInspection(technicianId, inspectionId)
+        val inspection = requireAvailableInspection(technicianId, inspectionId).also {
+            it.status = InspectionStatus.DRAFT
+        }
         val section = inspection.template.sections.firstOrNull { it.id == sectionId }
             ?: throw BadRequestException("Section $sectionId does not belong to the inspection template")
 
@@ -424,8 +457,71 @@ class MobileInspectionService(
     }
 
     @Transactional
+    fun deleteEvidence(
+        technicianId: Long,
+        inspectionId: Long,
+        evidenceId: Long
+    ): InspectionDraftResponse {
+        val inspection = requireAvailableInspection(technicianId, inspectionId).also {
+            it.status = InspectionStatus.DRAFT
+        }
+        val removed = inspection.evidences.removeIf { it.id == evidenceId }
+        if (!removed) {
+            throw NotFoundException("Evidence $evidenceId was not found")
+        }
+        auditService.log(
+            actor = inspection.technician,
+            action = "REMOVE_INSPECTION_EVIDENCE",
+            entityName = "INSPECTION",
+            entityId = inspection.id.toString(),
+            details = mapOf("evidenceId" to evidenceId)
+        )
+        return inspection.toDraftResponse()
+    }
+
+    @Transactional
+    fun pauseInspection(technicianId: Long, inspectionId: Long): InspectionDraftResponse {
+        val inspection = requireAvailableInspection(technicianId, inspectionId)
+        inspection.status = InspectionStatus.PAUSED
+        auditService.log(
+            actor = inspection.technician,
+            action = "PAUSE_INSPECTION",
+            entityName = "INSPECTION",
+            entityId = inspection.id.toString()
+        )
+        return inspection.toDraftResponse()
+    }
+
+    @Transactional
+    fun abandonInspection(technicianId: Long, inspectionId: Long) {
+        val inspection = requireAvailableInspection(technicianId, inspectionId)
+        inspection.archived = true
+
+        val verificationOrderId = inspection.verificationOrder.id ?: 0L
+        val totalUnits = orderUnitRepository.countByVerificationOrderIdAndArchivedFalse(verificationOrderId)
+        val submittedForOrder = inspectionRepository.countByVerificationOrderIdAndStatusAndArchivedFalse(
+            verificationOrderId,
+            InspectionStatus.SUBMITTED
+        )
+        val activeInspections = inspectionRepository.countByVerificationOrderIdAndArchivedFalse(verificationOrderId)
+
+        inspection.verificationOrder.status = when {
+            submittedForOrder >= totalUnits -> VerificationOrderStatus.COMPLETED
+            activeInspections > 0 -> VerificationOrderStatus.IN_PROGRESS
+            else -> VerificationOrderStatus.OPEN
+        }
+
+        auditService.log(
+            actor = inspection.technician,
+            action = "ABANDON_INSPECTION",
+            entityName = "INSPECTION",
+            entityId = inspection.id.toString()
+        )
+    }
+
+    @Transactional
     fun submitInspection(technicianId: Long, inspectionId: Long): SubmissionResponse {
-        val inspection = requireDraftInspection(technicianId, inspectionId)
+        val inspection = requireAvailableInspection(technicianId, inspectionId)
         val requiredQuestions = inspection.template.sections
             .flatMap { it.questions }
             .filter { !it.archived && it.required }
@@ -483,13 +579,13 @@ class MobileInspectionService(
     private fun requireTechnician(id: Long) =
         userRepository.findById(id).orElseThrow { NotFoundException("Technician $id was not found") }
 
-    private fun requireDraftInspection(technicianId: Long, inspectionId: Long): Inspection {
+    private fun requireAvailableInspection(technicianId: Long, inspectionId: Long): Inspection {
         val inspection = inspectionRepository.findDetailedById(inspectionId)
             ?: throw NotFoundException("Inspection $inspectionId was not found")
 
         if (inspection.archived ||
             inspection.technician.id != technicianId ||
-            inspection.status != InspectionStatus.DRAFT
+            inspection.status == InspectionStatus.SUBMITTED
         ) {
             throw ForbiddenException("Inspection draft is not available")
         }

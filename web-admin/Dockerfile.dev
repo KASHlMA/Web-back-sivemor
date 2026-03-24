@@ -1,0 +1,7 @@
+FROM docker.io/library/node:20-alpine@sha256:b88333c42c23fbd91596ebd7fd10de239cedab9617de04142dde7315e3bc0afa
+
+WORKDIR /app
+
+RUN apk add --no-cache wget
+
+EXPOSE 80

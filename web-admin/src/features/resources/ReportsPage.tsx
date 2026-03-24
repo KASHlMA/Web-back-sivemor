@@ -1,19 +1,18 @@
 import {
   Box,
-  Button,
   MenuItem,
-  Paper,
   Stack,
   Table,
   TableBody,
   TableCell,
   TableHead,
   TableRow,
-  TextField,
-  Typography
+  TextField
 } from "@mui/material";
 import { useQuery } from "@tanstack/react-query";
 import { useMemo, useState } from "react";
+import { PagePanel, PageTitleBar, PrimaryActionButton } from "../../components/AdminPrimitives";
+import { renderStatusValue } from "../../components/ResourceTablePage";
 import { api } from "../../lib/api";
 
 type Report = {
@@ -73,17 +72,39 @@ export function ReportsPage() {
 
   return (
     <Stack spacing={3}>
-      <Box>
-        <Typography variant="h4" fontWeight={700}>
-          Reportes de fallas
-        </Typography>
-        <Typography color="text.secondary">
-          Filtra por empresa, región, pedido, técnico y unidad para concentrarte en las fallas detectadas.
-        </Typography>
-      </Box>
+      <PagePanel>
+        <PageTitleBar
+          title="Reportes de fallas"
+          subtitle="Filtra por empresa, región, pedido, técnico y unidad para concentrarte en las fallas detectadas."
+          actions={
+            <PrimaryActionButton
+              variant="outlined"
+              sx={{
+                bgcolor: "transparent",
+                color: "white",
+                border: "none",
+                minWidth: 120,
+                "&:hover": {
+                  bgcolor: "rgba(19,64,46,0.14)"
+                }
+              }}
+              onClick={() =>
+                setFilters({
+                  companyId: "",
+                  regionId: "",
+                  orderId: "",
+                  technicianId: "",
+                  vehicleId: "",
+                  onlyFailures: "true"
+                })
+              }
+            >
+              Limpiar
+            </PrimaryActionButton>
+          }
+        />
 
-      <Paper sx={{ p: 3 }}>
-        <Stack direction={{ xs: "column", md: "row" }} spacing={2} flexWrap="wrap">
+        <Stack direction={{ xs: "column", md: "row" }} spacing={2} flexWrap="wrap" sx={{ p: 3 }}>
           <FilterSelect
             label="Empresa"
             value={filters.companyId}
@@ -125,54 +146,39 @@ export function ReportsPage() {
               { label: "Todos", value: "false" }
             ]}
           />
-          <Button
-            variant="outlined"
-            onClick={() =>
-              setFilters({
-                companyId: "",
-                regionId: "",
-                orderId: "",
-                technicianId: "",
-                vehicleId: "",
-                onlyFailures: "true"
-              })
-            }
-          >
-            Limpiar
-          </Button>
         </Stack>
-      </Paper>
 
-      <Paper sx={{ overflowX: "auto" }}>
-        <Table>
-          <TableHead>
-            <TableRow>
-              <TableCell>Pedido</TableCell>
-              <TableCell>Empresa</TableCell>
-              <TableCell>Región</TableCell>
-              <TableCell>Técnico</TableCell>
-              <TableCell>Unidad</TableCell>
-              <TableCell>Resultado</TableCell>
-              <TableCell>Fallas</TableCell>
-              <TableCell>Evidencias</TableCell>
-            </TableRow>
-          </TableHead>
-          <TableBody>
-            {(reports.data ?? []).map((report) => (
-              <TableRow key={report.inspectionId}>
-                <TableCell>{report.orderNumber}</TableCell>
-                <TableCell>{report.clientCompanyName}</TableCell>
-                <TableCell>{report.regionName}</TableCell>
-                <TableCell>{report.technicianName}</TableCell>
-                <TableCell>{report.vehiclePlate}</TableCell>
-                <TableCell>{report.overallResult}</TableCell>
-                <TableCell>{report.failureCount}</TableCell>
-                <TableCell>{report.evidenceCount}</TableCell>
+        <Box sx={{ overflowX: "auto", px: 2.5, pb: 2.5 }}>
+          <Table>
+            <TableHead>
+              <TableRow>
+                <TableCell>Pedido</TableCell>
+                <TableCell>Empresa</TableCell>
+                <TableCell>Región</TableCell>
+                <TableCell>Técnico</TableCell>
+                <TableCell>Unidad</TableCell>
+                <TableCell>Resultado</TableCell>
+                <TableCell>Fallas</TableCell>
+                <TableCell>Evidencias</TableCell>
               </TableRow>
-            ))}
-          </TableBody>
-        </Table>
-      </Paper>
+            </TableHead>
+            <TableBody>
+              {(reports.data ?? []).map((report) => (
+                <TableRow key={report.inspectionId}>
+                  <TableCell>{report.orderNumber}</TableCell>
+                  <TableCell>{report.clientCompanyName}</TableCell>
+                  <TableCell>{report.regionName}</TableCell>
+                  <TableCell>{report.technicianName}</TableCell>
+                  <TableCell>{report.vehiclePlate}</TableCell>
+                  <TableCell>{renderStatusValue(report.overallResult ?? "PENDING")}</TableCell>
+                  <TableCell>{renderStatusValue(report.failureCount > 0 ? "FAIL" : "PASS")}</TableCell>
+                  <TableCell>{report.evidenceCount}</TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+        </Box>
+      </PagePanel>
     </Stack>
   );
 }

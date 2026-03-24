@@ -28,9 +28,17 @@ paths:
       summary: Load a technician draft inspection.
     put:
       summary: Update answers, notes, and progress for a technician draft inspection.
+    delete:
+      summary: Abandon a draft inspection and archive it.
   /mobile/inspections/{id}/evidences:
     post:
       summary: Upload section evidence for a draft inspection.
+  /mobile/inspections/{id}/evidences/{evidenceId}:
+    delete:
+      summary: Remove a previously uploaded evidence from a draft inspection.
+  /mobile/inspections/{id}/pause:
+    post:
+      summary: Pause an in-progress draft inspection.
   /mobile/inspections/{id}/submit:
     post:
       summary: Submit a completed inspection draft.

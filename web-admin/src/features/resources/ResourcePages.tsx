@@ -1,8 +1,13 @@
-import { z } from "zod";
 import { useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
+import { z } from "zod";
+import {
+  ResourceTablePage,
+  renderLinkedText,
+  renderStatusValue,
+  schemaHelpers
+} from "../../components/ResourceTablePage";
 import { api } from "../../lib/api";
-import { ResourceTablePage, schemaHelpers } from "../../components/ResourceTablePage";
 
 type UserResponse = {
   id: number;
@@ -151,11 +156,11 @@ export function UsersPage() {
       endpoint="users"
       queryKey={["users"]}
       columns={[
-        { header: "Usuario", render: (row) => row.username },
-        { header: "Nombre", render: (row) => row.fullName },
-        { header: "Correo", render: (row) => row.email },
-        { header: "Rol", render: (row) => row.role },
-        { header: "Activo", render: (row) => (row.active ? "Sí" : "No") }
+        { header: "Usuario", render: (row) => renderLinkedText(row.username), searchableText: (row) => row.username },
+        { header: "Nombre", render: (row) => row.fullName, searchableText: (row) => row.fullName },
+        { header: "Correo", render: (row) => row.email, searchableText: (row) => row.email },
+        { header: "Rol", render: (row) => renderStatusValue(row.role), searchableText: (row) => row.role },
+        { header: "Activo", render: (row) => renderStatusValue(row.active), searchableText: (row) => String(row.active) }
       ]}
       schema={userSchema}
       fields={[
@@ -201,7 +206,7 @@ export function RegionsPage() {
       title="Regiones"
       endpoint="regions"
       queryKey={["regions"]}
-      columns={[{ header: "Nombre", render: (row) => row.name }]}
+      columns={[{ header: "Nombre", render: (row) => renderLinkedText(row.name), searchableText: (row) => row.name }]}
       schema={regionSchema}
       fields={[{ name: "name", label: "Nombre", type: "text" }]}
       defaultValues={{ name: "" }}
@@ -220,9 +225,9 @@ export function ClientsPage() {
       endpoint="clients"
       queryKey={["clients"]}
       columns={[
-        { header: "Empresa", render: (row) => row.name },
-        { header: "RFC", render: (row) => row.taxId },
-        { header: "Región", render: (row) => row.regionName }
+        { header: "Empresa", render: (row) => renderLinkedText(row.name), searchableText: (row) => row.name },
+        { header: "RFC", render: (row) => row.taxId, searchableText: (row) => row.taxId },
+        { header: "Región", render: (row) => row.regionName, searchableText: (row) => row.regionName }
       ]}
       schema={clientSchema}
       fields={[
@@ -261,11 +266,11 @@ export function VehiclesPage() {
       endpoint="vehicles"
       queryKey={["vehicles"]}
       columns={[
-        { header: "Placa", render: (row) => row.plate },
-        { header: "Cliente", render: (row) => row.clientCompanyName },
-        { header: "Categoría", render: (row) => row.category },
-        { header: "Marca", render: (row) => row.brand },
-        { header: "Modelo", render: (row) => row.model }
+        { header: "Placa", render: (row) => renderLinkedText(row.plate), searchableText: (row) => row.plate },
+        { header: "Cliente", render: (row) => row.clientCompanyName, searchableText: (row) => row.clientCompanyName },
+        { header: "Categoría", render: (row) => renderStatusValue(row.category), searchableText: (row) => row.category },
+        { header: "Marca", render: (row) => row.brand, searchableText: (row) => row.brand },
+        { header: "Modelo", render: (row) => row.model, searchableText: (row) => row.model }
       ]}
       schema={vehicleSchema}
       fields={[
@@ -333,12 +338,16 @@ export function OrdersPage() {
       endpoint="orders"
       queryKey={["orders"]}
       columns={[
-        { header: "Pedido", render: (row) => row.orderNumber },
-        { header: "Empresa", render: (row) => row.clientCompanyName },
-        { header: "Región", render: (row) => row.regionName },
-        { header: "Técnico", render: (row) => row.assignedTechnicianName },
-        { header: "Estado", render: (row) => row.status },
-        { header: "Unidades", render: (row) => row.units.map((item) => item.vehiclePlate).join(", ") }
+        { header: "Pedido", render: (row) => renderLinkedText(row.orderNumber), searchableText: (row) => row.orderNumber },
+        { header: "Empresa", render: (row) => row.clientCompanyName, searchableText: (row) => row.clientCompanyName },
+        { header: "Región", render: (row) => row.regionName, searchableText: (row) => row.regionName },
+        { header: "Técnico", render: (row) => row.assignedTechnicianName, searchableText: (row) => row.assignedTechnicianName },
+        { header: "Estado", render: (row) => renderStatusValue(row.status), searchableText: (row) => row.status },
+        {
+          header: "No. de unidades",
+          render: (row) => `Pedido de: ${row.units.length} unidades`,
+          searchableText: (row) => row.units.map((item) => item.vehiclePlate).join(" ")
+        }
       ]}
       schema={orderSchema}
       fields={[
@@ -431,10 +440,10 @@ export function PaymentsPage() {
       endpoint="payments"
       queryKey={["payments"]}
       columns={[
-        { header: "Pedido", render: (row) => row.orderNumber },
-        { header: "Monto", render: (row) => `${row.amount} ${row.currency}` },
-        { header: "Estado", render: (row) => row.status },
-        { header: "Referencia", render: (row) => row.reference ?? "-" }
+        { header: "Pedido", render: (row) => renderLinkedText(row.orderNumber), searchableText: (row) => row.orderNumber },
+        { header: "Monto", render: (row) => `${row.amount} ${row.currency}`, searchableText: (row) => String(row.amount) },
+        { header: "Estado", render: (row) => renderStatusValue(row.status), searchableText: (row) => row.status },
+        { header: "Referencia", render: (row) => row.reference ?? "-", searchableText: (row) => row.reference ?? "" }
       ]}
       schema={paymentSchema}
       fields={[

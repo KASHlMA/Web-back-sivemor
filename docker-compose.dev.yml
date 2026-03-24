@@ -1,0 +1,77 @@
+services:
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile.dev
+    image: sevimor-backend-dev
+    working_dir: /workspace
+    command:
+      [
+        "gradle",
+        "bootRun",
+        "--no-daemon",
+        "--continuous"
+      ]
+    environment:
+      DB_URL: jdbc:mysql://mysql:3306/${MYSQL_DATABASE}?createDatabaseIfNotExist=true&useSSL=false&allowPublicKeyRetrieval=true
+      DB_USERNAME: ${MYSQL_USER}
+      DB_PASSWORD: ${MYSQL_PASSWORD}
+      JWT_SECRET: ${JWT_SECRET}
+      JWT_ISSUER: ${JWT_ISSUER}
+      JWT_ACCESS_TOKEN_MINUTES: ${JWT_ACCESS_TOKEN_MINUTES}
+      JWT_REFRESH_TOKEN_DAYS: ${JWT_REFRESH_TOKEN_DAYS}
+      CORS_ALLOWED_ORIGIN: ${CORS_ALLOWED_ORIGIN}
+      SERVER_PORT: 8080
+      GRADLE_USER_HOME: /home/gradle/.gradle
+    volumes:
+      - ./backend:/workspace
+      - backend_gradle_cache:/home/gradle/.gradle
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "bash",
+          "-lc",
+          ": > /dev/tcp/127.0.0.1/8080"
+        ]
+      start_period: 360s
+      interval: 15s
+      timeout: 5s
+      retries: 20
+
+  web-admin:
+    build:
+      context: ./web-admin
+      dockerfile: Dockerfile.dev
+    image: sevimor-web-admin-dev
+    working_dir: /app
+    command:
+      [
+        "sh",
+        "-c",
+        "npm install && npm run dev -- --port 80"
+      ]
+    environment:
+      VITE_API_BASE_URL: http://localhost:${BACKEND_PORT}/api/v1
+      CHOKIDAR_USEPOLLING: "true"
+      CHOKIDAR_INTERVAL: "300"
+      WATCHPACK_POLLING: "true"
+    depends_on:
+      backend:
+        condition: service_started
+    volumes:
+      - ./web-admin:/app
+      - web_admin_node_modules:/app/node_modules
+    healthcheck:
+      test:
+        [
+          "CMD-SHELL",
+          "wget -qO- http://127.0.0.1/ >/dev/null 2>&1 || exit 1"
+        ]
+      interval: 15s
+      timeout: 5s
+      retries: 20
+
+volumes:
+  backend_gradle_cache:
+  web_admin_node_modules:

@@ -99,6 +99,8 @@ interface InspectionRepository : JpaRepository<Inspection, Long> {
         verificationOrderId: Long,
         status: InspectionStatus
     ): Long
+
+    fun countByVerificationOrderIdAndArchivedFalse(verificationOrderId: Long): Long
 }
 
 interface PaymentRepository : JpaRepository<Payment, Long> {

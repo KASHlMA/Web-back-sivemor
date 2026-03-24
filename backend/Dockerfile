@@ -1,6 +1,10 @@
-FROM gradle:8.10.2-jdk17 AS build
+FROM eclipse-temurin:17-jdk-jammy AS build
 
 WORKDIR /app
+
+RUN apt-get update \
+    && apt-get install -y --no-install-recommends wget unzip \
+    && rm -rf /var/lib/apt/lists/*
 
 COPY gradlew gradlew
 COPY gradlew.bat gradlew.bat

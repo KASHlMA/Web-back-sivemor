@@ -32,6 +32,7 @@ This workspace is the `sivemor-platform` repository. It contains:
    ```
 
    This flow builds immutable images for the backend and web admin. It is useful when you want to test the stack close to deployment behavior.
+   It should be the command you use when you want Docker to serve the final redesigned frontend build at `http://localhost:3000`.
 
 3. Start the live-reload development stack:
 
@@ -44,6 +45,8 @@ This workspace is the `sivemor-platform` repository. It contains:
    - the web admin with Vite dev server and bind-mounted source
 
    In this mode, frontend edits should refresh automatically and backend code changes should trigger rebuild/restart behavior without manually stopping containers.
+   On the first backend startup, the container may remain in `health: starting` for a while because Gradle compiles and boots the app from source before the TCP healthcheck can pass.
+   This is the command you should use when you want to see the redesigned frontend and keep hot reload while you work.
 
 4. Open the admin UI:
 

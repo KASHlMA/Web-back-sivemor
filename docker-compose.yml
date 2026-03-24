@@ -23,6 +23,7 @@ services:
       retries: 12
 
   backend:
+    image: sevimor-backend-prod
     build:
       context: ./backend
     restart: unless-stopped
@@ -42,6 +43,7 @@ services:
       - "${BACKEND_PORT}:8080"
 
   web-admin:
+    image: sevimor-web-admin-prod
     build:
       context: ./web-admin
       args:

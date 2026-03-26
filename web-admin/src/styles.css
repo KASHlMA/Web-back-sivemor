@@ -1,0 +1,147 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  color-scheme: light;
+  --page: #fefffd;
+  --panel: #faffee;
+  --panel-alt: #eef2e4;
+  --header: #567f6f;
+  --header-accent: #2cb3af;
+  --shell-dark: #4a7363;
+  --shell-dark-strong: #13402e;
+  --shell-text: #325447;
+  --title: #1e352f;
+  --border: #b5beb0;
+  --border-strong: #7e8d84;
+  --danger: #b54d40;
+  --warning-bg: #f5ead3;
+  --warning-text: #8c5b11;
+  --success-bg: #dcecdf;
+  --success-text: #22543d;
+  --neutral-bg: #edf2eb;
+  --shadow: 0px 10px 28px rgba(38, 52, 45, 0.12);
+}
+
+html,
+body,
+#root {
+  min-height: 100%;
+}
+
+body {
+  margin: 0;
+  background: var(--page);
+  color: var(--title);
+  font-family: "Segoe UI", "Helvetica Neue", Arial, sans-serif;
+}
+
+button,
+input,
+select,
+textarea {
+  font: inherit;
+}
+
+@layer base {
+  * {
+    @apply box-border;
+  }
+
+  a {
+    @apply text-inherit no-underline;
+  }
+}
+
+@layer components {
+  .app-panel {
+    @apply overflow-hidden rounded-xl border bg-[var(--panel)] shadow-[var(--shadow)];
+    border-color: var(--border);
+  }
+
+  .panel-header {
+    @apply flex flex-col gap-4 border-b px-4 py-4 md:px-6 lg:flex-row lg:items-center lg:justify-between;
+    background: #93b7a9;
+    border-color: var(--border-strong);
+  }
+
+  .field-base {
+    @apply w-full rounded-lg border bg-white px-4 py-3 text-sm text-[var(--title)] outline-none transition;
+    border-color: var(--border-strong);
+  }
+
+  .field-base::placeholder {
+    color: rgba(50, 84, 71, 0.68);
+  }
+
+  .field-base:focus {
+    @apply ring-2;
+    border-color: var(--shell-dark);
+    --tw-ring-color: rgba(74, 115, 99, 0.2);
+  }
+
+  .field-label {
+    @apply mb-2 block text-sm font-semibold text-[var(--shell-text)];
+  }
+
+  .btn-primary {
+    @apply inline-flex min-h-[40px] items-center justify-center rounded-lg px-5 py-2.5 text-sm font-bold text-white transition;
+    background: var(--shell-dark-strong);
+  }
+
+  .btn-primary:hover:not(:disabled) {
+    background: #0f3023;
+  }
+
+  .btn-secondary {
+    @apply inline-flex min-h-[40px] items-center justify-center rounded-lg border px-5 py-2.5 text-sm font-bold transition;
+    border-color: var(--border-strong);
+    color: var(--shell-text);
+    background: #f8fbf4;
+  }
+
+  .btn-secondary:hover:not(:disabled) {
+    background: #eef4e8;
+  }
+
+  .btn-danger {
+    @apply inline-flex min-h-[40px] items-center justify-center rounded-lg px-5 py-2.5 text-sm font-bold text-white transition;
+    background: var(--danger);
+  }
+
+  .btn-danger:hover:not(:disabled) {
+    background: #993e32;
+  }
+
+  .btn-primary:disabled,
+  .btn-secondary:disabled,
+  .btn-danger:disabled {
+    @apply cursor-not-allowed opacity-60;
+  }
+
+  .table-shell {
+    @apply overflow-x-auto;
+  }
+
+  .table-grid {
+    @apply min-w-full border-separate border-spacing-0;
+  }
+
+  .table-grid thead th {
+    @apply border-b px-4 py-3 text-left text-xs font-bold uppercase tracking-[0.08em];
+    color: var(--shell-text);
+    border-color: var(--border);
+    background: rgba(238, 242, 228, 0.78);
+  }
+
+  .table-grid tbody td {
+    @apply border-b px-4 py-3 text-sm align-middle;
+    border-color: var(--border);
+    color: var(--shell-text);
+  }
+
+  .table-grid tbody tr:hover {
+    background: rgba(238, 242, 228, 0.55);
+  }
+}

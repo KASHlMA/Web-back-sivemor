@@ -6,13 +6,14 @@ import { ChevronIcon, LogoutIcon, MenuIcon, cx } from "./AdminPrimitives";
 
 const navigationItems = [
   { label: "Dashboard", to: "/" },
-  { label: "Usuarios", to: "/users" },
-  { label: "Regiones", to: "/regions" },
-  { label: "Clientes", to: "/clients" },
-  { label: "Unidades", to: "/vehicles" },
+  { label: "Vehículos", to: "/vehicles" },
   { label: "Pedidos", to: "/orders" },
-  { label: "Pagos", to: "/payments" },
-  { label: "Reportes", to: "/reports" }
+  { label: "Usuarios", to: "/users" },
+  { label: "Clientes", to: "/clients" },
+  { label: "CEDIS", to: "/cedis" },
+  { label: "Verificentros", to: "/verification-centers" },
+  { label: "Notas", to: "/notes" },
+  { label: "Verificaciones web", to: "/web-verifications" }
 ];
 
 export function ProtectedPage({ children }) {

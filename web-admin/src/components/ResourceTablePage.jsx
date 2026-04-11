@@ -32,7 +32,8 @@ export function ResourceTablePage({
   fields,
   defaultValues,
   toPayload,
-  toFormValues
+  toFormValues,
+  renderRowActions
 }) {
   const queryClient = useQueryClient();
   const [editingRow, setEditingRow] = useState(null);
@@ -133,6 +134,8 @@ export function ResourceTablePage({
     await createMutation.mutateAsync(values);
   });
 
+  const shouldRenderActions = renderRowActions !== null;
+
   return (
     <div className="space-y-6">
       <AlertMessage message={feedbackError} />
@@ -157,7 +160,7 @@ export function ResourceTablePage({
                 {columns.map((column) => (
                   <th key={column.header}>{column.header}</th>
                 ))}
-                <th className="text-right">Acciones</th>
+                {shouldRenderActions ? <th className="text-right">Acciones</th> : null}
               </tr>
             </thead>
             <tbody>
@@ -166,31 +169,37 @@ export function ResourceTablePage({
                   {columns.map((column) => (
                     <td key={column.header}>{column.render(row)}</td>
                   ))}
-                  <td>
-                    <div className="flex justify-end gap-2">
-                      <button
-                        type="button"
-                        onClick={() => openEditDialog(row)}
-                        className="inline-flex items-center gap-1 rounded-md px-2 py-1.5 text-sm font-semibold text-[var(--shell-text)] transition hover:bg-[var(--panel-alt)]"
-                      >
-                        <EditIcon />
-                        Editar
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => setPendingDelete(row)}
-                        className="inline-flex items-center gap-1 rounded-md px-2 py-1.5 text-sm font-semibold text-[var(--danger)] transition hover:bg-[#f9ebe7]"
-                      >
-                        <TrashIcon />
-                        Eliminar
-                      </button>
-                    </div>
-                  </td>
+                  {shouldRenderActions ? (
+                    <td>
+                      {renderRowActions ? (
+                        renderRowActions(row)
+                      ) : (
+                        <div className="flex justify-end gap-2">
+                          <button
+                            type="button"
+                            onClick={() => openEditDialog(row)}
+                            className="inline-flex items-center gap-1 rounded-md px-2 py-1.5 text-sm font-semibold text-[var(--shell-text)] transition hover:bg-[var(--panel-alt)]"
+                          >
+                            <EditIcon />
+                            Editar
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => setPendingDelete(row)}
+                            className="inline-flex items-center gap-1 rounded-md px-2 py-1.5 text-sm font-semibold text-[var(--danger)] transition hover:bg-[#f9ebe7]"
+                          >
+                            <TrashIcon />
+                            Eliminar
+                          </button>
+                        </div>
+                      )}
+                    </td>
+                  ) : null}
                 </tr>
               ))}
               {!query.isLoading && filteredRows.length === 0 ? (
                 <tr>
-                  <td colSpan={columns.length + 1} className="!p-0">
+                  <td colSpan={columns.length + (shouldRenderActions ? 1 : 0)} className="!p-0">
                     <EmptyState
                       title={search ? "No hay coincidencias" : "No hay registros disponibles"}
                       description={
@@ -207,44 +216,47 @@ export function ResourceTablePage({
         </div>
       </PagePanel>
 
-      <Modal
-        open={dialogOpen}
-        title={dialogTitle}
-        onClose={closeDialog}
-        footer={
-          <>
-            <SecondaryActionButton type="button" onClick={closeDialog}>
-              Cancelar
-            </SecondaryActionButton>
-            <PrimaryActionButton
-              type="button"
-              onClick={() => void onSubmit()}
-              disabled={createMutation.isPending || updateMutation.isPending}
-            >
-              Guardar
-            </PrimaryActionButton>
-          </>
-        }
-      >
-        <div className="space-y-4">
-          {fields.map((field) => (
-            <Controller
-              key={field.name}
-              name={field.name}
-              control={form.control}
-              render={({ field: controllerField, fieldState }) => (
-                <FieldRenderer
-                  field={field}
-                  controllerField={controllerField}
-                  error={fieldState.error?.message}
-                />
-              )}
-            />
-          ))}
-        </div>
-      </Modal>
+      {renderRowActions ? null : (
+        <Modal
+          open={dialogOpen}
+          title={dialogTitle}
+          onClose={closeDialog}
+          footer={
+            <>
+              <SecondaryActionButton type="button" onClick={closeDialog}>
+                Cancelar
+              </SecondaryActionButton>
+              <PrimaryActionButton
+                type="button"
+                onClick={() => void onSubmit()}
+                disabled={createMutation.isPending || updateMutation.isPending}
+              >
+                Guardar
+              </PrimaryActionButton>
+            </>
+          }
+        >
+          <div className="space-y-4">
+            {fields.map((field) => (
+              <Controller
+                key={field.name}
+                name={field.name}
+                control={form.control}
+                render={({ field: controllerField, fieldState }) => (
+                  <FieldRenderer
+                    field={field}
+                    controllerField={controllerField}
+                    error={fieldState.error?.message}
+                  />
+                )}
+              />
+            ))}
+          </div>
+        </Modal>
+      )}
 
-      <ConfirmDialog
+      {renderRowActions ? null : (
+        <ConfirmDialog
         open={Boolean(pendingDelete)}
         title={`Eliminar ${title}`}
         description={`¿Estás seguro de eliminar este registro de ${title.toLowerCase()}?`}
@@ -256,7 +268,8 @@ export function ResourceTablePage({
           }
         }}
         danger
-      />
+        />
+      )}
     </div>
   );
 }

@@ -7,6 +7,7 @@ import {
   renderStatusValue,
   schemaHelpers
 } from "../../components/ResourceTablePage";
+import { SecondaryActionButton } from "../../components/AdminPrimitives";
 import { api } from "../../lib/api";
 
 const userSchema = z.object({
@@ -197,16 +198,24 @@ export function VehiclesPage() {
 
   return (
     <ResourceTablePage
-      title="Unidades"
+      title="Vehículos"
       endpoint="vehicles"
       queryKey={["vehicles"]}
       columns={[
         { header: "Placa", render: (row) => renderLinkedText(row.plate), searchableText: (row) => row.plate },
-        { header: "Cliente", render: (row) => row.clientCompanyName, searchableText: (row) => row.clientCompanyName },
-        { header: "Categoría", render: (row) => renderStatusValue(row.category), searchableText: (row) => row.category },
-        { header: "Marca", render: (row) => row.brand, searchableText: (row) => row.brand },
-        { header: "Modelo", render: (row) => row.model, searchableText: (row) => row.model }
+        { header: "Número de serie", render: (row) => row.vin, searchableText: (row) => row.vin },
+        { header: "CEDIS", render: (row) => row.clientCompanyName, searchableText: (row) => row.clientCompanyName }
       ]}
+      renderRowActions={() => (
+        <div className="flex justify-end gap-2">
+          <SecondaryActionButton type="button" disabled>
+            Editar información
+          </SecondaryActionButton>
+          <SecondaryActionButton type="button" disabled>
+            Ver historial
+          </SecondaryActionButton>
+        </div>
+      )}
       schema={vehicleSchema}
       fields={[
         {

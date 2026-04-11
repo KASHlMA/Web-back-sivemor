@@ -2,15 +2,13 @@ import { Outlet, createRootRoute, createRoute, createRouter } from "@tanstack/re
 import { ProtectedPage } from "./components/AppShell";
 import { LoginPage } from "./features/auth/LoginPage";
 import { DashboardPage } from "./features/dashboard/DashboardPage";
+import { PlaceholderPage } from "./features/navigation/PlaceholderPage";
 import {
   ClientsPage,
   OrdersPage,
-  PaymentsPage,
-  RegionsPage,
   UsersPage,
   VehiclesPage
 } from "./features/resources/ResourcePages";
-import { ReportsPage } from "./features/resources/ReportsPage";
 
 const rootRoute = createRootRoute({
   component: () => <Outlet />
@@ -40,12 +38,6 @@ const usersRoute = createRoute({
   component: withProtection(UsersPage)
 });
 
-const regionsRoute = createRoute({
-  getParentRoute: () => rootRoute,
-  path: "/regions",
-  component: withProtection(RegionsPage)
-});
-
 const clientsRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: "/clients",
@@ -64,28 +56,41 @@ const ordersRoute = createRoute({
   component: withProtection(OrdersPage)
 });
 
-const paymentsRoute = createRoute({
+const cedisRoute = createRoute({
   getParentRoute: () => rootRoute,
-  path: "/payments",
-  component: withProtection(PaymentsPage)
+  path: "/cedis",
+  component: withProtection(() => <PlaceholderPage title="CEDIS" />)
 });
 
-const reportsRoute = createRoute({
+const verificationCentersRoute = createRoute({
   getParentRoute: () => rootRoute,
-  path: "/reports",
-  component: withProtection(ReportsPage)
+  path: "/verification-centers",
+  component: withProtection(() => <PlaceholderPage title="Verificentros" />)
+});
+
+const notesRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: "/notes",
+  component: withProtection(() => <PlaceholderPage title="Notas" />)
+});
+
+const webVerificationsRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: "/web-verifications",
+  component: withProtection(() => <PlaceholderPage title="Verificaciones web" />)
 });
 
 const routeTree = rootRoute.addChildren([
   loginRoute,
   dashboardRoute,
   usersRoute,
-  regionsRoute,
   clientsRoute,
   vehiclesRoute,
   ordersRoute,
-  paymentsRoute,
-  reportsRoute
+  cedisRoute,
+  verificationCentersRoute,
+  notesRoute,
+  webVerificationsRoute
 ]);
 
 export const router = createRouter({ routeTree });

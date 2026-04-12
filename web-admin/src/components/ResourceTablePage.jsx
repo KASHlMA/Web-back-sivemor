@@ -33,7 +33,9 @@ export function ResourceTablePage({
   defaultValues,
   toPayload,
   toFormValues,
-  renderRowActions
+  renderRowActions,
+  onCreateAction,
+  feedbackMessage
 }) {
   const queryClient = useQueryClient();
   const [editingRow, setEditingRow] = useState(null);
@@ -139,6 +141,7 @@ export function ResourceTablePage({
   return (
     <div className="space-y-6">
       <AlertMessage message={feedbackError} />
+      <AlertMessage message={feedbackMessage} />
 
       <PagePanel>
         <PageTitleBar
@@ -146,7 +149,10 @@ export function ResourceTablePage({
           subtitle={description}
           search={<SearchField value={search} onChange={(event) => setSearch(event.target.value)} />}
           actions={
-            <PrimaryActionButton type="button" onClick={openCreateDialog}>
+            <PrimaryActionButton
+              type="button"
+              onClick={onCreateAction ?? openCreateDialog}
+            >
               <PlusIcon />
               Agregar Nuevo
             </PrimaryActionButton>

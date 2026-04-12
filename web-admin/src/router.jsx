@@ -9,6 +9,11 @@ import {
   UsersPage,
   VehiclesPage
 } from "./features/resources/ResourcePages";
+import { VehicleCreatePage, VehicleEditPage } from "./features/resources/VehicleCreatePage";
+import {
+  VehicleHistoryPage,
+  VerificationDetailPlaceholderPage
+} from "./features/resources/VehicleHistoryPage";
 
 const rootRoute = createRootRoute({
   component: () => <Outlet />
@@ -50,6 +55,36 @@ const vehiclesRoute = createRoute({
   component: withProtection(VehiclesPage)
 });
 
+const vehiclesAliasRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: "/vehiculos",
+  component: withProtection(VehiclesPage)
+});
+
+const vehicleCreateRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: "/vehiculos/nuevo",
+  component: withProtection(VehicleCreatePage)
+});
+
+const vehicleEditRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: "/vehiculos/$id/editar",
+  component: withProtection(VehicleEditPage)
+});
+
+const vehicleHistoryRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: "/vehiculos/$id/historial",
+  component: withProtection(VehicleHistoryPage)
+});
+
+const verificationDetailRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: "/verificaciones/$id",
+  component: withProtection(VerificationDetailPlaceholderPage)
+});
+
 const ordersRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: "/orders",
@@ -86,6 +121,11 @@ const routeTree = rootRoute.addChildren([
   usersRoute,
   clientsRoute,
   vehiclesRoute,
+  vehiclesAliasRoute,
+  vehicleCreateRoute,
+  vehicleEditRoute,
+  vehicleHistoryRoute,
+  verificationDetailRoute,
   ordersRoute,
   cedisRoute,
   verificationCentersRoute,

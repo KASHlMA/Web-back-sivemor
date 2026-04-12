@@ -40,11 +40,15 @@ function AppShell({ children }) {
   });
   const navigate = useNavigate();
   const { session, logout } = useAuth();
+  const vehiclesSelected = pathname === "/vehicles" || pathname.startsWith("/vehiculos");
 
-  const title = useMemo(
-    () => navigationItems.find((item) => item.to === pathname)?.label ?? "SIVEMOR",
-    [pathname]
-  );
+  const title = useMemo(() => {
+    if (pathname.startsWith("/vehiculos")) {
+      return "Vehículos";
+    }
+
+    return navigationItems.find((item) => item.to === pathname)?.label ?? "SIVEMOR";
+  }, [pathname]);
 
   const navigateTo = (to) => {
     setMobileOpen(false);
@@ -83,7 +87,7 @@ function AppShell({ children }) {
             <div className="min-h-[72px] border-b border-b-[var(--border-strong)] bg-[var(--shell-dark)]" />
             <nav className="flex flex-col">
               {navigationItems.map((item, index) => {
-                const selected = pathname === item.to;
+                const selected = item.to === "/vehicles" ? vehiclesSelected : pathname === item.to;
                 return (
                   <button
                     key={item.to}

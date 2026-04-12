@@ -152,6 +152,22 @@ class ClientCompany : BaseEntity() {
 }
 
 @Entity
+@Table(name = "cedis")
+class Cedis : BaseEntity() {
+    @Column(nullable = false, unique = true, length = 160)
+    lateinit var name: String
+
+    @Column(nullable = false, unique = true, length = 150)
+    lateinit var email: String
+
+    @Column(nullable = false, length = 30)
+    lateinit var phone: String
+
+    @Column(name = "alternate_phone", nullable = false, length = 30)
+    lateinit var alternatePhone: String
+}
+
+@Entity
 @Table(name = "vehicle_units")
 class VehicleUnit : BaseEntity() {
     @ManyToOne(fetch = FetchType.LAZY, optional = false)

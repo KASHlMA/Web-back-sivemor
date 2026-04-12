@@ -1,6 +1,7 @@
 package com.sivemor.platform.support
 
 import com.sivemor.platform.domain.AnswerValue
+import com.sivemor.platform.domain.Cedis
 import com.sivemor.platform.domain.ChecklistQuestion
 import com.sivemor.platform.domain.ChecklistSection
 import com.sivemor.platform.domain.ChecklistTemplate
@@ -78,6 +79,19 @@ object TestEntityFactory {
         this.name = name
         taxId = "RFC$id"
         this.region = region
+        this.archived = archived
+    }
+
+    fun cedis(
+        id: Long = 1L,
+        name: String = "CEDIS $id",
+        archived: Boolean = false
+    ) = Cedis().apply {
+        this.id = id
+        this.name = name
+        email = "cedis$id@example.com"
+        phone = "77745011$id"
+        alternatePhone = "77745022$id"
         this.archived = archived
     }
 

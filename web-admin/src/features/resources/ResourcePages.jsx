@@ -1,5 +1,6 @@
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
+import { useNavigate } from "@tanstack/react-router";
 import { z } from "zod";
 import {
   ResourceTablePage,
@@ -9,6 +10,7 @@ import {
 } from "../../components/ResourceTablePage";
 import { SecondaryActionButton } from "../../components/AdminPrimitives";
 import { api } from "../../lib/api";
+import { consumeFlashMessage } from "../../lib/flashMessage";
 
 const userSchema = z.object({
   username: schemaHelpers.requiredText("Usuario"),
@@ -194,24 +196,34 @@ export function ClientsPage() {
 }
 
 export function VehiclesPage() {
+  const navigate = useNavigate();
   const { clients } = useLookups();
+  const [feedbackMessage] = useState(() => consumeFlashMessage());
 
   return (
     <ResourceTablePage
       title="Vehículos"
       endpoint="vehicles"
       queryKey={["vehicles"]}
+      feedbackMessage={feedbackMessage}
+      onCreateAction={() => void navigate({ to: "/vehiculos/nuevo" })}
       columns={[
         { header: "Placa", render: (row) => renderLinkedText(row.plate), searchableText: (row) => row.plate },
         { header: "Número de serie", render: (row) => row.vin, searchableText: (row) => row.vin },
         { header: "CEDIS", render: (row) => row.clientCompanyName, searchableText: (row) => row.clientCompanyName }
       ]}
-      renderRowActions={() => (
+      renderRowActions={(row) => (
         <div className="flex justify-end gap-2">
-          <SecondaryActionButton type="button" disabled>
+          <SecondaryActionButton
+            type="button"
+            onClick={() => void navigate({ to: "/vehiculos/$id/editar", params: { id: String(row.id) } })}
+          >
             Editar información
           </SecondaryActionButton>
-          <SecondaryActionButton type="button" disabled>
+          <SecondaryActionButton
+            type="button"
+            onClick={() => void navigate({ to: "/vehiculos/$id/historial", params: { id: String(row.id) } })}
+          >
             Ver historial
           </SecondaryActionButton>
         </div>

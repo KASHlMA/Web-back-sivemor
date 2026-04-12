@@ -30,6 +30,10 @@ interface ClientCompanyRepository : JpaRepository<ClientCompany, Long> {
     fun findAllByArchivedFalseOrderByNameAsc(): List<ClientCompany>
 }
 
+interface CedisRepository : JpaRepository<Cedis, Long> {
+    fun findAllByArchivedFalseOrderByNameAsc(): List<Cedis>
+}
+
 interface VehicleUnitRepository : JpaRepository<VehicleUnit, Long> {
     fun findAllByArchivedFalseOrderByPlateAsc(): List<VehicleUnit>
 }

@@ -3,6 +3,8 @@ package com.sivemor.platform.admin
 import com.sivemor.platform.common.BadRequestException
 import com.sivemor.platform.common.NotFoundException
 import com.sivemor.platform.domain.AnswerValue
+import com.sivemor.platform.domain.Cedis
+import com.sivemor.platform.domain.CedisRepository
 import com.sivemor.platform.domain.ClientCompany
 import com.sivemor.platform.domain.ClientCompanyRepository
 import com.sivemor.platform.domain.Inspection
@@ -96,6 +98,21 @@ data class ClientResponse(
     val taxId: String,
     val regionId: Long,
     val regionName: String
+)
+
+data class CedisUpsertRequest(
+    @field:NotBlank @field:Size(max = 160) val name: String,
+    @field:Email @field:Size(max = 150) val email: String,
+    @field:NotBlank @field:Size(max = 30) val phone: String,
+    @field:NotBlank @field:Size(max = 30) val alternatePhone: String
+)
+
+data class CedisResponse(
+    val id: Long,
+    val name: String,
+    val email: String,
+    val phone: String,
+    val alternatePhone: String
 )
 
 data class VehicleUpsertRequest(
@@ -310,6 +327,43 @@ class AdminController(
     @GetMapping("/vehicles")
     fun vehicles(): List<VehicleResponse> = adminService.listVehicles()
 
+    @Operation(summary = "List CEDIS")
+    @GetMapping("/cedis")
+    fun cedis(): List<CedisResponse> = adminService.listCedis()
+
+    @Operation(summary = "Get CEDIS detail")
+    @GetMapping("/cedis/{id}")
+    fun cedisById(@PathVariable id: Long): CedisResponse = adminService.getCedis(id)
+
+    @Operation(summary = "Create a CEDIS")
+    @PostMapping("/cedis")
+    @ResponseStatus(HttpStatus.CREATED)
+    fun createCedis(
+        @Parameter(hidden = true)
+        @AuthenticationPrincipal principal: AppUserPrincipal,
+        @Valid @RequestBody request: CedisUpsertRequest
+    ): CedisResponse = adminService.createCedis(principal.id, request)
+
+    @Operation(summary = "Update a CEDIS")
+    @PutMapping("/cedis/{id}")
+    fun updateCedis(
+        @Parameter(hidden = true)
+        @AuthenticationPrincipal principal: AppUserPrincipal,
+        @PathVariable id: Long,
+        @Valid @RequestBody request: CedisUpsertRequest
+    ): CedisResponse = adminService.updateCedis(principal.id, id, request)
+
+    @Operation(summary = "Archive a CEDIS")
+    @DeleteMapping("/cedis/{id}")
+    fun deleteCedis(
+        @Parameter(hidden = true)
+        @AuthenticationPrincipal principal: AppUserPrincipal,
+        @PathVariable id: Long
+    ): ResponseEntity<Unit> {
+        adminService.archiveCedis(principal.id, id)
+        return ResponseEntity.noContent().build()
+    }
+
     @Operation(summary = "Create a vehicle unit")
     @PostMapping("/vehicles")
     @ResponseStatus(HttpStatus.CREATED)
@@ -441,6 +495,7 @@ class AdminService(
     private val userRepository: UserRepository,
     private val regionRepository: RegionRepository,
     private val clientCompanyRepository: ClientCompanyRepository,
+    private val cedisRepository: CedisRepository,
     private val vehicleUnitRepository: VehicleUnitRepository,
     private val verificationOrderRepository: VerificationOrderRepository,
     private val orderUnitRepository: OrderUnitRepository,
@@ -545,6 +600,39 @@ class AdminService(
         val client = requireClient(id)
         client.archived = true
         logAction(actorId, "ARCHIVE_CLIENT", "CLIENT_COMPANY", client.id.toString(), mapOf("name" to client.name))
+    }
+
+    @Transactional(readOnly = true)
+    fun listCedis(): List<CedisResponse> = cedisRepository.findAllByArchivedFalseOrderByNameAsc().map { it.toResponse() }
+
+    @Transactional(readOnly = true)
+    fun getCedis(id: Long): CedisResponse = requireCedis(id).toResponse()
+
+    @Transactional
+    fun createCedis(actorId: Long, request: CedisUpsertRequest): CedisResponse =
+        cedisRepository.save(
+            Cedis().apply {
+                name = request.name.trim()
+                email = request.email.trim().lowercase()
+                phone = request.phone.trim()
+                alternatePhone = request.alternatePhone.trim()
+            }
+        ).alsoSaved(actorId, "CREATE_CEDIS", request.name).toResponse()
+
+    @Transactional
+    fun updateCedis(actorId: Long, id: Long, request: CedisUpsertRequest): CedisResponse =
+        requireCedis(id).apply {
+            name = request.name.trim()
+            email = request.email.trim().lowercase()
+            phone = request.phone.trim()
+            alternatePhone = request.alternatePhone.trim()
+        }.alsoSaved(actorId, "UPDATE_CEDIS", request.name).toResponse()
+
+    @Transactional
+    fun archiveCedis(actorId: Long, id: Long) {
+        val cedis = requireCedis(id)
+        cedis.archived = true
+        logAction(actorId, "ARCHIVE_CEDIS", "CEDIS", cedis.id.toString(), mapOf("name" to cedis.name))
     }
 
     @Transactional(readOnly = true)
@@ -734,6 +822,14 @@ class AdminService(
         regionName = region.name
     )
 
+    private fun Cedis.toResponse(): CedisResponse = CedisResponse(
+        id = id ?: 0L,
+        name = name,
+        email = email,
+        phone = phone,
+        alternatePhone = alternatePhone
+    )
+
     private fun VehicleUnit.toResponse(): VehicleResponse = VehicleResponse(
         id = id ?: 0L,
         clientCompanyId = clientCompany.id ?: 0L,
@@ -823,6 +919,14 @@ class AdminService(
                 }
             }
 
+    private fun requireCedis(id: Long): Cedis =
+        cedisRepository.findById(id).orElseThrow { NotFoundException("CEDIS $id was not found") }
+            .also {
+                if (it.archived) {
+                    throw NotFoundException("CEDIS $id was not found")
+                }
+            }
+
     private fun requireVehicle(id: Long): VehicleUnit =
         vehicleUnitRepository.findById(id).orElseThrow { NotFoundException("Vehicle $id was not found") }
             .also {
@@ -861,6 +965,7 @@ class AdminService(
             is User -> id.toString()
             is Region -> id.toString()
             is ClientCompany -> id.toString()
+            is Cedis -> id.toString()
             is VehicleUnit -> id.toString()
             is VerificationOrder -> id.toString()
             is Payment -> id.toString()

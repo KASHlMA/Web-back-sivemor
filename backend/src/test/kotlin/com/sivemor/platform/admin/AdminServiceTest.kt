@@ -3,6 +3,7 @@ package com.sivemor.platform.admin
 import com.sivemor.platform.common.BadRequestException
 import com.sivemor.platform.common.NotFoundException
 import com.sivemor.platform.domain.AnswerValue
+import com.sivemor.platform.domain.CedisRepository
 import com.sivemor.platform.domain.ClientCompanyRepository
 import com.sivemor.platform.domain.InspectionRepository
 import com.sivemor.platform.domain.InspectionResult
@@ -16,6 +17,7 @@ import com.sivemor.platform.domain.VehicleUnitRepository
 import com.sivemor.platform.domain.VerificationOrderRepository
 import com.sivemor.platform.service.AuditService
 import com.sivemor.platform.support.TestEntityFactory.client
+import com.sivemor.platform.support.TestEntityFactory.cedis
 import com.sivemor.platform.support.TestEntityFactory.inspection
 import com.sivemor.platform.support.TestEntityFactory.inspectionAnswer
 import com.sivemor.platform.support.TestEntityFactory.inspectionEvidence
@@ -43,6 +45,7 @@ class AdminServiceTest {
     @MockK private lateinit var userRepository: UserRepository
     @MockK private lateinit var regionRepository: RegionRepository
     @MockK private lateinit var clientCompanyRepository: ClientCompanyRepository
+    @MockK private lateinit var cedisRepository: CedisRepository
     @MockK private lateinit var vehicleUnitRepository: VehicleUnitRepository
     @MockK private lateinit var verificationOrderRepository: VerificationOrderRepository
     @MockK private lateinit var orderUnitRepository: OrderUnitRepository
@@ -60,6 +63,7 @@ class AdminServiceTest {
             userRepository,
             regionRepository,
             clientCompanyRepository,
+            cedisRepository,
             vehicleUnitRepository,
             verificationOrderRepository,
             orderUnitRepository,
@@ -157,6 +161,74 @@ class AdminServiceTest {
         assertThat(response.orderNumber).isEqualTo("ORDER-1")
         assertThat(response.units).hasSize(1)
         verify { auditService.log(actor, "CREATE_ORDER", "VerificationOrder", any(), any()) }
+    }
+
+    @Test
+    fun `listCedis returns only active records ordered by name`() {
+        val first = cedis(id = 10L, name = "CEDIS Centro")
+        val second = cedis(id = 11L, name = "CEDIS Norte")
+
+        every { cedisRepository.findAllByArchivedFalseOrderByNameAsc() } returns listOf(first, second)
+
+        val result = adminService.listCedis()
+
+        assertThat(result).extracting(CedisResponse::name).containsExactly("CEDIS Centro", "CEDIS Norte")
+        assertThat(result.first().email).isEqualTo(first.email)
+    }
+
+    @Test
+    fun `createCedis normalizes and audits new records`() {
+        val actor = user(id = 99L, username = "admin", role = Role.ADMIN)
+        every { cedisRepository.save(any()) } answers { firstArg() }
+        every { userRepository.findById(99L) } returns Optional.of(actor)
+
+        val result = adminService.createCedis(
+            99L,
+            CedisUpsertRequest(
+                name = "  CEDIS Norte  ",
+                email = "  Norte@Empresa.com ",
+                phone = " 7774501122 ",
+                alternatePhone = " 7774501100 "
+            )
+        )
+
+        assertThat(result.name).isEqualTo("CEDIS Norte")
+        assertThat(result.email).isEqualTo("norte@empresa.com")
+        assertThat(result.phone).isEqualTo("7774501122")
+        assertThat(result.alternatePhone).isEqualTo("7774501100")
+        verify { auditService.log(actor, "CREATE_CEDIS", "Cedis", any(), any()) }
+    }
+
+    @Test
+    fun `archiveCedis marks record as archived`() {
+        val actor = user(id = 99L, username = "admin", role = Role.ADMIN)
+        val target = cedis(id = 33L, name = "CEDIS Sur")
+
+        every { cedisRepository.findById(33L) } returns Optional.of(target)
+        every { userRepository.findById(99L) } returns Optional.of(actor)
+
+        adminService.archiveCedis(99L, 33L)
+
+        assertThat(target.archived).isTrue()
+        verify {
+            auditService.log(
+                actor = actor,
+                action = "ARCHIVE_CEDIS",
+                entityName = "CEDIS",
+                entityId = "33",
+                details = match<Map<String, String>> { it["name"] == "CEDIS Sur" }
+            )
+        }
+    }
+
+    @Test
+    fun `getCedis rejects archived records`() {
+        every { cedisRepository.findById(77L) } returns Optional.of(cedis(id = 77L, archived = true))
+
+        assertThatThrownBy {
+            adminService.getCedis(77L)
+        }.isInstanceOf(NotFoundException::class.java)
+            .hasMessage("CEDIS 77 was not found")
     }
 
     @Test

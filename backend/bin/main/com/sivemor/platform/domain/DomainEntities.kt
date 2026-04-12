@@ -143,12 +143,75 @@ class ClientCompany : BaseEntity() {
     @Column(nullable = false, unique = true, length = 160)
     lateinit var name: String
 
-    @Column(name = "tax_id", nullable = false, unique = true, length = 30)
-    lateinit var taxId: String
+    @Column(name = "business_name", nullable = false, length = 160)
+    lateinit var businessName: String
+
+    @Column(nullable = false, length = 150)
+    lateinit var email: String
+
+    @Column(nullable = false, length = 30)
+    lateinit var phone: String
+
+    @Column(name = "alternate_phone", nullable = false, length = 30)
+    lateinit var alternatePhone: String
+
+    @Column(nullable = false, length = 160)
+    lateinit var manager: String
+
+    @Column(name = "tax_id", unique = true, length = 30)
+    var taxId: String? = null
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "region_id")
+    var region: Region? = null
+}
+
+@Entity
+@Table(name = "cedis")
+class Cedis : BaseEntity() {
+    @Column(nullable = false, unique = true, length = 160)
+    lateinit var name: String
+
+    @Column(nullable = false, unique = true, length = 150)
+    lateinit var email: String
+
+    @Column(nullable = false, length = 30)
+    lateinit var phone: String
+
+    @Column(name = "alternate_phone", nullable = false, length = 30)
+    lateinit var alternatePhone: String
+}
+
+@Entity
+@Table(name = "verification_centers")
+class VerificationCenter : BaseEntity() {
+    @Column(nullable = false, unique = true, length = 160)
+    lateinit var name: String
+
+    @Column(name = "center_key", nullable = false, unique = true, length = 60)
+    lateinit var centerKey: String
+
+    @Column(nullable = false, length = 255)
+    lateinit var address: String
 
     @ManyToOne(fetch = FetchType.LAZY, optional = false)
     @JoinColumn(name = "region_id", nullable = false)
     lateinit var region: Region
+
+    @Column(nullable = false, length = 160)
+    lateinit var manager: String
+
+    @Column(nullable = false, length = 150)
+    lateinit var email: String
+
+    @Column(nullable = false, length = 30)
+    lateinit var phone: String
+
+    @Column(name = "alternate_phone", nullable = false, length = 30)
+    lateinit var alternatePhone: String
+
+    @Column(nullable = false, length = 120)
+    lateinit var schedule: String
 }
 
 @Entity

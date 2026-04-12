@@ -3,6 +3,8 @@ package com.sivemor.platform.admin
 import com.sivemor.platform.common.BadRequestException
 import com.sivemor.platform.common.NotFoundException
 import com.sivemor.platform.domain.AnswerValue
+import com.sivemor.platform.domain.Cedis
+import com.sivemor.platform.domain.CedisRepository
 import com.sivemor.platform.domain.ClientCompany
 import com.sivemor.platform.domain.ClientCompanyRepository
 import com.sivemor.platform.domain.Inspection
@@ -19,6 +21,8 @@ import com.sivemor.platform.domain.RegionRepository
 import com.sivemor.platform.domain.Role
 import com.sivemor.platform.domain.User
 import com.sivemor.platform.domain.UserRepository
+import com.sivemor.platform.domain.VerificationCenter
+import com.sivemor.platform.domain.VerificationCenterRepository
 import com.sivemor.platform.domain.VehicleCategory
 import com.sivemor.platform.domain.VehicleUnit
 import com.sivemor.platform.domain.VehicleUnitRepository
@@ -62,7 +66,7 @@ data class UserUpsertRequest(
     @field:Email @field:Size(max = 150) val email: String,
     @field:NotBlank @field:Size(max = 160) val fullName: String,
     @field:NotNull val role: Role,
-    val active: Boolean = true,
+    val active: Boolean? = true,
     val password: String? = null
 )
 
@@ -86,16 +90,64 @@ data class RegionResponse(
 
 data class ClientUpsertRequest(
     @field:NotBlank @field:Size(max = 160) val name: String,
-    @field:NotBlank @field:Size(max = 30) val taxId: String,
-    @field:NotNull val regionId: Long
+    @field:NotBlank @field:Size(max = 160) val businessName: String,
+    @field:Email @field:Size(max = 150) val email: String,
+    @field:NotBlank @field:Size(max = 30) val phone: String,
+    @field:NotBlank @field:Size(max = 30) val alternatePhone: String,
+    @field:NotBlank @field:Size(max = 160) val manager: String
 )
 
 data class ClientResponse(
     val id: Long,
     val name: String,
-    val taxId: String,
+    val businessName: String,
+    val email: String,
+    val phone: String,
+    val alternatePhone: String,
+    val manager: String,
+    val regionId: Long?,
+    val regionName: String?
+)
+
+data class CedisUpsertRequest(
+    @field:NotBlank @field:Size(max = 160) val name: String,
+    @field:Email @field:Size(max = 150) val email: String,
+    @field:NotBlank @field:Size(max = 30) val phone: String,
+    @field:NotBlank @field:Size(max = 30) val alternatePhone: String
+)
+
+data class CedisResponse(
+    val id: Long,
+    val name: String,
+    val email: String,
+    val phone: String,
+    val alternatePhone: String
+)
+
+data class VerificationCenterUpsertRequest(
+    @field:NotBlank @field:Size(max = 160) val name: String,
+    @field:NotBlank @field:Size(max = 60) val centerKey: String,
+    @field:NotBlank @field:Size(max = 255) val address: String,
+    @field:NotNull val regionId: Long,
+    @field:NotBlank @field:Size(max = 160) val manager: String,
+    @field:Email @field:Size(max = 150) val email: String,
+    @field:NotBlank @field:Size(max = 30) val phone: String,
+    @field:NotBlank @field:Size(max = 30) val alternatePhone: String,
+    @field:NotBlank @field:Size(max = 120) val schedule: String
+)
+
+data class VerificationCenterResponse(
+    val id: Long,
+    val name: String,
+    val centerKey: String,
+    val address: String,
     val regionId: Long,
-    val regionName: String
+    val regionName: String,
+    val manager: String,
+    val email: String,
+    val phone: String,
+    val alternatePhone: String,
+    val schedule: String
 )
 
 data class VehicleUpsertRequest(
@@ -286,6 +338,10 @@ class AdminController(
         @Valid @RequestBody request: ClientUpsertRequest
     ): ClientResponse = adminService.createClient(principal.id, request)
 
+    @Operation(summary = "Get client company detail")
+    @GetMapping("/clients/{id}")
+    fun clientById(@PathVariable id: Long): ClientResponse = adminService.getClient(id)
+
     @Operation(summary = "Update a client company")
     @PutMapping("/clients/{id}")
     fun updateClient(
@@ -309,6 +365,80 @@ class AdminController(
     @Operation(summary = "List vehicle units")
     @GetMapping("/vehicles")
     fun vehicles(): List<VehicleResponse> = adminService.listVehicles()
+
+    @Operation(summary = "List CEDIS")
+    @GetMapping("/cedis")
+    fun cedis(): List<CedisResponse> = adminService.listCedis()
+
+    @Operation(summary = "Get CEDIS detail")
+    @GetMapping("/cedis/{id}")
+    fun cedisById(@PathVariable id: Long): CedisResponse = adminService.getCedis(id)
+
+    @Operation(summary = "Create a CEDIS")
+    @PostMapping("/cedis")
+    @ResponseStatus(HttpStatus.CREATED)
+    fun createCedis(
+        @Parameter(hidden = true)
+        @AuthenticationPrincipal principal: AppUserPrincipal,
+        @Valid @RequestBody request: CedisUpsertRequest
+    ): CedisResponse = adminService.createCedis(principal.id, request)
+
+    @Operation(summary = "Update a CEDIS")
+    @PutMapping("/cedis/{id}")
+    fun updateCedis(
+        @Parameter(hidden = true)
+        @AuthenticationPrincipal principal: AppUserPrincipal,
+        @PathVariable id: Long,
+        @Valid @RequestBody request: CedisUpsertRequest
+    ): CedisResponse = adminService.updateCedis(principal.id, id, request)
+
+    @Operation(summary = "Archive a CEDIS")
+    @DeleteMapping("/cedis/{id}")
+    fun deleteCedis(
+        @Parameter(hidden = true)
+        @AuthenticationPrincipal principal: AppUserPrincipal,
+        @PathVariable id: Long
+    ): ResponseEntity<Unit> {
+        adminService.archiveCedis(principal.id, id)
+        return ResponseEntity.noContent().build()
+    }
+
+    @Operation(summary = "List verification centers")
+    @GetMapping("/verification-centers")
+    fun verificationCenters(): List<VerificationCenterResponse> = adminService.listVerificationCenters()
+
+    @Operation(summary = "Get verification center detail")
+    @GetMapping("/verification-centers/{id}")
+    fun verificationCenterById(@PathVariable id: Long): VerificationCenterResponse = adminService.getVerificationCenter(id)
+
+    @Operation(summary = "Create a verification center")
+    @PostMapping("/verification-centers")
+    @ResponseStatus(HttpStatus.CREATED)
+    fun createVerificationCenter(
+        @Parameter(hidden = true)
+        @AuthenticationPrincipal principal: AppUserPrincipal,
+        @Valid @RequestBody request: VerificationCenterUpsertRequest
+    ): VerificationCenterResponse = adminService.createVerificationCenter(principal.id, request)
+
+    @Operation(summary = "Update a verification center")
+    @PutMapping("/verification-centers/{id}")
+    fun updateVerificationCenter(
+        @Parameter(hidden = true)
+        @AuthenticationPrincipal principal: AppUserPrincipal,
+        @PathVariable id: Long,
+        @Valid @RequestBody request: VerificationCenterUpsertRequest
+    ): VerificationCenterResponse = adminService.updateVerificationCenter(principal.id, id, request)
+
+    @Operation(summary = "Archive a verification center")
+    @DeleteMapping("/verification-centers/{id}")
+    fun deleteVerificationCenter(
+        @Parameter(hidden = true)
+        @AuthenticationPrincipal principal: AppUserPrincipal,
+        @PathVariable id: Long
+    ): ResponseEntity<Unit> {
+        adminService.archiveVerificationCenter(principal.id, id)
+        return ResponseEntity.noContent().build()
+    }
 
     @Operation(summary = "Create a vehicle unit")
     @PostMapping("/vehicles")
@@ -441,6 +571,8 @@ class AdminService(
     private val userRepository: UserRepository,
     private val regionRepository: RegionRepository,
     private val clientCompanyRepository: ClientCompanyRepository,
+    private val cedisRepository: CedisRepository,
+    private val verificationCenterRepository: VerificationCenterRepository,
     private val vehicleUnitRepository: VehicleUnitRepository,
     private val verificationOrderRepository: VerificationOrderRepository,
     private val orderUnitRepository: OrderUnitRepository,
@@ -467,7 +599,7 @@ class AdminService(
             email = request.email.trim().lowercase()
             fullName = request.fullName.trim()
             role = request.role
-            active = request.active
+            active = request.active ?: true
             passwordHash = passwordEncoder.encode(request.password!!) ?: throw IllegalStateException("Password encoder returned null")
         }
 
@@ -481,7 +613,7 @@ class AdminService(
         user.email = request.email.trim().lowercase()
         user.fullName = request.fullName.trim()
         user.role = request.role
-        user.active = request.active
+        user.active = request.active ?: true
         if (!request.password.isNullOrBlank()) {
             user.passwordHash = passwordEncoder.encode(request.password!!) ?: throw IllegalStateException("Password encoder returned null")
         }
@@ -522,29 +654,162 @@ class AdminService(
     @Transactional(readOnly = true)
     fun listClients(): List<ClientResponse> = clientCompanyRepository.findAllByArchivedFalseOrderByNameAsc().map { it.toResponse() }
 
-    @Transactional
-    fun createClient(actorId: Long, request: ClientUpsertRequest): ClientResponse =
-        clientCompanyRepository.save(
-            ClientCompany().apply {
-                name = request.name.trim()
-                taxId = request.taxId.trim().uppercase()
-                region = requireRegion(request.regionId)
-            }
-        ).alsoSaved(actorId, "CREATE_CLIENT", request.name).toResponse()
+    @Transactional(readOnly = true)
+    fun getClient(id: Long): ClientResponse = requireClient(id).toResponse()
 
     @Transactional
-    fun updateClient(actorId: Long, id: Long, request: ClientUpsertRequest): ClientResponse =
-        requireClient(id).apply {
-            name = request.name.trim()
-            taxId = request.taxId.trim().uppercase()
-            region = requireRegion(request.regionId)
+    fun createClient(actorId: Long, request: ClientUpsertRequest): ClientResponse {
+        val normalizedName = request.name.trim()
+        if (clientCompanyRepository.findByNameIgnoreCaseAndArchivedFalse(normalizedName) != null) {
+            throw BadRequestException("Ya existe un cliente con ese nombre")
+        }
+
+        return clientCompanyRepository.save(
+            ClientCompany().apply {
+                name = normalizedName
+                businessName = request.businessName.trim()
+                email = request.email.trim().lowercase()
+                phone = digitsOnly(request.phone)
+                alternatePhone = digitsOnly(request.alternatePhone)
+                manager = request.manager.trim()
+            }
+        ).alsoSaved(actorId, "CREATE_CLIENT", request.name).toResponse()
+    }
+
+    @Transactional
+    fun updateClient(actorId: Long, id: Long, request: ClientUpsertRequest): ClientResponse {
+        val client = requireClient(id)
+        val normalizedName = request.name.trim()
+        val existing = clientCompanyRepository.findByNameIgnoreCaseAndArchivedFalse(normalizedName)
+        if (existing != null && existing.id != client.id) {
+            throw BadRequestException("Ya existe un cliente con ese nombre")
+        }
+
+        return client.apply {
+            name = normalizedName
+            businessName = request.businessName.trim()
+            email = request.email.trim().lowercase()
+            phone = digitsOnly(request.phone)
+            alternatePhone = digitsOnly(request.alternatePhone)
+            manager = request.manager.trim()
         }.alsoSaved(actorId, "UPDATE_CLIENT", request.name).toResponse()
+    }
 
     @Transactional
     fun archiveClient(actorId: Long, id: Long) {
         val client = requireClient(id)
         client.archived = true
         logAction(actorId, "ARCHIVE_CLIENT", "CLIENT_COMPANY", client.id.toString(), mapOf("name" to client.name))
+    }
+
+    @Transactional(readOnly = true)
+    fun listCedis(): List<CedisResponse> = cedisRepository.findAllByArchivedFalseOrderByNameAsc().map { it.toResponse() }
+
+    @Transactional(readOnly = true)
+    fun getCedis(id: Long): CedisResponse = requireCedis(id).toResponse()
+
+    @Transactional
+    fun createCedis(actorId: Long, request: CedisUpsertRequest): CedisResponse =
+        cedisRepository.save(
+            Cedis().apply {
+                name = request.name.trim()
+                email = request.email.trim().lowercase()
+                phone = request.phone.trim()
+                alternatePhone = request.alternatePhone.trim()
+            }
+        ).alsoSaved(actorId, "CREATE_CEDIS", request.name).toResponse()
+
+    @Transactional
+    fun updateCedis(actorId: Long, id: Long, request: CedisUpsertRequest): CedisResponse =
+        requireCedis(id).apply {
+            name = request.name.trim()
+            email = request.email.trim().lowercase()
+            phone = request.phone.trim()
+            alternatePhone = request.alternatePhone.trim()
+        }.alsoSaved(actorId, "UPDATE_CEDIS", request.name).toResponse()
+
+    @Transactional
+    fun archiveCedis(actorId: Long, id: Long) {
+        val cedis = requireCedis(id)
+        cedis.archived = true
+        logAction(actorId, "ARCHIVE_CEDIS", "CEDIS", cedis.id.toString(), mapOf("name" to cedis.name))
+    }
+
+    @Transactional(readOnly = true)
+    fun listVerificationCenters(): List<VerificationCenterResponse> =
+        verificationCenterRepository.findAllByArchivedFalseOrderByNameAsc().map { it.toResponse() }
+
+    @Transactional(readOnly = true)
+    fun getVerificationCenter(id: Long): VerificationCenterResponse = requireVerificationCenter(id).toResponse()
+
+    @Transactional
+    fun createVerificationCenter(actorId: Long, request: VerificationCenterUpsertRequest): VerificationCenterResponse {
+        val normalizedName = request.name.trim()
+        val normalizedCenterKey = request.centerKey.trim().uppercase()
+
+        if (verificationCenterRepository.findByNameIgnoreCaseAndArchivedFalse(normalizedName) != null) {
+            throw BadRequestException("Ya existe un verificentro con ese nombre")
+        }
+
+        if (verificationCenterRepository.findByCenterKeyIgnoreCaseAndArchivedFalse(normalizedCenterKey) != null) {
+            throw BadRequestException("Ya existe un verificentro con esa clave")
+        }
+
+        return verificationCenterRepository.save(
+            VerificationCenter().apply {
+                name = normalizedName
+                centerKey = normalizedCenterKey
+                address = request.address.trim()
+                region = requireRegion(request.regionId)
+                manager = request.manager.trim()
+                email = request.email.trim().lowercase()
+                phone = digitsOnly(request.phone)
+                alternatePhone = digitsOnly(request.alternatePhone)
+                schedule = request.schedule.trim()
+            }
+        ).alsoSaved(actorId, "CREATE_VERIFICATION_CENTER", request.name).toResponse()
+    }
+
+    @Transactional
+    fun updateVerificationCenter(actorId: Long, id: Long, request: VerificationCenterUpsertRequest): VerificationCenterResponse {
+        val verificationCenter = requireVerificationCenter(id)
+        val normalizedName = request.name.trim()
+        val normalizedCenterKey = request.centerKey.trim().uppercase()
+
+        val existingByName = verificationCenterRepository.findByNameIgnoreCaseAndArchivedFalse(normalizedName)
+        if (existingByName != null && existingByName.id != verificationCenter.id) {
+            throw BadRequestException("Ya existe un verificentro con ese nombre")
+        }
+
+        val existingByCenterKey = verificationCenterRepository.findByCenterKeyIgnoreCaseAndArchivedFalse(normalizedCenterKey)
+        if (existingByCenterKey != null && existingByCenterKey.id != verificationCenter.id) {
+            throw BadRequestException("Ya existe un verificentro con esa clave")
+        }
+
+        return verificationCenter.apply {
+            name = normalizedName
+            centerKey = normalizedCenterKey
+            address = request.address.trim()
+            region = requireRegion(request.regionId)
+            manager = request.manager.trim()
+            email = request.email.trim().lowercase()
+            phone = digitsOnly(request.phone)
+            alternatePhone = digitsOnly(request.alternatePhone)
+            schedule = request.schedule.trim()
+        }.alsoSaved(actorId, "UPDATE_VERIFICATION_CENTER", request.name).toResponse()
+    }
+
+    @Transactional
+    fun archiveVerificationCenter(actorId: Long, id: Long) {
+        val verificationCenter = requireVerificationCenter(id)
+        verificationCenter.archived = true
+        logAction(
+            actorId,
+            "ARCHIVE_VERIFICATION_CENTER",
+            "VERIFICATION_CENTER",
+            verificationCenter.id.toString(),
+            mapOf("name" to verificationCenter.name)
+        )
     }
 
     @Transactional(readOnly = true)
@@ -729,9 +994,35 @@ class AdminService(
     private fun ClientCompany.toResponse(): ClientResponse = ClientResponse(
         id = id ?: 0L,
         name = name,
-        taxId = taxId,
+        businessName = businessName,
+        email = email,
+        phone = phone,
+        alternatePhone = alternatePhone,
+        manager = manager,
+        regionId = region?.id,
+        regionName = region?.name
+    )
+
+    private fun Cedis.toResponse(): CedisResponse = CedisResponse(
+        id = id ?: 0L,
+        name = name,
+        email = email,
+        phone = phone,
+        alternatePhone = alternatePhone
+    )
+
+    private fun VerificationCenter.toResponse(): VerificationCenterResponse = VerificationCenterResponse(
+        id = id ?: 0L,
+        name = name,
+        centerKey = centerKey,
+        address = address,
         regionId = region.id ?: 0L,
-        regionName = region.name
+        regionName = region.name,
+        manager = manager,
+        email = email,
+        phone = phone,
+        alternatePhone = alternatePhone,
+        schedule = schedule
     )
 
     private fun VehicleUnit.toResponse(): VehicleResponse = VehicleResponse(
@@ -823,6 +1114,22 @@ class AdminService(
                 }
             }
 
+    private fun requireCedis(id: Long): Cedis =
+        cedisRepository.findById(id).orElseThrow { NotFoundException("CEDIS $id was not found") }
+            .also {
+                if (it.archived) {
+                    throw NotFoundException("CEDIS $id was not found")
+                }
+            }
+
+    private fun requireVerificationCenter(id: Long): VerificationCenter =
+        verificationCenterRepository.findById(id).orElseThrow { NotFoundException("Verification center $id was not found") }
+            .also {
+                if (it.archived) {
+                    throw NotFoundException("Verification center $id was not found")
+                }
+            }
+
     private fun requireVehicle(id: Long): VehicleUnit =
         vehicleUnitRepository.findById(id).orElseThrow { NotFoundException("Vehicle $id was not found") }
             .also {
@@ -837,6 +1144,8 @@ class AdminService(
                 throw BadRequestException("Vehicle $id does not belong to client $clientId")
             }
         }
+
+    private fun digitsOnly(value: String): String = value.filter(Char::isDigit)
 
     private fun requireOrder(id: Long): VerificationOrder =
         verificationOrderRepository.findById(id).orElseThrow { NotFoundException("Order $id was not found") }
@@ -861,6 +1170,8 @@ class AdminService(
             is User -> id.toString()
             is Region -> id.toString()
             is ClientCompany -> id.toString()
+            is Cedis -> id.toString()
+            is VerificationCenter -> id.toString()
             is VehicleUnit -> id.toString()
             is VerificationOrder -> id.toString()
             is Payment -> id.toString()

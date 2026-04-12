@@ -26,6 +26,7 @@ import com.sivemor.platform.support.TestEntityFactory.region
 import com.sivemor.platform.support.TestEntityFactory.templateWithSection
 import com.sivemor.platform.support.TestEntityFactory.user
 import com.sivemor.platform.support.TestEntityFactory.vehicle
+import com.sivemor.platform.support.TestEntityFactory.verificationCenter
 import com.sivemor.platform.support.TestEntityFactory.verificationOrder
 import io.mockk.MockKAnnotations
 import io.mockk.Runs
@@ -46,6 +47,7 @@ class AdminServiceTest {
     @MockK private lateinit var regionRepository: RegionRepository
     @MockK private lateinit var clientCompanyRepository: ClientCompanyRepository
     @MockK private lateinit var cedisRepository: CedisRepository
+    @MockK private lateinit var verificationCenterRepository: com.sivemor.platform.domain.VerificationCenterRepository
     @MockK private lateinit var vehicleUnitRepository: VehicleUnitRepository
     @MockK private lateinit var verificationOrderRepository: VerificationOrderRepository
     @MockK private lateinit var orderUnitRepository: OrderUnitRepository
@@ -64,6 +66,7 @@ class AdminServiceTest {
             regionRepository,
             clientCompanyRepository,
             cedisRepository,
+            verificationCenterRepository,
             vehicleUnitRepository,
             verificationOrderRepository,
             orderUnitRepository,
@@ -172,8 +175,90 @@ class AdminServiceTest {
 
         val result = adminService.listCedis()
 
-        assertThat(result).extracting(CedisResponse::name).containsExactly("CEDIS Centro", "CEDIS Norte")
+        assertThat(result.map { it.name }).containsExactly("CEDIS Centro", "CEDIS Norte")
         assertThat(result.first().email).isEqualTo(first.email)
+    }
+
+    @Test
+    fun `createClient normalizes contact data and audits new records`() {
+        val actor = user(id = 99L, username = "admin", role = Role.ADMIN)
+        every { clientCompanyRepository.findByNameIgnoreCaseAndArchivedFalse("Coca-Cola") } returns null
+        every { clientCompanyRepository.save(any()) } answers { firstArg() }
+        every { userRepository.findById(99L) } returns Optional.of(actor)
+
+        val result = adminService.createClient(
+            99L,
+            ClientUpsertRequest(
+                name = "  Coca-Cola  ",
+                businessName = "  Coca-Cola Femsa  ",
+                email = "  Clientes@CocaCola.com ",
+                phone = "777-450-1100",
+                alternatePhone = "(777) 450 2200",
+                manager = "  Gestor principal  "
+            )
+        )
+
+        assertThat(result.name).isEqualTo("Coca-Cola")
+        assertThat(result.businessName).isEqualTo("Coca-Cola Femsa")
+        assertThat(result.email).isEqualTo("clientes@cocacola.com")
+        assertThat(result.phone).isEqualTo("7774501100")
+        assertThat(result.alternatePhone).isEqualTo("7774502200")
+        assertThat(result.manager).isEqualTo("Gestor principal")
+        verify { auditService.log(actor, "CREATE_CLIENT", "ClientCompany", any(), any()) }
+    }
+
+    @Test
+    fun `getClient rejects archived records`() {
+        every { clientCompanyRepository.findById(77L) } returns Optional.of(client(id = 77L, archived = true))
+
+        assertThatThrownBy {
+            adminService.getClient(77L)
+        }.isInstanceOf(NotFoundException::class.java)
+            .hasMessage("Client 77 was not found")
+    }
+
+    @Test
+    fun `createVerificationCenter normalizes contact data and audits new records`() {
+        val actor = user(id = 99L, username = "admin", role = Role.ADMIN)
+        val region = region(id = 10L, name = "Centro")
+        every { verificationCenterRepository.findByNameIgnoreCaseAndArchivedFalse("Verificentro Centro") } returns null
+        every { verificationCenterRepository.findByCenterKeyIgnoreCaseAndArchivedFalse("VER-MOR-002") } returns null
+        every { verificationCenterRepository.save(any()) } answers { firstArg() }
+        every { regionRepository.findById(10L) } returns Optional.of(region)
+        every { userRepository.findById(99L) } returns Optional.of(actor)
+
+        val result = adminService.createVerificationCenter(
+            99L,
+            VerificationCenterUpsertRequest(
+                name = "  Verificentro Centro  ",
+                centerKey = " ver-mor-002 ",
+                address = "  Av. Plan de Ayala 450  ",
+                regionId = 10L,
+                manager = "  Ing. Roberto Estrada ",
+                email = " Contacto@Verisur-Mor.mx ",
+                phone = "777-102-3040",
+                alternatePhone = "777 312 4568",
+                schedule = "  Lun - Sab: 08:00 a 19:00 "
+            )
+        )
+
+        assertThat(result.name).isEqualTo("Verificentro Centro")
+        assertThat(result.centerKey).isEqualTo("VER-MOR-002")
+        assertThat(result.email).isEqualTo("contacto@verisur-mor.mx")
+        assertThat(result.phone).isEqualTo("7771023040")
+        assertThat(result.alternatePhone).isEqualTo("7773124568")
+        assertThat(result.regionName).isEqualTo("Centro")
+        verify { auditService.log(actor, "CREATE_VERIFICATION_CENTER", "VerificationCenter", any(), any()) }
+    }
+
+    @Test
+    fun `getVerificationCenter rejects archived records`() {
+        every { verificationCenterRepository.findById(77L) } returns Optional.of(verificationCenter(id = 77L, archived = true))
+
+        assertThatThrownBy {
+            adminService.getVerificationCenter(77L)
+        }.isInstanceOf(NotFoundException::class.java)
+            .hasMessage("Verification center 77 was not found")
     }
 
     @Test

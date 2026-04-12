@@ -25,12 +25,6 @@ const regionSchema = z.object({
   name: schemaHelpers.requiredText("Nombre")
 });
 
-const clientSchema = z.object({
-  name: schemaHelpers.requiredText("Nombre"),
-  taxId: schemaHelpers.requiredText("RFC"),
-  regionId: z.string().min(1, "La región es obligatoria")
-});
-
 const vehicleSchema = z.object({
   clientCompanyId: z.string().min(1, "El cliente es obligatorio"),
   plate: schemaHelpers.requiredText("Placa"),
@@ -155,41 +149,81 @@ export function RegionsPage() {
 }
 
 export function ClientsPage() {
-  const { regions } = useLookups();
+  const navigate = useNavigate();
+  const [feedbackMessage] = useState(() => consumeFlashMessage());
 
   return (
     <ResourceTablePage
       title="Clientes"
+      description="Administra los clientes registrados en el sistema."
       endpoint="clients"
       queryKey={["clients"]}
+      feedbackMessage={feedbackMessage}
+      createLabel="Agregar nuevo cliente"
+      loadingMessage="Cargando clientes..."
+      emptyTitle="No hay clientes registrados"
+      emptyDescription="Cuando existan clientes registrados apareceran aqui."
+      errorMessage="Error al cargar los clientes"
+      deleteDialogTitle="Eliminar cliente"
+      deleteDialogDescription="Deseas eliminar este cliente?"
+      deleteSuccessMessage="Cliente eliminado correctamente"
+      extraInvalidateQueryKeys={[["clients-lookup"]]}
+      onCreateAction={() => void navigate({ to: "/clients/nuevo" })}
       columns={[
-        { header: "Empresa", render: (row) => renderLinkedText(row.name), searchableText: (row) => row.name },
-        { header: "RFC", render: (row) => row.taxId, searchableText: (row) => row.taxId },
-        { header: "Región", render: (row) => row.regionName, searchableText: (row) => row.regionName }
-      ]}
-      schema={clientSchema}
-      fields={[
-        { name: "name", label: "Empresa", type: "text" },
-        { name: "taxId", label: "RFC", type: "text" },
+        { header: "Nombre", render: (row) => renderLinkedText(row.name), searchableText: (row) => row.name },
+        { header: "Correo", render: (row) => row.email, searchableText: (row) => row.email },
+        { header: "Teléfono", render: (row) => row.phone, searchableText: (row) => row.phone },
         {
-          name: "regionId",
-          label: "Región",
-          type: "select",
-          options: (regions.data ?? []).map((item) => ({
-            label: item.name,
-            value: String(item.id)
-          }))
+          header: "Teléfono alternativo",
+          render: (row) => row.alternatePhone,
+          searchableText: (row) => row.alternatePhone
         }
       ]}
-      defaultValues={{ name: "", taxId: "", regionId: "" }}
-      toPayload={(values) => ({
-        ...values,
-        regionId: Number(values.regionId)
+      renderRowActions={(row, { requestDelete }) => (
+        <div className="flex justify-end gap-2">
+          <SecondaryActionButton
+            type="button"
+            onClick={() => void navigate({ to: "/clients/$id", params: { id: String(row.id) } })}
+          >
+            Ver información
+          </SecondaryActionButton>
+          <SecondaryActionButton type="button" onClick={() => requestDelete(row)}>
+            Eliminar
+          </SecondaryActionButton>
+        </div>
+      )}
+      schema={z.object({
+        name: schemaHelpers.requiredText("Nombre"),
+        businessName: schemaHelpers.requiredText("Razón social"),
+        email: z.string().email("Correo inválido"),
+        phone: schemaHelpers.requiredText("Teléfono"),
+        alternatePhone: schemaHelpers.requiredText("Teléfono alternativo"),
+        manager: schemaHelpers.requiredText("Gestor")
       })}
+      fields={[
+        { name: "name", label: "Nombre", type: "text" },
+        { name: "businessName", label: "Razón social", type: "text" },
+        { name: "email", label: "Correo", type: "text" },
+        { name: "phone", label: "Teléfono", type: "text" },
+        { name: "alternatePhone", label: "Teléfono alternativo", type: "text" },
+        { name: "manager", label: "Gestor", type: "text" }
+      ]}
+      defaultValues={{
+        name: "",
+        businessName: "",
+        email: "",
+        phone: "",
+        alternatePhone: "",
+        manager: ""
+      }}
+      toPayload={(values) => values}
       toFormValues={(row) => ({
         name: row.name,
-        taxId: row.taxId,
-        regionId: String(row.regionId)
+        businessName: row.businessName,
+        email: row.email,
+        phone: row.phone,
+        alternatePhone: row.alternatePhone,
+        manager: row.manager
       })}
     />
   );
@@ -273,6 +307,163 @@ export function VehiclesPage() {
         brand: row.brand,
         model: row.model
       })}
+    />
+  );
+}
+
+export function CedisPage() {
+  const navigate = useNavigate();
+  const [feedbackMessage] = useState(() => consumeFlashMessage());
+
+  return (
+    <ResourceTablePage
+      title="CEDIS"
+      description="Administra los centros de distribucion registrados en el sistema."
+      endpoint="cedis"
+      queryKey={["cedis"]}
+      feedbackMessage={feedbackMessage}
+      createLabel="Agregar nuevo CEDIS"
+      loadingMessage="Cargando CEDIS..."
+      emptyTitle="No hay CEDIS registrados"
+      emptyDescription="Cuando existan CEDIS registrados apareceran aqui."
+      errorMessage="Error al cargar los CEDIS"
+      deleteDialogTitle="Eliminar CEDIS"
+      deleteDialogDescription="Deseas eliminar este CEDIS?"
+      deleteSuccessMessage="CEDIS eliminado correctamente"
+      onCreateAction={() => void navigate({ to: "/cedis/nuevo" })}
+      columns={[
+        { header: "Nombre", render: (row) => renderLinkedText(row.name), searchableText: (row) => row.name },
+        { header: "Correo", render: (row) => row.email, searchableText: (row) => row.email },
+        { header: "Telefono", render: (row) => row.phone, searchableText: (row) => row.phone },
+        {
+          header: "Telefono alternativo",
+          render: (row) => row.alternatePhone,
+          searchableText: (row) => row.alternatePhone
+        }
+      ]}
+      renderRowActions={(row, { requestDelete }) => (
+        <div className="flex justify-end gap-2">
+          <SecondaryActionButton
+            type="button"
+            onClick={() => void navigate({ to: "/cedis/$id", params: { id: String(row.id) } })}
+          >
+            Ver informacion
+          </SecondaryActionButton>
+          <SecondaryActionButton
+            type="button"
+            onClick={() => requestDelete(row)}
+          >
+            Eliminar
+          </SecondaryActionButton>
+        </div>
+      )}
+      schema={z.object({
+        name: schemaHelpers.requiredText("Nombre"),
+        email: z.string().email("Correo invalido"),
+        phone: schemaHelpers.requiredText("Telefono"),
+        alternatePhone: schemaHelpers.requiredText("Telefono alternativo")
+      })}
+      fields={[
+        { name: "name", label: "Nombre", type: "text" },
+        { name: "email", label: "Correo", type: "text" },
+        { name: "phone", label: "Telefono", type: "text" },
+        { name: "alternatePhone", label: "Telefono alternativo", type: "text" }
+      ]}
+      defaultValues={{
+        name: "",
+        email: "",
+        phone: "",
+        alternatePhone: ""
+      }}
+      toPayload={(values) => values}
+      toFormValues={(row) => ({
+        name: row.name,
+        email: row.email,
+        phone: row.phone,
+        alternatePhone: row.alternatePhone
+      })}
+    />
+  );
+}
+
+export function VerificationCentersPage() {
+  const navigate = useNavigate();
+  const [feedbackMessage] = useState(() => consumeFlashMessage());
+
+  return (
+    <ResourceTablePage
+      title="Verificentros"
+      description="Administra los verificentros registrados en el sistema."
+      endpoint="verification-centers"
+      queryKey={["verification-centers"]}
+      feedbackMessage={feedbackMessage}
+      createLabel="Agregar nuevo verificentro"
+      loadingMessage="Cargando verificentros..."
+      emptyTitle="No hay verificentros registrados"
+      emptyDescription="Cuando existan verificentros registrados apareceran aqui."
+      errorMessage="Error al cargar los verificentros"
+      deleteDialogTitle="Eliminar verificentro"
+      deleteDialogDescription="Deseas eliminar este verificentro?"
+      deleteSuccessMessage="Verificentro eliminado correctamente"
+      onCreateAction={() => void navigate({ to: "/verification-centers/nuevo" })}
+      columns={[
+        { header: "Nombre", render: (row) => renderLinkedText(row.name), searchableText: (row) => row.name },
+        { header: "Correo", render: (row) => row.email, searchableText: (row) => row.email },
+        { header: "Teléfono", render: (row) => row.phone, searchableText: (row) => row.phone },
+        {
+          header: "Teléfono alternativo",
+          render: (row) => row.alternatePhone,
+          searchableText: (row) => row.alternatePhone
+        }
+      ]}
+      renderRowActions={(row, { requestDelete }) => (
+        <div className="flex justify-end gap-2">
+          <SecondaryActionButton
+            type="button"
+            onClick={() => void navigate({ to: "/verification-centers/$id", params: { id: String(row.id) } })}
+          >
+            Ver información
+          </SecondaryActionButton>
+          <SecondaryActionButton type="button" onClick={() => requestDelete(row)}>
+            Eliminar
+          </SecondaryActionButton>
+        </div>
+      )}
+      schema={z.object({
+        name: schemaHelpers.requiredText("Nombre"),
+        centerKey: schemaHelpers.requiredText("Clave de verificentro"),
+        address: schemaHelpers.requiredText("Direccion"),
+        regionId: z.string().min(1, "Region es obligatoria"),
+        manager: schemaHelpers.requiredText("Responsable"),
+        email: z.string().email("Correo inválido"),
+        phone: schemaHelpers.requiredText("Teléfono"),
+        alternatePhone: schemaHelpers.requiredText("Teléfono alternativo"),
+        schedule: schemaHelpers.requiredText("Horario")
+      })}
+      fields={[
+        { name: "name", label: "Nombre", type: "text" },
+        { name: "centerKey", label: "Clave de verificentro", type: "text" },
+        { name: "address", label: "Direccion", type: "text" },
+        { name: "regionId", label: "Region", type: "text" },
+        { name: "manager", label: "Responsable", type: "text" },
+        { name: "email", label: "Correo", type: "text" },
+        { name: "phone", label: "Teléfono", type: "text" },
+        { name: "alternatePhone", label: "Teléfono alternativo", type: "text" },
+        { name: "schedule", label: "Horario", type: "text" }
+      ]}
+      defaultValues={{
+        name: "",
+        centerKey: "",
+        address: "",
+        regionId: "",
+        manager: "",
+        email: "",
+        phone: "",
+        alternatePhone: "",
+        schedule: ""
+      }}
+      toPayload={(values) => values}
+      toFormValues={(row) => row}
     />
   );
 }

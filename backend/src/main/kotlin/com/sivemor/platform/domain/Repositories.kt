@@ -28,10 +28,17 @@ interface RegionRepository : JpaRepository<Region, Long> {
 
 interface ClientCompanyRepository : JpaRepository<ClientCompany, Long> {
     fun findAllByArchivedFalseOrderByNameAsc(): List<ClientCompany>
+    fun findByNameIgnoreCaseAndArchivedFalse(name: String): ClientCompany?
 }
 
 interface CedisRepository : JpaRepository<Cedis, Long> {
     fun findAllByArchivedFalseOrderByNameAsc(): List<Cedis>
+}
+
+interface VerificationCenterRepository : JpaRepository<VerificationCenter, Long> {
+    fun findAllByArchivedFalseOrderByNameAsc(): List<VerificationCenter>
+    fun findByNameIgnoreCaseAndArchivedFalse(name: String): VerificationCenter?
+    fun findByCenterKeyIgnoreCaseAndArchivedFalse(centerKey: String): VerificationCenter?
 }
 
 interface VehicleUnitRepository : JpaRepository<VehicleUnit, Long> {

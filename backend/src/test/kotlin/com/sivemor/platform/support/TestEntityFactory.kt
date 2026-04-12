@@ -22,6 +22,7 @@ import com.sivemor.platform.domain.User
 import com.sivemor.platform.domain.VehicleCategory
 import com.sivemor.platform.domain.VehicleUnit
 import com.sivemor.platform.domain.VerificationOrder
+import com.sivemor.platform.domain.VerificationCenter
 import com.sivemor.platform.domain.VerificationOrderStatus
 import java.math.BigDecimal
 import java.time.Instant
@@ -77,6 +78,11 @@ object TestEntityFactory {
     ) = ClientCompany().apply {
         this.id = id
         this.name = name
+        businessName = "$name SA de CV"
+        email = "client$id@example.com"
+        phone = "77745011$id"
+        alternatePhone = "77745022$id"
+        manager = "Manager $id"
         taxId = "RFC$id"
         this.region = region
         this.archived = archived
@@ -92,6 +98,25 @@ object TestEntityFactory {
         email = "cedis$id@example.com"
         phone = "77745011$id"
         alternatePhone = "77745022$id"
+        this.archived = archived
+    }
+
+    fun verificationCenter(
+        id: Long = 1L,
+        name: String = "Verificentro $id",
+        region: Region = region(),
+        archived: Boolean = false
+    ) = VerificationCenter().apply {
+        this.id = id
+        this.name = name
+        centerKey = "VER-MOR-00$id"
+        address = "Direccion $id"
+        this.region = region
+        manager = "Responsable $id"
+        email = "verification$id@example.com"
+        phone = "77720011$id"
+        alternatePhone = "77720022$id"
+        schedule = "Lun - Vie 08:00 - 18:00"
         this.archived = archived
     }
 
@@ -114,7 +139,7 @@ object TestEntityFactory {
     fun verificationOrder(
         id: Long = 1L,
         client: ClientCompany = client(),
-        region: Region = client.region,
+        region: Region = client.region ?: region(),
         technician: User = user(id = 2L, role = Role.TECHNICIAN),
         status: VerificationOrderStatus = VerificationOrderStatus.OPEN
     ) = VerificationOrder().apply {

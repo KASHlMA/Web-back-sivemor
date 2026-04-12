@@ -105,7 +105,7 @@ function VehicleFormPage({ mode }) {
     const selectedClient = (clientsQuery.data ?? []).find(
       (item) => String(item.id) === watchedValues.clientCompanyId
     );
-    return selectedClient ? String(selectedClient.regionId) : "";
+    return selectedClient?.regionId ? String(selectedClient.regionId) : "";
   }, [clientsQuery.data, watchedValues.clientCompanyId]);
 
   const vehicleRecord = useMemo(() => {
@@ -156,7 +156,7 @@ function VehicleFormPage({ mode }) {
       plate: vehicleRecord.plate,
       category: vehicleRecord.category,
       clientCompanyId: String(vehicleRecord.clientCompanyId),
-      regionId: matchedClient ? String(matchedClient.regionId) : "",
+      regionId: matchedClient?.regionId ? String(matchedClient.regionId) : "",
       brand: vehicleRecord.brand,
       model: vehicleRecord.model
     });

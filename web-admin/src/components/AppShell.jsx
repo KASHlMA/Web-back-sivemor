@@ -6,7 +6,7 @@ import { ChevronIcon, LogoutIcon, MenuIcon, cx } from "./AdminPrimitives";
 
 const navigationItems = [
   { label: "Dashboard", to: "/" },
-  { label: "Vehículos", to: "/vehicles" },
+  { label: "Vehiculos", to: "/vehicles" },
   { label: "Pedidos", to: "/orders" },
   { label: "Usuarios", to: "/users" },
   { label: "Clientes", to: "/clients" },
@@ -18,7 +18,7 @@ const navigationItems = [
 
 export function ProtectedPage({ children }) {
   const navigate = useNavigate();
-  const { session } = useAuth();
+  const { session, logout, isAdmin } = useAuth();
 
   useEffect(() => {
     if (!session) {
@@ -26,7 +26,15 @@ export function ProtectedPage({ children }) {
     }
   }, [navigate, session]);
 
-  if (!session) {
+  useEffect(() => {
+    if (session && !isAdmin) {
+      void logout().finally(() => {
+        void navigate({ to: "/login" });
+      });
+    }
+  }, [isAdmin, logout, navigate, session]);
+
+  if (!session || !isAdmin) {
     return null;
   }
 
@@ -41,10 +49,20 @@ function AppShell({ children }) {
   const navigate = useNavigate();
   const { session, logout } = useAuth();
   const vehiclesSelected = pathname === "/vehicles" || pathname.startsWith("/vehiculos");
+  const cedisSelected = pathname === "/cedis" || pathname.startsWith("/cedis/");
+  const verificationCentersSelected = pathname === "/verification-centers" || pathname.startsWith("/verification-centers/");
 
   const title = useMemo(() => {
     if (pathname.startsWith("/vehiculos")) {
-      return "Vehículos";
+      return "Vehiculos";
+    }
+
+    if (pathname.startsWith("/cedis")) {
+      return "CEDIS";
+    }
+
+    if (pathname.startsWith("/verification-centers")) {
+      return "Verificentros";
     }
 
     return navigationItems.find((item) => item.to === pathname)?.label ?? "SIVEMOR";
@@ -63,14 +81,14 @@ function AppShell({ children }) {
             type="button"
             onClick={() => setMobileOpen((value) => !value)}
             className="inline-flex rounded-md p-2 transition hover:bg-white/10 lg:hidden"
-            aria-label="Abrir menú"
+            aria-label="Abrir menu"
           >
             <MenuIcon />
           </button>
           <img src={brandAssets.logoLight} alt="SIVEMOR" className="w-[74px] md:w-[92px]" />
           <div className="min-w-0 flex-1">
             <h1 className="text-[2rem] font-bold leading-none">SIVEMOR</h1>
-            <p className="mt-1 text-sm text-white/95">Sistema de Verificación de Morelos</p>
+            <p className="mt-1 text-sm text-white/95">Sistema de Verificacion de Morelos</p>
           </div>
           <p className="hidden text-base font-bold tracking-[0.02em] md:block">{title}</p>
         </div>
@@ -87,7 +105,15 @@ function AppShell({ children }) {
             <div className="min-h-[72px] border-b border-b-[var(--border-strong)] bg-[var(--shell-dark)]" />
             <nav className="flex flex-col">
               {navigationItems.map((item, index) => {
-                const selected = item.to === "/vehicles" ? vehiclesSelected : pathname === item.to;
+                const selected =
+                  item.to === "/vehicles"
+                    ? vehiclesSelected
+                    : item.to === "/cedis"
+                      ? cedisSelected
+                      : item.to === "/verification-centers"
+                        ? verificationCentersSelected
+                        : pathname === item.to;
+
                 return (
                   <button
                     key={item.to}
@@ -118,7 +144,7 @@ function AppShell({ children }) {
                 className="flex w-full items-center justify-center gap-2 rounded-lg bg-[var(--shell-dark-strong)] px-3 py-2.5 text-sm font-bold text-white transition hover:bg-[#0f3023]"
               >
                 <LogoutIcon />
-                Cerrar sesión
+                Cerrar sesion
               </button>
             </div>
           </div>
@@ -129,7 +155,7 @@ function AppShell({ children }) {
             type="button"
             onClick={() => setMobileOpen(false)}
             className="fixed inset-0 top-[120px] z-20 bg-[#173126]/30 lg:hidden"
-            aria-label="Cerrar menú"
+            aria-label="Cerrar menu"
           />
         ) : null}
 

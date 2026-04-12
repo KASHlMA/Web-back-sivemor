@@ -3,6 +3,7 @@ package com.sivemor.platform.admin
 import com.sivemor.platform.common.BadRequestException
 import com.sivemor.platform.common.NotFoundException
 import com.sivemor.platform.domain.AnswerValue
+import com.sivemor.platform.domain.CedisRepository
 import com.sivemor.platform.domain.ClientCompanyRepository
 import com.sivemor.platform.domain.InspectionRepository
 import com.sivemor.platform.domain.InspectionResult
@@ -16,6 +17,7 @@ import com.sivemor.platform.domain.VehicleUnitRepository
 import com.sivemor.platform.domain.VerificationOrderRepository
 import com.sivemor.platform.service.AuditService
 import com.sivemor.platform.support.TestEntityFactory.client
+import com.sivemor.platform.support.TestEntityFactory.cedis
 import com.sivemor.platform.support.TestEntityFactory.inspection
 import com.sivemor.platform.support.TestEntityFactory.inspectionAnswer
 import com.sivemor.platform.support.TestEntityFactory.inspectionEvidence
@@ -24,6 +26,7 @@ import com.sivemor.platform.support.TestEntityFactory.region
 import com.sivemor.platform.support.TestEntityFactory.templateWithSection
 import com.sivemor.platform.support.TestEntityFactory.user
 import com.sivemor.platform.support.TestEntityFactory.vehicle
+import com.sivemor.platform.support.TestEntityFactory.verificationCenter
 import com.sivemor.platform.support.TestEntityFactory.verificationOrder
 import io.mockk.MockKAnnotations
 import io.mockk.Runs
@@ -43,6 +46,8 @@ class AdminServiceTest {
     @MockK private lateinit var userRepository: UserRepository
     @MockK private lateinit var regionRepository: RegionRepository
     @MockK private lateinit var clientCompanyRepository: ClientCompanyRepository
+    @MockK private lateinit var cedisRepository: CedisRepository
+    @MockK private lateinit var verificationCenterRepository: com.sivemor.platform.domain.VerificationCenterRepository
     @MockK private lateinit var vehicleUnitRepository: VehicleUnitRepository
     @MockK private lateinit var verificationOrderRepository: VerificationOrderRepository
     @MockK private lateinit var orderUnitRepository: OrderUnitRepository
@@ -60,6 +65,8 @@ class AdminServiceTest {
             userRepository,
             regionRepository,
             clientCompanyRepository,
+            cedisRepository,
+            verificationCenterRepository,
             vehicleUnitRepository,
             verificationOrderRepository,
             orderUnitRepository,
@@ -157,6 +164,156 @@ class AdminServiceTest {
         assertThat(response.orderNumber).isEqualTo("ORDER-1")
         assertThat(response.units).hasSize(1)
         verify { auditService.log(actor, "CREATE_ORDER", "VerificationOrder", any(), any()) }
+    }
+
+    @Test
+    fun `listCedis returns only active records ordered by name`() {
+        val first = cedis(id = 10L, name = "CEDIS Centro")
+        val second = cedis(id = 11L, name = "CEDIS Norte")
+
+        every { cedisRepository.findAllByArchivedFalseOrderByNameAsc() } returns listOf(first, second)
+
+        val result = adminService.listCedis()
+
+        assertThat(result.map { it.name }).containsExactly("CEDIS Centro", "CEDIS Norte")
+        assertThat(result.first().email).isEqualTo(first.email)
+    }
+
+    @Test
+    fun `createClient normalizes contact data and audits new records`() {
+        val actor = user(id = 99L, username = "admin", role = Role.ADMIN)
+        every { clientCompanyRepository.findByNameIgnoreCaseAndArchivedFalse("Coca-Cola") } returns null
+        every { clientCompanyRepository.save(any()) } answers { firstArg() }
+        every { userRepository.findById(99L) } returns Optional.of(actor)
+
+        val result = adminService.createClient(
+            99L,
+            ClientUpsertRequest(
+                name = "  Coca-Cola  ",
+                businessName = "  Coca-Cola Femsa  ",
+                email = "  Clientes@CocaCola.com ",
+                phone = "777-450-1100",
+                alternatePhone = "(777) 450 2200",
+                manager = "  Gestor principal  "
+            )
+        )
+
+        assertThat(result.name).isEqualTo("Coca-Cola")
+        assertThat(result.businessName).isEqualTo("Coca-Cola Femsa")
+        assertThat(result.email).isEqualTo("clientes@cocacola.com")
+        assertThat(result.phone).isEqualTo("7774501100")
+        assertThat(result.alternatePhone).isEqualTo("7774502200")
+        assertThat(result.manager).isEqualTo("Gestor principal")
+        verify { auditService.log(actor, "CREATE_CLIENT", "ClientCompany", any(), any()) }
+    }
+
+    @Test
+    fun `getClient rejects archived records`() {
+        every { clientCompanyRepository.findById(77L) } returns Optional.of(client(id = 77L, archived = true))
+
+        assertThatThrownBy {
+            adminService.getClient(77L)
+        }.isInstanceOf(NotFoundException::class.java)
+            .hasMessage("Client 77 was not found")
+    }
+
+    @Test
+    fun `createVerificationCenter normalizes contact data and audits new records`() {
+        val actor = user(id = 99L, username = "admin", role = Role.ADMIN)
+        val region = region(id = 10L, name = "Centro")
+        every { verificationCenterRepository.findByNameIgnoreCaseAndArchivedFalse("Verificentro Centro") } returns null
+        every { verificationCenterRepository.findByCenterKeyIgnoreCaseAndArchivedFalse("VER-MOR-002") } returns null
+        every { verificationCenterRepository.save(any()) } answers { firstArg() }
+        every { regionRepository.findById(10L) } returns Optional.of(region)
+        every { userRepository.findById(99L) } returns Optional.of(actor)
+
+        val result = adminService.createVerificationCenter(
+            99L,
+            VerificationCenterUpsertRequest(
+                name = "  Verificentro Centro  ",
+                centerKey = " ver-mor-002 ",
+                address = "  Av. Plan de Ayala 450  ",
+                regionId = 10L,
+                manager = "  Ing. Roberto Estrada ",
+                email = " Contacto@Verisur-Mor.mx ",
+                phone = "777-102-3040",
+                alternatePhone = "777 312 4568",
+                schedule = "  Lun - Sab: 08:00 a 19:00 "
+            )
+        )
+
+        assertThat(result.name).isEqualTo("Verificentro Centro")
+        assertThat(result.centerKey).isEqualTo("VER-MOR-002")
+        assertThat(result.email).isEqualTo("contacto@verisur-mor.mx")
+        assertThat(result.phone).isEqualTo("7771023040")
+        assertThat(result.alternatePhone).isEqualTo("7773124568")
+        assertThat(result.regionName).isEqualTo("Centro")
+        verify { auditService.log(actor, "CREATE_VERIFICATION_CENTER", "VerificationCenter", any(), any()) }
+    }
+
+    @Test
+    fun `getVerificationCenter rejects archived records`() {
+        every { verificationCenterRepository.findById(77L) } returns Optional.of(verificationCenter(id = 77L, archived = true))
+
+        assertThatThrownBy {
+            adminService.getVerificationCenter(77L)
+        }.isInstanceOf(NotFoundException::class.java)
+            .hasMessage("Verification center 77 was not found")
+    }
+
+    @Test
+    fun `createCedis normalizes and audits new records`() {
+        val actor = user(id = 99L, username = "admin", role = Role.ADMIN)
+        every { cedisRepository.save(any()) } answers { firstArg() }
+        every { userRepository.findById(99L) } returns Optional.of(actor)
+
+        val result = adminService.createCedis(
+            99L,
+            CedisUpsertRequest(
+                name = "  CEDIS Norte  ",
+                email = "  Norte@Empresa.com ",
+                phone = " 7774501122 ",
+                alternatePhone = " 7774501100 "
+            )
+        )
+
+        assertThat(result.name).isEqualTo("CEDIS Norte")
+        assertThat(result.email).isEqualTo("norte@empresa.com")
+        assertThat(result.phone).isEqualTo("7774501122")
+        assertThat(result.alternatePhone).isEqualTo("7774501100")
+        verify { auditService.log(actor, "CREATE_CEDIS", "Cedis", any(), any()) }
+    }
+
+    @Test
+    fun `archiveCedis marks record as archived`() {
+        val actor = user(id = 99L, username = "admin", role = Role.ADMIN)
+        val target = cedis(id = 33L, name = "CEDIS Sur")
+
+        every { cedisRepository.findById(33L) } returns Optional.of(target)
+        every { userRepository.findById(99L) } returns Optional.of(actor)
+
+        adminService.archiveCedis(99L, 33L)
+
+        assertThat(target.archived).isTrue()
+        verify {
+            auditService.log(
+                actor = actor,
+                action = "ARCHIVE_CEDIS",
+                entityName = "CEDIS",
+                entityId = "33",
+                details = match<Map<String, String>> { it["name"] == "CEDIS Sur" }
+            )
+        }
+    }
+
+    @Test
+    fun `getCedis rejects archived records`() {
+        every { cedisRepository.findById(77L) } returns Optional.of(cedis(id = 77L, archived = true))
+
+        assertThatThrownBy {
+            adminService.getCedis(77L)
+        }.isInstanceOf(NotFoundException::class.java)
+            .hasMessage("CEDIS 77 was not found")
     }
 
     @Test

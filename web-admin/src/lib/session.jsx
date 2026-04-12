@@ -8,16 +8,29 @@ import {
 
 const AuthContext = createContext(undefined);
 
+function isAdminSession(session) {
+  return session?.user?.role === "ADMIN";
+}
+
 export function AuthProvider({ children }) {
-  const [session, setSessionState] = useState(() => getStoredSession());
+  const [session, setSessionState] = useState(() => {
+    const storedSession = getStoredSession();
+    return isAdminSession(storedSession) ? storedSession : null;
+  });
 
   const setSession = (value) => {
-    setSessionState(value);
-    setStoredSession(value);
+    const nextValue = isAdminSession(value) ? value : null;
+    setSessionState(nextValue);
+    setStoredSession(nextValue);
   };
 
   const login = async (username, password) => {
     const nextSession = await api.login(username, password);
+    if (!isAdminSession(nextSession)) {
+      clearStoredSession();
+      setSessionState(null);
+      throw new Error("Este panel solo permite usuarios administradores");
+    }
     setSession(nextSession);
   };
 
@@ -34,7 +47,8 @@ export function AuthProvider({ children }) {
       session,
       login,
       logout,
-      setSession
+      setSession,
+      isAdmin: isAdminSession(session)
     }),
     [session]
   );

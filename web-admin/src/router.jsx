@@ -4,11 +4,20 @@ import { LoginPage } from "./features/auth/LoginPage";
 import { DashboardPage } from "./features/dashboard/DashboardPage";
 import { PlaceholderPage } from "./features/navigation/PlaceholderPage";
 import {
+  CedisPage,
   ClientsPage,
   OrdersPage,
+  VerificationCentersPage,
   UsersPage,
   VehiclesPage
 } from "./features/resources/ResourcePages";
+import { ClientCreatePage, ClientDetailPage } from "./features/resources/ClientPages";
+import { CedisCreatePage, CedisDetailPage } from "./features/resources/CedisPages";
+import {
+  VerificationCenterCreatePage,
+  VerificationCenterDetailPage,
+  VerificationCenterEditPage
+} from "./features/resources/VerificationCenterPages";
 import { VehicleCreatePage, VehicleEditPage } from "./features/resources/VehicleCreatePage";
 import {
   VehicleHistoryPage,
@@ -47,6 +56,18 @@ const clientsRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: "/clients",
   component: withProtection(ClientsPage)
+});
+
+const clientCreateRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: "/clients/nuevo",
+  component: withProtection(ClientCreatePage)
+});
+
+const clientDetailRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: "/clients/$id",
+  component: withProtection(ClientDetailPage)
 });
 
 const vehiclesRoute = createRoute({
@@ -94,13 +115,43 @@ const ordersRoute = createRoute({
 const cedisRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: "/cedis",
-  component: withProtection(() => <PlaceholderPage title="CEDIS" />)
+  component: withProtection(CedisPage)
+});
+
+const cedisCreateRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: "/cedis/nuevo",
+  component: withProtection(CedisCreatePage)
+});
+
+const cedisDetailRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: "/cedis/$id",
+  component: withProtection(CedisDetailPage)
 });
 
 const verificationCentersRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: "/verification-centers",
-  component: withProtection(() => <PlaceholderPage title="Verificentros" />)
+  component: withProtection(VerificationCentersPage)
+});
+
+const verificationCenterCreateRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: "/verification-centers/nuevo",
+  component: withProtection(VerificationCenterCreatePage)
+});
+
+const verificationCenterDetailRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: "/verification-centers/$id",
+  component: withProtection(VerificationCenterDetailPage)
+});
+
+const verificationCenterEditRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: "/verification-centers/$id/editar",
+  component: withProtection(VerificationCenterEditPage)
 });
 
 const notesRoute = createRoute({
@@ -120,6 +171,8 @@ const routeTree = rootRoute.addChildren([
   dashboardRoute,
   usersRoute,
   clientsRoute,
+  clientCreateRoute,
+  clientDetailRoute,
   vehiclesRoute,
   vehiclesAliasRoute,
   vehicleCreateRoute,
@@ -128,7 +181,12 @@ const routeTree = rootRoute.addChildren([
   verificationDetailRoute,
   ordersRoute,
   cedisRoute,
+  cedisCreateRoute,
+  cedisDetailRoute,
   verificationCentersRoute,
+  verificationCenterCreateRoute,
+  verificationCenterDetailRoute,
+  verificationCenterEditRoute,
   notesRoute,
   webVerificationsRoute
 ]);

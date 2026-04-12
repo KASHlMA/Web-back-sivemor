@@ -33,6 +33,11 @@ This workspace is the `sivemor-platform` repository. It contains:
 
    This flow builds immutable images for the backend and web admin. It is useful when you want to test the stack close to deployment behavior.
    It should be the command you use when you want Docker to serve the final redesigned frontend build at `http://localhost:3000`.
+   The backend now applies schema changes through Flyway. If you have an older local MySQL volume created before this change, reset it once with:
+
+   ```bash
+   docker compose down -v
+   ```
 
 3. Start the live-reload development stack:
 
@@ -51,9 +56,9 @@ This workspace is the `sivemor-platform` repository. It contains:
 4. Open the admin UI:
 
    - Web admin: `http://localhost:3000`
-   - Backend API: `http://localhost:8080/api/v1`
-   - Backend health: `http://localhost:8080/actuator/health`
-   - Swagger UI: `http://localhost:8080/swagger-ui.html`
+   - Backend API: `http://localhost:8081/api/v1`
+   - Backend health: `http://localhost:8081/actuator/health`
+   - Swagger UI: `http://localhost:8081/swagger-ui.html`
 
 5. To call secured endpoints from Swagger UI:
 
@@ -73,6 +78,7 @@ This workspace is the `sivemor-platform` repository. It contains:
 ## Notes
 
 - The Android app lives in a separate repository and should target the backend through `http://10.0.2.2:8080/api/v1` when running in the Android emulator.
+- In Docker, Flyway is the source of truth for schema changes. Every new entity or table change must include a migration.
 - Technicians are restricted to draft capture flows only. The mobile API does not expose final report browsing.
 - Evidence is stored in MySQL as binary data with metadata and checksum tracking.
 - In live-reload Docker mode, dependency changes may still require container recreation or a fresh `docker compose ... up --build`.

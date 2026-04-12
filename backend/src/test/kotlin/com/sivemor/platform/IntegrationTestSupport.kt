@@ -2,11 +2,11 @@ package com.sivemor.platform
 
 import com.fasterxml.jackson.databind.JsonNode
 import com.fasterxml.jackson.databind.ObjectMapper
-import com.sivemor.platform.domain.AuditLogRepository
 import com.sivemor.platform.domain.UserRepository
 import com.sivemor.platform.security.JwtService
 import com.sivemor.platform.service.AuditService
 import io.mockk.mockk
+import org.flywaydb.core.Flyway
 import org.junit.jupiter.api.BeforeEach
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.boot.test.context.SpringBootTest
@@ -91,11 +91,20 @@ abstract class IntegrationTestSupport {
             if (!mysql.isRunning) {
                 mysql.start()
             }
+            Flyway.configure()
+                .dataSource(mysql.jdbcUrl, mysql.username, mysql.password)
+                .cleanDisabled(false)
+                .baselineOnMigrate(true)
+                .load()
+                .run {
+                    clean()
+                    migrate()
+                }
             registry.add("spring.datasource.url", mysql::getJdbcUrl)
             registry.add("spring.datasource.username", mysql::getUsername)
             registry.add("spring.datasource.password", mysql::getPassword)
-            registry.add("spring.jpa.hibernate.ddl-auto") { "create-drop" }
-            registry.add("spring.flyway.enabled") { "false" }
+            registry.add("spring.jpa.hibernate.ddl-auto") { "validate" }
+            registry.add("spring.flyway.enabled") { "true" }
             registry.add("app.security.jwt.secret") {
                 "this-is-a-long-enough-secret-for-test-only-1234567890"
             }
@@ -106,9 +115,6 @@ abstract class IntegrationTestSupport {
     class NoopAuditConfig {
         @Bean
         @Primary
-        fun auditService(): AuditService = AuditService(
-            auditLogRepository = mockk<AuditLogRepository>(relaxed = true),
-            objectMapper = ObjectMapper()
-        )
+        fun auditService(): AuditService = mockk(relaxed = true)
     }
 }

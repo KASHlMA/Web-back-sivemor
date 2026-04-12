@@ -2,8 +2,10 @@ package com.sivemor.platform.common
 
 import jakarta.servlet.http.HttpServletRequest
 import jakarta.validation.ConstraintViolationException
+import org.slf4j.LoggerFactory
 import org.springframework.http.HttpStatus
 import org.springframework.http.ResponseEntity
+import org.springframework.http.converter.HttpMessageNotReadableException
 import org.springframework.security.access.AccessDeniedException
 import org.springframework.validation.FieldError
 import org.springframework.web.bind.MethodArgumentNotValidException
@@ -31,6 +33,8 @@ data class ApiErrorResponse(
 
 @RestControllerAdvice
 class ApiExceptionHandler {
+    private val logger = LoggerFactory.getLogger(ApiExceptionHandler::class.java)
+
     @ExceptionHandler(ApiException::class)
     fun handleApiException(
         exception: ApiException,
@@ -69,6 +73,16 @@ class ApiExceptionHandler {
         path = request.requestURI
     )
 
+    @ExceptionHandler(HttpMessageNotReadableException::class)
+    fun handleUnreadableMessage(
+        exception: HttpMessageNotReadableException,
+        request: HttpServletRequest
+    ): ResponseEntity<ApiErrorResponse> = buildResponse(
+        status = HttpStatus.BAD_REQUEST,
+        message = exception.mostSpecificCause?.message ?: "Malformed JSON request",
+        path = request.requestURI
+    )
+
     @ExceptionHandler(AccessDeniedException::class)
     fun handleAccessDenied(
         exception: AccessDeniedException,
@@ -83,11 +97,14 @@ class ApiExceptionHandler {
     fun handleUnexpected(
         exception: Exception,
         request: HttpServletRequest
-    ): ResponseEntity<ApiErrorResponse> = buildResponse(
-        status = HttpStatus.INTERNAL_SERVER_ERROR,
-        message = exception.message ?: "Unexpected server error",
-        path = request.requestURI
-    )
+    ): ResponseEntity<ApiErrorResponse> {
+        logger.error("Unhandled exception for {}", request.requestURI, exception)
+        return buildResponse(
+            status = HttpStatus.INTERNAL_SERVER_ERROR,
+            message = exception.message ?: "Unexpected server error",
+            path = request.requestURI
+        )
+    }
 
     private fun buildResponse(
         status: HttpStatus,

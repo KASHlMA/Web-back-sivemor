@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Controller, useForm } from "react-hook-form";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { z } from "zod";
@@ -35,14 +35,26 @@ export function ResourceTablePage({
   toFormValues,
   renderRowActions,
   onCreateAction,
-  feedbackMessage
+  feedbackMessage,
+  createLabel = "Agregar Nuevo",
+  loadingMessage = "Cargando registros...",
+  emptyTitle = "No hay registros disponibles",
+  emptyDescription = "Cuando existan elementos en este modulo apareceran aqui.",
+  errorMessage = "Error al cargar los registros",
+  deleteDialogTitle,
+  deleteDialogDescription,
+  deleteSuccessMessage,
+  extraInvalidateQueryKeys = [],
+  pageSize = 10
 }) {
   const queryClient = useQueryClient();
   const [editingRow, setEditingRow] = useState(null);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [feedbackError, setFeedbackError] = useState(null);
+  const [localFeedbackMessage, setLocalFeedbackMessage] = useState(null);
   const [search, setSearch] = useState("");
   const [pendingDelete, setPendingDelete] = useState(null);
+  const [page, setPage] = useState(1);
 
   const query = useQuery({
     queryKey,
@@ -58,6 +70,7 @@ export function ResourceTablePage({
     mutationFn: (values) => api.post(`/admin/${endpoint}`, toPayload(values)),
     onSuccess: async () => {
       await queryClient.invalidateQueries({ queryKey });
+      await Promise.all(extraInvalidateQueryKeys.map((key) => queryClient.invalidateQueries({ queryKey: key })));
       closeDialog();
     },
     onError: (error) => setFeedbackError(error instanceof Error ? error.message : "Request failed")
@@ -72,6 +85,7 @@ export function ResourceTablePage({
     },
     onSuccess: async () => {
       await queryClient.invalidateQueries({ queryKey });
+      await Promise.all(extraInvalidateQueryKeys.map((key) => queryClient.invalidateQueries({ queryKey: key })));
       closeDialog();
     },
     onError: (error) => setFeedbackError(error instanceof Error ? error.message : "Request failed")
@@ -81,7 +95,9 @@ export function ResourceTablePage({
     mutationFn: (id) => api.delete(`/admin/${endpoint}/${id}`),
     onSuccess: async () => {
       await queryClient.invalidateQueries({ queryKey });
+      await Promise.all(extraInvalidateQueryKeys.map((key) => queryClient.invalidateQueries({ queryKey: key })));
       setPendingDelete(null);
+      setLocalFeedbackMessage(deleteSuccessMessage ?? null);
     },
     onError: (error) => setFeedbackError(error instanceof Error ? error.message : "Delete failed")
   });
@@ -106,6 +122,23 @@ export function ResourceTablePage({
       })
     );
   }, [columns, query.data, search]);
+
+  const totalPages = Math.max(1, Math.ceil(filteredRows.length / pageSize));
+
+  const paginatedRows = useMemo(() => {
+    const startIndex = (page - 1) * pageSize;
+    return filteredRows.slice(startIndex, startIndex + pageSize);
+  }, [filteredRows, page, pageSize]);
+
+  useEffect(() => {
+    setPage(1);
+  }, [search]);
+
+  useEffect(() => {
+    if (page > totalPages) {
+      setPage(totalPages);
+    }
+  }, [page, totalPages]);
 
   const closeDialog = () => {
     setDialogOpen(false);
@@ -137,11 +170,16 @@ export function ResourceTablePage({
   });
 
   const shouldRenderActions = renderRowActions !== null;
+  const resolvedDeleteDialogTitle = deleteDialogTitle ?? `Eliminar ${title}`;
+  const resolvedDeleteDialogDescription =
+    deleteDialogDescription ?? `Estas seguro de eliminar este registro de ${title.toLowerCase()}?`;
+  const hasRows = filteredRows.length > 0;
 
   return (
     <div className="space-y-6">
       <AlertMessage message={feedbackError} />
       <AlertMessage message={feedbackMessage} />
+      <AlertMessage message={localFeedbackMessage} />
 
       <PagePanel>
         <PageTitleBar
@@ -149,12 +187,9 @@ export function ResourceTablePage({
           subtitle={description}
           search={<SearchField value={search} onChange={(event) => setSearch(event.target.value)} />}
           actions={
-            <PrimaryActionButton
-              type="button"
-              onClick={onCreateAction ?? openCreateDialog}
-            >
+            <PrimaryActionButton type="button" onClick={onCreateAction ?? openCreateDialog}>
               <PlusIcon />
-              Agregar Nuevo
+              {createLabel}
             </PrimaryActionButton>
           }
         />
@@ -170,48 +205,64 @@ export function ResourceTablePage({
               </tr>
             </thead>
             <tbody>
-              {filteredRows.map((row) => (
-                <tr key={row.id}>
-                  {columns.map((column) => (
-                    <td key={column.header}>{column.render(row)}</td>
-                  ))}
-                  {shouldRenderActions ? (
-                    <td>
-                      {renderRowActions ? (
-                        renderRowActions(row)
-                      ) : (
-                        <div className="flex justify-end gap-2">
-                          <button
-                            type="button"
-                            onClick={() => openEditDialog(row)}
-                            className="inline-flex items-center gap-1 rounded-md px-2 py-1.5 text-sm font-semibold text-[var(--shell-text)] transition hover:bg-[var(--panel-alt)]"
-                          >
-                            <EditIcon />
-                            Editar
-                          </button>
-                          <button
-                            type="button"
-                            onClick={() => setPendingDelete(row)}
-                            className="inline-flex items-center gap-1 rounded-md px-2 py-1.5 text-sm font-semibold text-[var(--danger)] transition hover:bg-[#f9ebe7]"
-                          >
-                            <TrashIcon />
-                            Eliminar
-                          </button>
-                        </div>
-                      )}
-                    </td>
-                  ) : null}
+              {query.isLoading ? (
+                <tr>
+                  <td colSpan={columns.length + (shouldRenderActions ? 1 : 0)} className="px-4 py-6 text-sm font-medium text-[var(--shell-text)]">
+                    {loadingMessage}
+                  </td>
                 </tr>
-              ))}
-              {!query.isLoading && filteredRows.length === 0 ? (
+              ) : null}
+              {!query.isLoading && query.isError ? (
+                <tr>
+                  <td colSpan={columns.length + (shouldRenderActions ? 1 : 0)} className="!p-0">
+                    <EmptyState title={errorMessage} description="Intenta nuevamente en unos momentos." />
+                  </td>
+                </tr>
+              ) : null}
+              {!query.isLoading && !query.isError
+                ? paginatedRows.map((row) => (
+                    <tr key={row.id}>
+                      {columns.map((column) => (
+                        <td key={column.header}>{column.render(row)}</td>
+                      ))}
+                      {shouldRenderActions ? (
+                        <td>
+                          {renderRowActions ? (
+                            renderRowActions(row, { requestDelete: setPendingDelete, openEditDialog })
+                          ) : (
+                            <div className="flex justify-end gap-2">
+                              <button
+                                type="button"
+                                onClick={() => openEditDialog(row)}
+                                className="inline-flex items-center gap-1 rounded-md px-2 py-1.5 text-sm font-semibold text-[var(--shell-text)] transition hover:bg-[var(--panel-alt)]"
+                              >
+                                <EditIcon />
+                                Editar
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => setPendingDelete(row)}
+                                className="inline-flex items-center gap-1 rounded-md px-2 py-1.5 text-sm font-semibold text-[var(--danger)] transition hover:bg-[#f9ebe7]"
+                              >
+                                <TrashIcon />
+                                Eliminar
+                              </button>
+                            </div>
+                          )}
+                        </td>
+                      ) : null}
+                    </tr>
+                  ))
+                : null}
+              {!query.isLoading && !query.isError && filteredRows.length === 0 ? (
                 <tr>
                   <td colSpan={columns.length + (shouldRenderActions ? 1 : 0)} className="!p-0">
                     <EmptyState
-                      title={search ? "No hay coincidencias" : "No hay registros disponibles"}
+                      title={search ? "No hay coincidencias" : emptyTitle}
                       description={
                         search
-                          ? "Prueba con otro término o limpia la búsqueda para volver a ver todos los registros."
-                          : "Cuando existan elementos en este módulo aparecerán aquí."
+                          ? "Prueba con otro termino o limpia la busqueda para volver a ver todos los registros."
+                          : emptyDescription
                       }
                     />
                   </td>
@@ -219,6 +270,20 @@ export function ResourceTablePage({
               ) : null}
             </tbody>
           </table>
+
+          {!query.isLoading && !query.isError && hasRows ? (
+            <div className="mt-4 flex flex-col gap-3 border-t border-[var(--border)] px-2 pt-4 sm:flex-row sm:items-center sm:justify-between">
+              <span className="text-sm font-medium text-[var(--shell-text)]">Pagina {page} de {totalPages}</span>
+              <div className="flex gap-2">
+                <SecondaryActionButton type="button" onClick={() => setPage((current) => Math.max(1, current - 1))} disabled={page === 1}>
+                  Anterior
+                </SecondaryActionButton>
+                <SecondaryActionButton type="button" onClick={() => setPage((current) => Math.min(totalPages, current + 1))} disabled={page === totalPages}>
+                  Siguiente
+                </SecondaryActionButton>
+              </div>
+            </div>
+          ) : null}
         </div>
       </PagePanel>
 
@@ -249,11 +314,7 @@ export function ResourceTablePage({
                 name={field.name}
                 control={form.control}
                 render={({ field: controllerField, fieldState }) => (
-                  <FieldRenderer
-                    field={field}
-                    controllerField={controllerField}
-                    error={fieldState.error?.message}
-                  />
+                  <FieldRenderer field={field} controllerField={controllerField} error={fieldState.error?.message} />
                 )}
               />
             ))}
@@ -261,19 +322,33 @@ export function ResourceTablePage({
         </Modal>
       )}
 
-      {renderRowActions ? null : (
+      {renderRowActions ? (
+        pendingDelete ? (
+          <ConfirmDialog
+            open={Boolean(pendingDelete)}
+            title={resolvedDeleteDialogTitle}
+            description={resolvedDeleteDialogDescription}
+            confirmLabel="Eliminar"
+            onCancel={() => setPendingDelete(null)}
+            onConfirm={async () => {
+              await deleteMutation.mutateAsync(pendingDelete.id);
+            }}
+            danger
+          />
+        ) : null
+      ) : (
         <ConfirmDialog
-        open={Boolean(pendingDelete)}
-        title={`Eliminar ${title}`}
-        description={`¿Estás seguro de eliminar este registro de ${title.toLowerCase()}?`}
-        confirmLabel="Eliminar"
-        onCancel={() => setPendingDelete(null)}
-        onConfirm={async () => {
-          if (pendingDelete) {
-            await deleteMutation.mutateAsync(pendingDelete.id);
-          }
-        }}
-        danger
+          open={Boolean(pendingDelete)}
+          title={resolvedDeleteDialogTitle}
+          description={resolvedDeleteDialogDescription}
+          confirmLabel="Eliminar"
+          onCancel={() => setPendingDelete(null)}
+          onConfirm={async () => {
+            if (pendingDelete) {
+              await deleteMutation.mutateAsync(pendingDelete.id);
+            }
+          }}
+          danger
         />
       )}
     </div>
@@ -304,7 +379,7 @@ function FieldRenderer({ field, controllerField, error }) {
           onChange={(event) => controllerField.onChange(event.target.value)}
           className="field-base"
         >
-          <option value="">Selecciona una opción</option>
+          <option value="">Selecciona una opcion</option>
           {(field.options ?? []).map((option) => (
             <option key={option.value} value={option.value}>
               {option.label}
@@ -335,7 +410,7 @@ function FieldRenderer({ field, controllerField, error }) {
             </option>
           ))}
         </select>
-        <p className="mt-1 text-xs text-[var(--shell-text)]/70">Mantén presionada la tecla Ctrl para seleccionar varias opciones.</p>
+        <p className="mt-1 text-xs text-[var(--shell-text)]/70">Manten presionada la tecla Ctrl para seleccionar varias opciones.</p>
         <FieldError message={error} />
       </div>
     );
@@ -390,7 +465,7 @@ export function renderStatusValue(value) {
   const normalized = String(value).toUpperCase();
   const map = {
     ADMIN: { label: "Administrador", tone: "neutral" },
-    TECHNICIAN: { label: "Técnico", tone: "neutral" },
+    TECHNICIAN: { label: "Tecnico", tone: "neutral" },
     OPEN: { label: "Abierto", tone: "warning" },
     IN_PROGRESS: { label: "En progreso", tone: "warning" },
     COMPLETED: { label: "Completado", tone: "success" },

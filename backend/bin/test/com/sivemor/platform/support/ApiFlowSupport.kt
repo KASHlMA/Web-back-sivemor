@@ -43,8 +43,11 @@ fun IntegrationTestSupport.createClient(name: String, taxId: String, regionId: L
         content = objectMapper.writeValueAsString(
             mapOf(
                 "name" to name,
-                "taxId" to taxId,
-                "regionId" to regionId
+                "businessName" to "$name SA de CV",
+                "email" to "${taxId.lowercase()}@example.com",
+                "phone" to "7774501100",
+                "alternatePhone" to "7774502200",
+                "manager" to "Gestor de prueba"
             )
         )
     }.andExpect {

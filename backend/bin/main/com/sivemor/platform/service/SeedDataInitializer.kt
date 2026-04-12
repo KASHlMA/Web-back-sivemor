@@ -16,6 +16,7 @@ import com.sivemor.platform.domain.RegionRepository
 import com.sivemor.platform.domain.Role
 import com.sivemor.platform.domain.User
 import com.sivemor.platform.domain.UserRepository
+import com.sivemor.platform.domain.VerificationCenter
 import com.sivemor.platform.domain.VehicleCategory
 import com.sivemor.platform.domain.VehicleUnit
 import com.sivemor.platform.domain.VehicleUnitRepository
@@ -36,6 +37,7 @@ class SeedDataInitializer(
     private val userRepository: UserRepository,
     private val regionRepository: RegionRepository,
     private val clientCompanyRepository: ClientCompanyRepository,
+    private val verificationCenterRepository: com.sivemor.platform.domain.VerificationCenterRepository,
     private val vehicleUnitRepository: VehicleUnitRepository,
     private val verificationOrderRepository: VerificationOrderRepository,
     private val orderUnitRepository: OrderUnitRepository,
@@ -50,8 +52,8 @@ class SeedDataInitializer(
             return
         }
 
-        val northRegion = regionRepository.save(Region().apply { name = "Región Norte" })
-        val southRegion = regionRepository.save(Region().apply { name = "Región Sur" })
+        val northRegion = regionRepository.save(Region().apply { name = "Region Norte" })
+        val southRegion = regionRepository.save(Region().apply { name = "Region Sur" })
 
         val admin = userRepository.save(
             User().apply {
@@ -67,7 +69,7 @@ class SeedDataInitializer(
             User().apply {
                 username = "tecnico1"
                 email = "tecnico1@sivemor.local"
-                fullName = "Técnico Uno"
+                fullName = "Tecnico Uno"
                 passwordHash = passwordEncoder.encode("Tecnico123!")!!
                 role = Role.TECHNICIAN
             }
@@ -76,6 +78,11 @@ class SeedDataInitializer(
         val clientCompany = clientCompanyRepository.save(
             ClientCompany().apply {
                 name = "Transportes Morelos"
+                businessName = "Transportes Morelos SA de CV"
+                email = "transportes.morelos@sivemor.local"
+                phone = "7774501101"
+                alternatePhone = "7774501102"
+                manager = "Gestor Morelos"
                 taxId = "TMO260217AA1"
                 region = northRegion
             }
@@ -112,7 +119,7 @@ class SeedDataInitializer(
         val sectionOne = ChecklistSection().apply {
             this.template = template
             title = "Sistema de luces"
-            description = "Inspección visual de faros, cuartos y luces de freno."
+            description = "Inspeccion visual de faros, cuartos y luces de freno."
             displayOrder = 1
         }
 
@@ -132,15 +139,15 @@ class SeedDataInitializer(
             ChecklistQuestion().apply {
                 section = sectionOne
                 code = "LIGHTS-TURN"
-                prompt = "Las direccionales son visibles y no presentan daño."
+                prompt = "Las direccionales son visibles y no presentan dano."
                 displayOrder = 3
             }
         )
 
         val sectionTwo = ChecklistSection().apply {
             this.template = template
-            title = "Frenos y suspensión"
-            description = "Comprobación operativa y visual de frenos y amortiguación."
+            title = "Frenos y suspension"
+            description = "Comprobacion operativa y visual de frenos y amortiguacion."
             displayOrder = 2
         }
 
@@ -148,19 +155,19 @@ class SeedDataInitializer(
             ChecklistQuestion().apply {
                 section = sectionTwo
                 code = "BRAKE-PRESSURE"
-                prompt = "La presión de aire de frenos se mantiene en rango."
+                prompt = "La presion de aire de frenos se mantiene en rango."
                 displayOrder = 1
             },
             ChecklistQuestion().apply {
                 section = sectionTwo
                 code = "BRAKE-LINES"
-                prompt = "No existen fugas visibles en líneas de freno."
+                prompt = "No existen fugas visibles en lineas de freno."
                 displayOrder = 2
             },
             ChecklistQuestion().apply {
                 section = sectionTwo
                 code = "SUSPENSION"
-                prompt = "La suspensión no presenta daño estructural."
+                prompt = "La suspension no presenta dano estructural."
                 displayOrder = 3
             }
         )
@@ -207,9 +214,41 @@ class SeedDataInitializer(
         val secondaryClient = clientCompanyRepository.save(
             ClientCompany().apply {
                 name = "Carga del Sur"
+                businessName = "Carga del Sur SA de CV"
+                email = "carga.sur@sivemor.local"
+                phone = "7774502201"
+                alternatePhone = "7774502202"
+                manager = "Gestor Sur"
                 taxId = "CDS260217AA2"
                 region = southRegion
             }
+        )
+
+        verificationCenterRepository.saveAll(
+            listOf(
+                VerificationCenter().apply {
+                    name = "Verificentro Centro"
+                    centerKey = "VER-MOR-001"
+                    address = "Av. Plan de Ayala 450, Cuernavaca"
+                    region = northRegion
+                    manager = "Ing. Roberto Estrada"
+                    email = "contacto@verisur-mor.mx"
+                    phone = "7771023040"
+                    alternatePhone = "7773124568"
+                    schedule = "Lun - Sab: 08:00 a 19:00"
+                },
+                VerificationCenter().apply {
+                    name = "Eco Morelos"
+                    centerKey = "VER-MOR-002"
+                    address = "Av. Universidad 1200, Cuernavaca"
+                    region = southRegion
+                    manager = "Lic. Andrea Solis"
+                    email = "admin@ecomorelos.mx"
+                    phone = "7351238890"
+                    alternatePhone = "7351238891"
+                    schedule = "Lun - Vie: 08:00 a 18:00"
+                }
+            )
         )
 
         vehicleUnitRepository.save(

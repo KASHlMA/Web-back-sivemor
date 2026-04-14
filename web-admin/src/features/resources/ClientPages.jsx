@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -39,27 +39,61 @@ function digitsOnly(value) {
 }
 
 export function ClientCreatePage() {
+  return <ClientFormPage mode="create" />;
+}
+
+export function ClientEditPage() {
+  return <ClientFormPage mode="edit" />;
+}
+
+function ClientFormPage({ mode }) {
   const navigate = useNavigate();
+  const params = useParams({ strict: false });
   const queryClient = useQueryClient();
   const [feedbackError, setFeedbackError] = useState(null);
+  const clientId = mode === "edit" ? String(params.id ?? "") : "";
+  const clientQuery = useQuery({
+    queryKey: ["clients", clientId],
+    queryFn: () => api.get(`/admin/clients/${clientId}`),
+    enabled: mode === "edit" && Boolean(clientId)
+  });
   const form = useForm({
     resolver: zodResolver(clientSchema),
     defaultValues,
     mode: "onChange"
   });
 
+  const successMessage = mode === "edit" ? "Cliente actualizado correctamente" : "Cliente registrado correctamente";
+  const errorMessage = mode === "edit" ? "Error al actualizar el cliente" : "Error al registrar el cliente";
+
   const createMutation = useMutation({
-    mutationFn: (values) => api.post("/admin/clients", values),
+    mutationFn: (values) => (mode === "edit" ? api.put(`/admin/clients/${clientId}`, values) : api.post("/admin/clients", values)),
     onSuccess: async () => {
       await queryClient.invalidateQueries({ queryKey: ["clients"] });
       await queryClient.invalidateQueries({ queryKey: ["clients-lookup"] });
-      setFlashMessage("Cliente registrado correctamente");
+      await queryClient.invalidateQueries({ queryKey: ["clients", clientId] });
+      setFlashMessage(successMessage);
       await navigate({ to: "/clients" });
     },
     onError: (error) => {
-      setFeedbackError(error instanceof Error ? error.message : "Error al registrar el cliente");
+      setFeedbackError(error instanceof Error ? error.message : errorMessage);
     }
   });
+
+  useEffect(() => {
+    if (mode !== "edit" || !clientQuery.data) {
+      return;
+    }
+
+    form.reset({
+      name: clientQuery.data.name,
+      businessName: clientQuery.data.businessName,
+      email: clientQuery.data.email,
+      phone: clientQuery.data.phone,
+      alternatePhone: clientQuery.data.alternatePhone,
+      manager: clientQuery.data.manager
+    });
+  }, [form, mode, clientQuery.data]);
 
   const onSubmit = form.handleSubmit(async (values) => {
     setFeedbackError(null);
@@ -78,14 +112,50 @@ export function ClientCreatePage() {
     }
   });
 
+  if (mode === "edit" && clientQuery.isLoading) {
+    return (
+      <div className="space-y-6">
+        <PagePanel>
+          <PageTitleBar title="Editar cliente" />
+          <div className="px-5 py-5 text-sm font-medium text-[var(--shell-text)]">Cargando informacion del cliente...</div>
+        </PagePanel>
+      </div>
+    );
+  }
+
+  if (mode === "edit" && (clientQuery.isError || !clientQuery.data)) {
+    return (
+      <div className="space-y-6">
+        <PagePanel>
+          <PageTitleBar
+            title="Editar cliente"
+            actions={
+              <SecondaryActionButton type="button" onClick={() => void navigate({ to: "/clients" })}>
+                Volver
+              </SecondaryActionButton>
+            }
+          />
+          <EmptyState
+            title="No se pudo cargar la informacion del cliente"
+            description="Verifica que el registro exista e intenta nuevamente."
+          />
+        </PagePanel>
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-6">
       <AlertMessage message={feedbackError} />
 
       <PagePanel>
         <PageTitleBar
-          title="Nuevo cliente"
-          subtitle="Captura la informacion necesaria para registrar un nuevo cliente."
+          title={mode === "edit" ? "Editar cliente" : "Nuevo cliente"}
+          subtitle={
+            mode === "edit"
+              ? "Actualiza la informacion registrada del cliente seleccionado."
+              : "Captura la informacion necesaria para registrar un nuevo cliente."
+          }
           actions={
             <div className="flex flex-col gap-3 sm:flex-row">
               <SecondaryActionButton type="button" onClick={() => void navigate({ to: "/clients" })}>
@@ -189,9 +259,14 @@ export function ClientDetailPage() {
           title="Detalle de cliente"
           subtitle="Consulta la informacion registrada del cliente seleccionado."
           actions={
-            <SecondaryActionButton type="button" onClick={() => void navigate({ to: "/clients" })}>
-              Volver
-            </SecondaryActionButton>
+            <div className="flex flex-col gap-3 sm:flex-row">
+              <SecondaryActionButton type="button" onClick={() => void navigate({ to: "/clients/$id/editar", params: { id: clientId } })}>
+                Editar informacion
+              </SecondaryActionButton>
+              <SecondaryActionButton type="button" onClick={() => void navigate({ to: "/clients" })}>
+                Volver
+              </SecondaryActionButton>
+            </div>
           }
         />
 

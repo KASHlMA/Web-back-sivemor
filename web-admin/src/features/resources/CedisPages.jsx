@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -39,32 +39,67 @@ function digitsOnly(value) {
 }
 
 export function CedisCreatePage() {
+  return <CedisFormPage mode="create" />;
+}
+
+export function CedisEditPage() {
+  return <CedisFormPage mode="edit" />;
+}
+
+function CedisFormPage({ mode }) {
   const navigate = useNavigate();
+  const params = useParams({ strict: false });
   const queryClient = useQueryClient();
   const [feedbackError, setFeedbackError] = useState(null);
+  const cedisId = mode === "edit" ? String(params.id ?? "") : "";
+  const cedisQuery = useQuery({
+    queryKey: ["cedis", cedisId],
+    queryFn: () => api.get(`/admin/cedis/${cedisId}`),
+    enabled: mode === "edit" && Boolean(cedisId)
+  });
   const form = useForm({
     resolver: zodResolver(cedisSchema),
     defaultValues,
     mode: "onChange"
   });
 
+  const successMessage = mode === "edit" ? "CEDIS actualizado correctamente" : "CEDIS registrado correctamente";
+  const errorMessage = mode === "edit" ? "Error al actualizar el CEDIS" : "Error al registrar el CEDIS";
+
   const createMutation = useMutation({
-    mutationFn: (values) => api.post("/admin/cedis", values),
+    mutationFn: (values) => {
+      const { address: _address, manager: _manager, ...payload } = values;
+      return mode === "edit" ? api.put(`/admin/cedis/${cedisId}`, payload) : api.post("/admin/cedis", payload);
+    },
     onSuccess: async () => {
       await queryClient.invalidateQueries({ queryKey: ["cedis"] });
-      setFlashMessage("CEDIS registrado correctamente");
+      await queryClient.invalidateQueries({ queryKey: ["cedis", cedisId] });
+      setFlashMessage(successMessage);
       await navigate({ to: "/cedis" });
     },
     onError: (error) => {
-      console.error(error);
-      setFeedbackError("Error al registrar el CEDIS");
+      setFeedbackError(error instanceof Error ? error.message : errorMessage);
     }
   });
 
+  useEffect(() => {
+    if (mode !== "edit" || !cedisQuery.data) {
+      return;
+    }
+
+    form.reset({
+      name: cedisQuery.data.name,
+      email: cedisQuery.data.email,
+      phone: cedisQuery.data.phone,
+      alternatePhone: cedisQuery.data.alternatePhone,
+      address: cedisQuery.data.address ?? "",
+      manager: cedisQuery.data.manager ?? ""
+    });
+  }, [form, mode, cedisQuery.data]);
+
   const onSubmit = form.handleSubmit(async (values) => {
     setFeedbackError(null);
-    const { address: _address, manager: _manager, ...payload } = values;
-    await createMutation.mutateAsync(payload);
+    await createMutation.mutateAsync(values);
   });
 
   const phoneField = form.register("phone", {
@@ -79,14 +114,50 @@ export function CedisCreatePage() {
     }
   });
 
+  if (mode === "edit" && cedisQuery.isLoading) {
+    return (
+      <div className="space-y-6">
+        <PagePanel>
+          <PageTitleBar title="Editar CEDIS" />
+          <div className="px-5 py-5 text-sm font-medium text-[var(--shell-text)]">Cargando informacion del CEDIS...</div>
+        </PagePanel>
+      </div>
+    );
+  }
+
+  if (mode === "edit" && (cedisQuery.isError || !cedisQuery.data)) {
+    return (
+      <div className="space-y-6">
+        <PagePanel>
+          <PageTitleBar
+            title="Editar CEDIS"
+            actions={
+              <SecondaryActionButton type="button" onClick={() => void navigate({ to: "/cedis" })}>
+                Volver
+              </SecondaryActionButton>
+            }
+          />
+          <EmptyState
+            title="No se pudo cargar la informacion del CEDIS"
+            description="Verifica que el registro exista e intenta nuevamente."
+          />
+        </PagePanel>
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-6">
       <AlertMessage message={feedbackError} />
 
       <PagePanel>
         <PageTitleBar
-          title="Nuevo CEDIS"
-          subtitle="Captura la informacion necesaria para registrar un nuevo CEDIS."
+          title={mode === "edit" ? "Editar CEDIS" : "Nuevo CEDIS"}
+          subtitle={
+            mode === "edit"
+              ? "Actualiza la informacion registrada del CEDIS seleccionado."
+              : "Captura la informacion necesaria para registrar un nuevo CEDIS."
+          }
           actions={
             <div className="flex flex-col gap-3 sm:flex-row">
               <SecondaryActionButton type="button" onClick={() => void navigate({ to: "/cedis" })}>
@@ -180,9 +251,14 @@ export function CedisDetailPage() {
           title="Detalle de CEDIS"
           subtitle="Consulta la informacion registrada del CEDIS seleccionado."
           actions={
-            <SecondaryActionButton type="button" onClick={() => void navigate({ to: "/cedis" })}>
-              Volver
-            </SecondaryActionButton>
+            <div className="flex flex-col gap-3 sm:flex-row">
+              <SecondaryActionButton type="button" onClick={() => void navigate({ to: "/cedis/$id/editar", params: { id: cedisId } })}>
+                Editar informacion
+              </SecondaryActionButton>
+              <SecondaryActionButton type="button" onClick={() => void navigate({ to: "/cedis" })}>
+                Volver
+              </SecondaryActionButton>
+            </div>
           }
         />
 

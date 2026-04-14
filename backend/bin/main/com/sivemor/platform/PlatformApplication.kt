@@ -2,6 +2,7 @@ package com.sivemor.platform
 
 import com.sivemor.platform.config.CorsProperties
 import com.sivemor.platform.config.JwtProperties
+import com.sivemor.platform.config.AppMailProperties
 import org.springframework.boot.autoconfigure.SpringBootApplication
 import org.springframework.boot.context.properties.EnableConfigurationProperties
 import org.springframework.boot.runApplication
@@ -11,7 +12,8 @@ import java.time.Clock
 @SpringBootApplication
 @EnableConfigurationProperties(
     JwtProperties::class,
-    CorsProperties::class
+    CorsProperties::class,
+    AppMailProperties::class
 )
 class PlatformApplication {
     @Bean

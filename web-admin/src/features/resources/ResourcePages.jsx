@@ -1,5 +1,5 @@
 import { useMemo, useState } from "react";
-import { useQuery } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useNavigate } from "@tanstack/react-router";
 import { z } from "zod";
 import {
@@ -17,8 +17,7 @@ const userSchema = z.object({
   email: z.string().email("Correo inválido"),
   fullName: schemaHelpers.requiredText("Nombre completo"),
   role: z.enum(["ADMIN", "TECHNICIAN"]),
-  active: z.boolean(),
-  password: z.string().optional().or(z.literal(""))
+  active: z.boolean()
 });
 
 const regionSchema = z.object({
@@ -81,12 +80,29 @@ function useLookups() {
 }
 
 export function UsersPage() {
+  const queryClient = useQueryClient();
+  const [feedbackMessage, setFeedbackMessage] = useState(null);
+  const resetPasswordMutation = useMutation({
+    mutationFn: (userId) => api.post(`/admin/users/${userId}/password/reset`, {}),
+    onSuccess: async (response) => {
+      setFeedbackMessage(response?.message ?? "La nueva contraseÃ±a fue enviada por correo");
+      await queryClient.invalidateQueries({ queryKey: ["users"] });
+      await queryClient.invalidateQueries({ queryKey: ["users-lookup"] });
+    },
+    onError: (error) => {
+      setFeedbackMessage(error instanceof Error ? error.message : "No se pudo regenerar la contraseÃ±a");
+    }
+  });
+
   return (
     <ResourceTablePage
       title="Usuarios"
       description="Administra usuarios administrativos y técnicos de captura."
       endpoint="users"
       queryKey={["users"]}
+      feedbackMessage={feedbackMessage}
+      createLabel="Agregar nuevo usuario"
+      emptyDescription="Cuando registres usuarios, su contraseÃƒÂ±a se generarÃƒÂ¡ automÃƒÂ¡ticamente y se enviarÃƒÂ¡ a su correo."
       columns={[
         { header: "Usuario", render: (row) => renderLinkedText(row.username), searchableText: (row) => row.username },
         { header: "Nombre", render: (row) => row.fullName, searchableText: (row) => row.fullName },
@@ -94,6 +110,30 @@ export function UsersPage() {
         { header: "Rol", render: (row) => renderStatusValue(row.role), searchableText: (row) => row.role },
         { header: "Activo", render: (row) => renderStatusValue(row.active), searchableText: (row) => String(row.active) }
       ]}
+      renderRowActions={(row, { requestDelete, openEditDialog }) => (
+        <div className="flex justify-end gap-2">
+          <SecondaryActionButton type="button" onClick={() => openEditDialog(row)}>
+            Editar
+          </SecondaryActionButton>
+          <SecondaryActionButton
+            type="button"
+            onClick={() => {
+              setFeedbackMessage(null);
+              void resetPasswordMutation.mutateAsync(row.id);
+            }}
+            disabled={resetPasswordMutation.isPending}
+          >
+            Generar contraseÃƒÂ±a
+          </SecondaryActionButton>
+          <button
+            type="button"
+            onClick={() => requestDelete(row)}
+            className="inline-flex items-center gap-1 rounded-md px-2 py-1.5 text-sm font-semibold text-[var(--danger)] transition hover:bg-[#f9ebe7]"
+          >
+            Eliminar
+          </button>
+        </div>
+      )}
       schema={userSchema}
       fields={[
         { name: "username", label: "Usuario", type: "text" },

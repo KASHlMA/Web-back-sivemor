@@ -31,6 +31,8 @@ import com.sivemor.platform.domain.VerificationOrderRepository
 import com.sivemor.platform.domain.VerificationOrderStatus
 import com.sivemor.platform.security.AppUserPrincipal
 import com.sivemor.platform.service.AuditService
+import com.sivemor.platform.service.PasswordGenerator
+import com.sivemor.platform.service.UserCredentialMailer
 import io.swagger.v3.oas.annotations.Operation
 import io.swagger.v3.oas.annotations.Parameter
 import io.swagger.v3.oas.annotations.security.SecurityRequirement
@@ -66,8 +68,7 @@ data class UserUpsertRequest(
     @field:Email @field:Size(max = 150) val email: String,
     @field:NotBlank @field:Size(max = 160) val fullName: String,
     @field:NotNull val role: Role,
-    val active: Boolean? = true,
-    val password: String? = null
+    val active: Boolean? = true
 )
 
 data class UserResponse(
@@ -77,6 +78,10 @@ data class UserResponse(
     val fullName: String,
     val role: Role,
     val active: Boolean
+)
+
+data class PasswordResetResponse(
+    val message: String
 )
 
 data class RegionUpsertRequest(
@@ -280,6 +285,14 @@ class AdminController(
         @PathVariable id: Long,
         @Valid @RequestBody request: UserUpsertRequest
     ): UserResponse = adminService.updateUser(principal.id, id, request)
+
+    @Operation(summary = "Generate a new password for a platform user and send it by email")
+    @PostMapping("/users/{id}/password/reset")
+    fun resetUserPassword(
+        @Parameter(hidden = true)
+        @AuthenticationPrincipal principal: AppUserPrincipal,
+        @PathVariable id: Long
+    ): PasswordResetResponse = adminService.resetUserPassword(principal.id, id)
 
     @Operation(summary = "Archive a platform user")
     @DeleteMapping("/users/{id}")
@@ -579,31 +592,32 @@ class AdminService(
     private val paymentRepository: PaymentRepository,
     private val inspectionRepository: InspectionRepository,
     private val passwordEncoder: PasswordEncoder,
-    private val auditService: AuditService
+    private val auditService: AuditService,
+    private val passwordGenerator: PasswordGenerator,
+    private val userCredentialMailer: UserCredentialMailer
 ) {
     @Transactional(readOnly = true)
     fun listUsers(): List<UserResponse> = userRepository.findAllByArchivedFalseOrderByFullNameAsc().map { it.toResponse() }
 
     @Transactional
     fun createUser(actorId: Long, request: UserUpsertRequest): UserResponse {
-        if (request.password.isNullOrBlank()) {
-            throw BadRequestException("Password is required for new users")
-        }
-
         if (userRepository.findByUsernameIgnoreCaseAndArchivedFalse(request.username.trim()) != null) {
             throw BadRequestException("Username already exists")
         }
 
+        val generatedPassword = passwordGenerator.generate()
         val user = User().apply {
             username = request.username.trim()
             email = request.email.trim().lowercase()
             fullName = request.fullName.trim()
             role = request.role
             active = request.active ?: true
-            passwordHash = passwordEncoder.encode(request.password!!) ?: throw IllegalStateException("Password encoder returned null")
+            passwordHash = passwordEncoder.encode(generatedPassword) ?: throw IllegalStateException("Password encoder returned null")
         }
 
-        return userRepository.save(user).alsoSaved(actorId, "CREATE_USER", user.fullName).toResponse()
+        val savedUser = userRepository.save(user)
+        userCredentialMailer.sendNewPassword(savedUser, generatedPassword)
+        return savedUser.alsoSaved(actorId, "CREATE_USER", user.fullName).toResponse()
     }
 
     @Transactional
@@ -614,10 +628,17 @@ class AdminService(
         user.fullName = request.fullName.trim()
         user.role = request.role
         user.active = request.active ?: true
-        if (!request.password.isNullOrBlank()) {
-            user.passwordHash = passwordEncoder.encode(request.password!!) ?: throw IllegalStateException("Password encoder returned null")
-        }
         return user.alsoSaved(actorId, "UPDATE_USER", user.fullName).toResponse()
+    }
+
+    @Transactional
+    fun resetUserPassword(actorId: Long, id: Long): PasswordResetResponse {
+        val user = requireUser(id)
+        val generatedPassword = passwordGenerator.generate()
+        user.passwordHash = passwordEncoder.encode(generatedPassword) ?: throw IllegalStateException("Password encoder returned null")
+        userCredentialMailer.sendNewPassword(user, generatedPassword)
+        logAction(actorId, "RESET_USER_PASSWORD", "USER", user.id.toString(), mapOf("username" to user.username))
+        return PasswordResetResponse("La nueva contrasena fue generada y enviada al correo del usuario")
     }
 
     @Transactional

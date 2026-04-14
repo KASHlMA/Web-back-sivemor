@@ -287,40 +287,38 @@ export function ResourceTablePage({
         </div>
       </PagePanel>
 
-      {renderRowActions ? null : (
-        <Modal
-          open={dialogOpen}
-          title={dialogTitle}
-          onClose={closeDialog}
-          footer={
-            <>
-              <SecondaryActionButton type="button" onClick={closeDialog}>
-                Cancelar
-              </SecondaryActionButton>
-              <PrimaryActionButton
-                type="button"
-                onClick={() => void onSubmit()}
-                disabled={createMutation.isPending || updateMutation.isPending}
-              >
-                Guardar
-              </PrimaryActionButton>
-            </>
-          }
-        >
-          <div className="space-y-4">
-            {fields.map((field) => (
-              <Controller
-                key={field.name}
-                name={field.name}
-                control={form.control}
-                render={({ field: controllerField, fieldState }) => (
-                  <FieldRenderer field={field} controllerField={controllerField} error={fieldState.error?.message} />
-                )}
-              />
-            ))}
-          </div>
-        </Modal>
-      )}
+      <Modal
+        open={dialogOpen}
+        title={dialogTitle}
+        onClose={closeDialog}
+        footer={
+          <>
+            <SecondaryActionButton type="button" onClick={closeDialog}>
+              Cancelar
+            </SecondaryActionButton>
+            <PrimaryActionButton
+              type="button"
+              onClick={() => void onSubmit()}
+              disabled={createMutation.isPending || updateMutation.isPending}
+            >
+              Guardar
+            </PrimaryActionButton>
+          </>
+        }
+      >
+        <div className="space-y-4">
+          {fields.map((field) => (
+            <Controller
+              key={field.name}
+              name={field.name}
+              control={form.control}
+              render={({ field: controllerField, fieldState }) => (
+                <FieldRenderer field={field} controllerField={controllerField} error={fieldState.error?.message} />
+              )}
+            />
+          ))}
+        </div>
+      </Modal>
 
       {renderRowActions ? (
         pendingDelete ? (

@@ -16,6 +16,8 @@ import com.sivemor.platform.domain.UserRepository
 import com.sivemor.platform.domain.VehicleUnitRepository
 import com.sivemor.platform.domain.VerificationOrderRepository
 import com.sivemor.platform.service.AuditService
+import com.sivemor.platform.service.PasswordGenerator
+import com.sivemor.platform.service.UserCredentialMailer
 import com.sivemor.platform.support.TestEntityFactory.client
 import com.sivemor.platform.support.TestEntityFactory.cedis
 import com.sivemor.platform.support.TestEntityFactory.inspection
@@ -55,6 +57,8 @@ class AdminServiceTest {
     @MockK private lateinit var inspectionRepository: InspectionRepository
     @MockK private lateinit var passwordEncoder: PasswordEncoder
     @MockK private lateinit var auditService: AuditService
+    @MockK private lateinit var passwordGenerator: PasswordGenerator
+    @MockK private lateinit var userCredentialMailer: UserCredentialMailer
 
     private lateinit var adminService: AdminService
 
@@ -73,20 +77,30 @@ class AdminServiceTest {
             paymentRepository,
             inspectionRepository,
             passwordEncoder,
-            auditService
+            auditService,
+            passwordGenerator,
+            userCredentialMailer
         )
         every { auditService.log(any(), any(), any(), any(), any()) } just Runs
+        every { userCredentialMailer.sendNewPassword(any(), any()) } just Runs
     }
 
     @Test
-    fun `createUser requires a password for new users`() {
-        assertThatThrownBy {
-            adminService.createUser(
-                99L,
-                UserUpsertRequest("newuser", "newuser@example.com", "New User", Role.ADMIN, password = null)
-            )
-        }.isInstanceOf(BadRequestException::class.java)
-            .hasMessage("Password is required for new users")
+    fun `createUser generates password and emails it`() {
+        val actor = user(id = 99L, username = "admin", role = Role.ADMIN)
+        every { userRepository.findByUsernameIgnoreCaseAndArchivedFalse("newuser") } returns null
+        every { userRepository.findById(99L) } returns Optional.of(actor)
+        every { passwordGenerator.generate(any()) } returns "Temp1234!"
+        every { passwordEncoder.encode("Temp1234!") } returns "encoded-temp"
+        every { userRepository.save(any()) } answers { firstArg() }
+
+        val response = adminService.createUser(
+            99L,
+            UserUpsertRequest("newuser", "newuser@example.com", "New User", Role.ADMIN)
+        )
+
+        assertThat(response.username).isEqualTo("newuser")
+        verify { userCredentialMailer.sendNewPassword(match { it.username == "newuser" }, "Temp1234!") }
     }
 
     @Test
@@ -96,7 +110,7 @@ class AdminServiceTest {
         assertThatThrownBy {
             adminService.createUser(
                 99L,
-                UserUpsertRequest("newuser", "newuser@example.com", "New User", Role.ADMIN, password = "secret")
+                UserUpsertRequest("newuser", "newuser@example.com", "New User", Role.ADMIN)
             )
         }.isInstanceOf(BadRequestException::class.java)
             .hasMessage("Username already exists")
@@ -479,9 +493,29 @@ class AdminServiceTest {
             adminService.updateUser(
                 99L,
                 77L,
-                UserUpsertRequest("archived", "archived@example.com", "Archived User", Role.ADMIN, password = "new-password")
+                UserUpsertRequest("archived", "archived@example.com", "Archived User", Role.ADMIN)
             )
         }.isInstanceOf(NotFoundException::class.java)
             .hasMessage("User 77 was not found")
+    }
+
+    @Test
+    fun `resetUserPassword replaces hash and emails user`() {
+        val actor = user(id = 99L, username = "admin", role = Role.ADMIN)
+        val target = user(id = 33L, username = "techuser").apply {
+            fullName = "Tech User"
+            email = "tech@example.com"
+        }
+        every { userRepository.findById(33L) } returns Optional.of(target)
+        every { userRepository.findById(99L) } returns Optional.of(actor)
+        every { passwordGenerator.generate(any()) } returns "NewPass123!"
+        every { passwordEncoder.encode("NewPass123!") } returns "encoded-reset"
+
+        val response = adminService.resetUserPassword(99L, 33L)
+
+        assertThat(target.passwordHash).isEqualTo("encoded-reset")
+        assertThat(response.message).contains("enviada al correo")
+        verify { userCredentialMailer.sendNewPassword(target, "NewPass123!") }
+        verify { auditService.log(actor, "RESET_USER_PASSWORD", "USER", "33", any()) }
     }
 }

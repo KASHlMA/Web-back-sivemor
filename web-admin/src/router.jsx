@@ -8,11 +8,11 @@ import {
   ClientsPage,
   OrdersPage,
   VerificationCentersPage,
-  UsersPage,
   VehiclesPage
 } from "./features/resources/ResourcePages";
-import { ClientCreatePage, ClientDetailPage } from "./features/resources/ClientPages";
-import { CedisCreatePage, CedisDetailPage } from "./features/resources/CedisPages";
+import { UsersPage } from "./features/resources/UsersPage";
+import { ClientCreatePage, ClientDetailPage, ClientEditPage } from "./features/resources/ClientPages";
+import { CedisCreatePage, CedisDetailPage, CedisEditPage } from "./features/resources/CedisPages";
 import {
   VerificationCenterCreatePage,
   VerificationCenterDetailPage,
@@ -68,6 +68,12 @@ const clientDetailRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: "/clients/$id",
   component: withProtection(ClientDetailPage)
+});
+
+const clientEditRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: "/clients/$id/editar",
+  component: withProtection(ClientEditPage)
 });
 
 const vehiclesRoute = createRoute({
@@ -130,6 +136,12 @@ const cedisDetailRoute = createRoute({
   component: withProtection(CedisDetailPage)
 });
 
+const cedisEditRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: "/cedis/$id/editar",
+  component: withProtection(CedisEditPage)
+});
+
 const verificationCentersRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: "/verification-centers",
@@ -173,6 +185,7 @@ const routeTree = rootRoute.addChildren([
   clientsRoute,
   clientCreateRoute,
   clientDetailRoute,
+  clientEditRoute,
   vehiclesRoute,
   vehiclesAliasRoute,
   vehicleCreateRoute,
@@ -183,6 +196,7 @@ const routeTree = rootRoute.addChildren([
   cedisRoute,
   cedisCreateRoute,
   cedisDetailRoute,
+  cedisEditRoute,
   verificationCentersRoute,
   verificationCenterCreateRoute,
   verificationCenterDetailRoute,

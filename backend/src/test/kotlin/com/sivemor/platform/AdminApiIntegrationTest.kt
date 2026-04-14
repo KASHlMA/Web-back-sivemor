@@ -55,7 +55,7 @@ class AdminApiIntegrationTest : IntegrationTestSupport() {
         mockMvc.post("/api/v1/admin/users") {
             header("Authorization", adminToken)
             contentType = MediaType.APPLICATION_JSON
-            content = """{"username":"","email":"invalid","fullName":"","role":"ADMIN"}"""
+            content = """{"username":"","email":"invalid","fullName":"","role":"ADMIN","active":true}"""
         }.andExpect {
             status { isBadRequest() }
             jsonPath("$.message") { value("Validation failed") }

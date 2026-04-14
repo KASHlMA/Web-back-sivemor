@@ -14,3 +14,9 @@ data class JwtProperties(
 data class CorsProperties(
     var allowedOrigins: List<String> = listOf("http://localhost:3000")
 )
+
+@ConfigurationProperties(prefix = "app.mail")
+data class AppMailProperties(
+    var from: String = "no-reply@sivemor.local",
+    var enabled: Boolean = false
+)

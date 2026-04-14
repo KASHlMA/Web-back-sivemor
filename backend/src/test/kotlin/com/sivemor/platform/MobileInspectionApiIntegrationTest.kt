@@ -61,4 +61,58 @@ class MobileInspectionApiIntegrationTest : IntegrationTestSupport() {
             jsonPath("$[?(@.orderNumber=='$orderNumber')].status") { value(org.hamcrest.Matchers.hasItem("COMPLETED")) }
         }
     }
+
+    @Test
+    fun `submitted inspections expose MER detail and reports fallback remains compatible`() {
+        val adminToken = bearerTokenForUser("admin")
+        val technicianToken = bearerTokenForUser("tecnico1")
+        val suffix = System.currentTimeMillis()
+
+        val technicianId = findUserId("tecnico1", adminToken)
+        val regionId = createRegion("MER Region $suffix", adminToken)
+        val clientId = createClient("MER Client $suffix", "MER$suffix", regionId, adminToken)
+        val vehicleId = createVehicle(clientId, "MER-$suffix", "MER-VIN-$suffix", adminToken)
+        val orderNumber = "MER-ORDER-$suffix"
+
+        createOrder(orderNumber, clientId, regionId, technicianId, listOf(vehicleId), adminToken)
+        val orderUnitId = fetchTechnicianOrderUnits(orderNumber, technicianToken).single()
+        val draft = createDraftInspection(orderUnitId, technicianToken)
+        val inspectionId = draft["id"].asLong()
+
+        updateDraftInspection(inspectionId, answerAllQuestions(draft), technicianToken)
+        val sectionId = draft["sections"][0]["sectionId"].asLong()
+        uploadEvidence(inspectionId, sectionId, technicianToken, "mer-$suffix-1.jpg")
+        uploadEvidence(inspectionId, sectionId, technicianToken, "mer-$suffix-2.jpg")
+        uploadEvidence(inspectionId, sectionId, technicianToken, "mer-$suffix-3.jpg")
+        submitInspection(inspectionId, technicianToken)
+
+        mockMvc.get("/api/v1/admin/reports/$inspectionId") {
+            header("Authorization", adminToken)
+            accept = MediaType.APPLICATION_JSON
+        }.andExpect {
+            status { isOk() }
+            jsonPath("$.verificacionId") { exists() }
+            jsonPath("$.inspectionId") { value(inspectionId.toInt()) }
+            jsonPath("$.source") { value("MER") }
+        }
+
+        mockMvc.get("/api/v1/admin/web-verifications") {
+            header("Authorization", adminToken)
+            accept = MediaType.APPLICATION_JSON
+        }.andExpect {
+            status { isOk() }
+            jsonPath("$[0].verificacionId") { exists() }
+            jsonPath("$[0].noteNumber") { value(orderNumber) }
+        }
+
+        mockMvc.get("/api/v1/admin/reports?orderId=&onlyFailures=false") {
+            header("Authorization", adminToken)
+            accept = MediaType.APPLICATION_JSON
+        }.andExpect {
+            status { isOk() }
+            jsonPath("$[?(@.inspectionId==${inspectionId.toInt()})].orderNumber") {
+                value(org.hamcrest.Matchers.hasItem(orderNumber))
+            }
+        }
+    }
 }

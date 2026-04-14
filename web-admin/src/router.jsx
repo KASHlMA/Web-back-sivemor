@@ -23,6 +23,10 @@ import {
   VehicleHistoryPage,
   VerificationDetailPlaceholderPage
 } from "./features/resources/VehicleHistoryPage";
+import {
+  WebVerificationDetailPage,
+  WebVerificationsPage
+} from "./features/resources/WebVerificationsPage";
 
 const rootRoute = createRootRoute({
   component: () => <Outlet />
@@ -169,13 +173,19 @@ const verificationCenterEditRoute = createRoute({
 const notesRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: "/notes",
-  component: withProtection(() => <PlaceholderPage title="Notas" />)
+  component: withProtection(() => <PlaceholderPage title="Transacciones" />)
 });
 
 const webVerificationsRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: "/web-verifications",
-  component: withProtection(() => <PlaceholderPage title="Verificaciones web" />)
+  component: withProtection(WebVerificationsPage)
+});
+
+const webVerificationDetailRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: "/web-verifications/$id",
+  component: withProtection(WebVerificationDetailPage)
 });
 
 const routeTree = rootRoute.addChildren([
@@ -202,7 +212,8 @@ const routeTree = rootRoute.addChildren([
   verificationCenterDetailRoute,
   verificationCenterEditRoute,
   notesRoute,
-  webVerificationsRoute
+  webVerificationsRoute,
+  webVerificationDetailRoute
 ]);
 
 export const router = createRouter({ routeTree });

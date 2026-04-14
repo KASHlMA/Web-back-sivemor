@@ -2,17 +2,17 @@ import { useEffect, useMemo, useState } from "react";
 import { useNavigate, useRouterState } from "@tanstack/react-router";
 import { brandAssets } from "../lib/brand";
 import { useAuth } from "../lib/session";
-import { ChevronIcon, LogoutIcon, MenuIcon, cx } from "./AdminPrimitives";
+import { LogoutIcon, MenuIcon, cx } from "./AdminPrimitives";
 
 const navigationItems = [
   { label: "Dashboard", to: "/" },
   { label: "Vehiculos", to: "/vehicles" },
-  { label: "Pedidos", to: "/orders" },
+  { label: "Notas", to: "/orders" },
   { label: "Usuarios", to: "/users" },
   { label: "Clientes", to: "/clients" },
   { label: "CEDIS", to: "/cedis" },
   { label: "Verificentros", to: "/verification-centers" },
-  { label: "Notas", to: "/notes" },
+  { label: "Transacciones", to: "/notes" },
   { label: "Verificaciones web", to: "/web-verifications" }
 ];
 
@@ -51,6 +51,7 @@ function AppShell({ children }) {
   const vehiclesSelected = pathname === "/vehicles" || pathname.startsWith("/vehiculos");
   const cedisSelected = pathname === "/cedis" || pathname.startsWith("/cedis/");
   const verificationCentersSelected = pathname === "/verification-centers" || pathname.startsWith("/verification-centers/");
+  const webVerificationsSelected = pathname === "/web-verifications" || pathname.startsWith("/web-verifications/");
 
   const title = useMemo(() => {
     if (pathname.startsWith("/vehiculos")) {
@@ -63,6 +64,10 @@ function AppShell({ children }) {
 
     if (pathname.startsWith("/verification-centers")) {
       return "Verificentros";
+    }
+
+    if (pathname.startsWith("/web-verifications")) {
+      return "Verificaciones web";
     }
 
     return navigationItems.find((item) => item.to === pathname)?.label ?? "SIVEMOR";
@@ -104,7 +109,7 @@ function AppShell({ children }) {
           <div className="h-full overflow-y-auto">
             <div className="min-h-[72px] border-b border-b-[var(--border-strong)] bg-[var(--shell-dark)]" />
             <nav className="flex flex-col">
-              {navigationItems.map((item, index) => {
+              {navigationItems.map((item) => {
                 const selected =
                   item.to === "/vehicles"
                     ? vehiclesSelected
@@ -112,6 +117,8 @@ function AppShell({ children }) {
                       ? cedisSelected
                       : item.to === "/verification-centers"
                         ? verificationCentersSelected
+                        : item.to === "/web-verifications"
+                          ? webVerificationsSelected
                         : pathname === item.to;
 
                 return (
@@ -124,9 +131,6 @@ function AppShell({ children }) {
                       selected ? "bg-[#d7ddcb]" : "bg-[var(--panel)] hover:bg-[#eef4e8]"
                     )}
                   >
-                    <span className={cx("flex w-5 justify-center", selected || index % 2 === 0 ? "opacity-100" : "opacity-25")}>
-                      <ChevronIcon />
-                    </span>
                     <span className={selected ? "font-bold" : ""}>{item.label}</span>
                   </button>
                 );

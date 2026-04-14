@@ -10,8 +10,10 @@ import com.sivemor.platform.domain.InspectionStatus
 import com.sivemor.platform.domain.OrderUnitRepository
 import com.sivemor.platform.domain.Role
 import com.sivemor.platform.domain.UserRepository
+import com.sivemor.platform.domain.Verificacion
 import com.sivemor.platform.domain.VerificationOrderStatus
 import com.sivemor.platform.service.AuditService
+import com.sivemor.platform.service.MerCompatibilityService
 import com.sivemor.platform.support.TestEntityFactory.checklistQuestion
 import com.sivemor.platform.support.TestEntityFactory.checklistSection
 import com.sivemor.platform.support.TestEntityFactory.inspection
@@ -43,6 +45,7 @@ class MobileInspectionServiceTest {
     @MockK private lateinit var inspectionRepository: InspectionRepository
     @MockK private lateinit var userRepository: UserRepository
     @MockK private lateinit var auditService: AuditService
+    @MockK private lateinit var merCompatibilityService: MerCompatibilityService
 
     private lateinit var mobileInspectionService: MobileInspectionService
     private val clock: Clock = Clock.fixed(Instant.parse("2026-03-23T12:00:00Z"), ZoneOffset.UTC)
@@ -56,9 +59,11 @@ class MobileInspectionServiceTest {
             inspectionRepository,
             userRepository,
             auditService,
+            merCompatibilityService,
             clock
         )
         every { auditService.log(any(), any(), any(), any(), any()) } just Runs
+        every { merCompatibilityService.syncSubmittedInspection(any()) } returns Verificacion()
     }
 
     @Test
@@ -295,5 +300,6 @@ class MobileInspectionServiceTest {
         assertThat(draft.overallResult).isEqualTo(InspectionResult.FAIL)
         assertThat(order.status).isEqualTo(VerificationOrderStatus.COMPLETED)
         assertThat(draft.submittedAt).isEqualTo(Instant.now(clock))
+        verify { merCompatibilityService.syncSubmittedInspection(draft) }
     }
 }

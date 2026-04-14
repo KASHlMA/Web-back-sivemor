@@ -62,6 +62,18 @@ enum class PaymentStatus {
     CANCELLED
 }
 
+enum class VerificacionMateria {
+    MOTRIZ,
+    ARRASTRE,
+    GASOLINA,
+    HUMO
+}
+
+enum class VerificacionVeredicto {
+    APROBADO,
+    REPROBADO
+}
+
 @MappedSuperclass
 abstract class BaseEntity {
     @Id
@@ -500,4 +512,241 @@ class AuditLog : BaseEntity() {
 
     @Column(name = "details_json", columnDefinition = "TEXT")
     var detailsJson: String? = null
+}
+
+@Entity
+@Table(name = "verificacion")
+class Verificacion : BaseEntity() {
+    @ManyToOne(fetch = FetchType.LAZY, optional = false)
+    @JoinColumn(name = "inspection_id", nullable = false)
+    lateinit var inspection: Inspection
+
+    @ManyToOne(fetch = FetchType.LAZY, optional = false)
+    @JoinColumn(name = "vehicle_unit_id", nullable = false)
+    lateinit var vehicleUnit: VehicleUnit
+
+    @ManyToOne(fetch = FetchType.LAZY, optional = false)
+    @JoinColumn(name = "verification_order_id", nullable = false)
+    lateinit var verificationOrder: VerificationOrder
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "verification_center_id")
+    var verificationCenter: VerificationCenter? = null
+
+    @Column(name = "folio_verificacion", nullable = false, unique = true, length = 60)
+    lateinit var folioVerificacion: String
+
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false, length = 40)
+    var materia: VerificacionMateria = VerificacionMateria.GASOLINA
+
+    @Column
+    var precio: Double? = null
+
+    @Column
+    var multa: Double? = null
+
+    @Column(name = "fecha_verificacion", nullable = false)
+    var fechaVerificacion: Instant = Instant.now()
+
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false, length = 20)
+    var veredicto: VerificacionVeredicto = VerificacionVeredicto.APROBADO
+
+    @Column(name = "overall_comment", columnDefinition = "TEXT")
+    var overallComment: String? = null
+}
+
+@Entity
+@Table(name = "evaluacion")
+class Evaluacion : BaseEntity() {
+    @ManyToOne(fetch = FetchType.LAZY, optional = false)
+    @JoinColumn(name = "verificacion_id", nullable = false)
+    lateinit var verificacion: Verificacion
+
+    @Column(name = "luces_galibo", length = 40)
+    var lucesGalibo: String? = null
+
+    @Column(name = "luces_altas", length = 40)
+    var lucesAltas: String? = null
+
+    @Column(name = "luces_bajas", length = 40)
+    var lucesBajas: String? = null
+
+    @Column(name = "luces_demarcadoras_delanteras", length = 40)
+    var lucesDemarcadorasDelanteras: String? = null
+
+    @Column(name = "luces_demarcadoras_traseras", length = 40)
+    var lucesDemarcadorasTraseras: String? = null
+
+    @Column(name = "luces_indicadoras", length = 40)
+    var lucesIndicadoras: String? = null
+
+    @Column(name = "faro_izquierdo", length = 40)
+    var faroIzquierdo: String? = null
+
+    @Column(name = "faro_derecho", length = 40)
+    var faroDerecho: String? = null
+
+    @Column(name = "luces_direccionales_delanteras", length = 40)
+    var lucesDireccionalesDelanteras: String? = null
+
+    @Column(name = "luces_direccionales_traseras", length = 40)
+    var lucesDireccionalesTraseras: String? = null
+
+    @Column(name = "llantas_rines_delanteros", length = 40)
+    var llantasRinesDelanteros: String? = null
+
+    @Column(name = "llantas_rines_traseros", length = 40)
+    var llantasRinesTraseros: String? = null
+
+    @Column(name = "llantas_masas_delanteras", length = 40)
+    var llantasMasasDelanteras: String? = null
+
+    @Column(name = "llantas_masas_traseras", length = 40)
+    var llantasMasasTraseras: String? = null
+
+    @Column(name = "llantas_presion_delantera_izquierda")
+    var llantasPresionDelanteraIzquierda: Double? = null
+
+    @Column(name = "llantas_presion_delantera_derecha")
+    var llantasPresionDelanteraDerecha: Double? = null
+
+    @Column(name = "llantas_presion_trasera_izquierda_1")
+    var llantasPresionTraseraIzquierda1: Double? = null
+
+    @Column(name = "llantas_presion_trasera_izquierda_2")
+    var llantasPresionTraseraIzquierda2: Double? = null
+
+    @Column(name = "llantas_presion_trasera_derecha_1")
+    var llantasPresionTraseraDerecha1: Double? = null
+
+    @Column(name = "llantas_presion_trasera_derecha_2")
+    var llantasPresionTraseraDerecha2: Double? = null
+
+    @Column(name = "llantas_profundidad_delantera_izquierda")
+    var llantasProfundidadDelanteraIzquierda: Double? = null
+
+    @Column(name = "llantas_profundidad_delantera_derecha")
+    var llantasProfundidadDelanteraDerecha: Double? = null
+
+    @Column(name = "llantas_profundidad_trasera_izquierda_1")
+    var llantasProfundidadTraseraIzquierda1: Double? = null
+
+    @Column(name = "llantas_profundidad_trasera_izquierda_2")
+    var llantasProfundidadTraseraIzquierda2: Double? = null
+
+    @Column(name = "llantas_profundidad_trasera_derecha_1")
+    var llantasProfundidadTraseraDerecha1: Double? = null
+
+    @Column(name = "llantas_profundidad_trasera_derecha_2")
+    var llantasProfundidadTraseraDerecha2: Double? = null
+
+    @Column(name = "llantas_tuercas_delantera_izquierda", length = 40)
+    var llantasTuercasDelanteraIzquierda: String? = null
+
+    @Column(name = "llantas_tuercas_delantera_izquierda_faltantes")
+    var llantasTuercasDelanteraIzquierdaFaltantes: Int? = null
+
+    @Column(name = "llantas_tuercas_delantera_izquierda_rotas")
+    var llantasTuercasDelanteraIzquierdaRotas: Int? = null
+
+    @Column(name = "llantas_tuercas_delantera_derecha", length = 40)
+    var llantasTuercasDelanteraDerecha: String? = null
+
+    @Column(name = "llantas_tuercas_delantera_derecha_faltantes")
+    var llantasTuercasDelanteraDerechaFaltantes: Int? = null
+
+    @Column(name = "llantas_tuercas_delantera_derecha_rotas")
+    var llantasTuercasDelanteraDerechaRotas: Int? = null
+
+    @Column(name = "llantas_tuercas_trasera_izquierda", length = 40)
+    var llantasTuercasTraseraIzquierda: String? = null
+
+    @Column(name = "llantas_tuercas_trasera_izquierda_faltantes")
+    var llantasTuercasTraseraIzquierdaFaltantes: Int? = null
+
+    @Column(name = "llantas_tuercas_trasera_izquierda_rotas")
+    var llantasTuercasTraseraIzquierdaRotas: Int? = null
+
+    @Column(name = "llantas_tuercas_trasera_derecha", length = 40)
+    var llantasTuercasTraseraDerecha: String? = null
+
+    @Column(name = "llantas_tuercas_trasera_derecha_faltantes")
+    var llantasTuercasTraseraDerechaFaltantes: Int? = null
+
+    @Column(name = "llantas_tuercas_trasera_derecha_rotas")
+    var llantasTuercasTraseraDerechaRotas: Int? = null
+
+    @Column(name = "direccion_brazo_pitman", length = 40)
+    var direccionBrazoPitman: String? = null
+
+    @Column(name = "direccion_manijas_puertas", length = 40)
+    var direccionManijasPuertas: String? = null
+
+    @Column(name = "direccion_chavetas", length = 40)
+    var direccionChavetas: String? = null
+
+    @Column(name = "direccion_chavetas_faltantes")
+    var direccionChavetasFaltantes: Int? = null
+
+    @Column(name = "aire_frenos_compresor", length = 40)
+    var aireFrenosCompresor: String? = null
+
+    @Column(name = "aire_frenos_tanques_aire", length = 40)
+    var aireFrenosTanquesAire: String? = null
+
+    @Column(name = "aire_frenos_tiempo_carga_psi")
+    var aireFrenosTiempoCargaPsi: Double? = null
+
+    @Column(name = "aire_frenos_tiempo_carga_tiempo")
+    var aireFrenosTiempoCargaTiempo: Double? = null
+
+    @Column(name = "motor_emisiones_humo", length = 40)
+    var motorEmisionesHumo: String? = null
+
+    @Column(name = "motor_emisiones_gobernado", length = 40)
+    var motorEmisionesGobernado: String? = null
+
+    @Column(name = "otros_caja_direccion", length = 40)
+    var otrosCajaDireccion: String? = null
+
+    @Column(name = "otros_deposito_aceite", length = 40)
+    var otrosDepositoAceite: String? = null
+
+    @Column(name = "otros_parabrisas", length = 40)
+    var otrosParabrisas: String? = null
+
+    @Column(name = "otros_limpiaparabrisas", length = 40)
+    var otrosLimpiaparabrisas: String? = null
+
+    @Column(name = "otros_juego", length = 40)
+    var otrosJuego: String? = null
+
+    @Column(name = "otros_escape", length = 40)
+    var otrosEscape: String? = null
+
+    @Column(name = "comentario_luces", columnDefinition = "TEXT")
+    var comentarioLuces: String? = null
+
+    @Column(name = "comentario_llantas", columnDefinition = "TEXT")
+    var comentarioLlantas: String? = null
+
+    @Column(name = "comentario_direccion", columnDefinition = "TEXT")
+    var comentarioDireccion: String? = null
+
+    @Column(name = "comentario_aire_frenos", columnDefinition = "TEXT")
+    var comentarioAireFrenos: String? = null
+
+    @Column(name = "comentario_motor_emisiones", columnDefinition = "TEXT")
+    var comentarioMotorEmisiones: String? = null
+
+    @Column(name = "comentario_otros", columnDefinition = "TEXT")
+    var comentarioOtros: String? = null
+
+    @Column(name = "comentarios_generales", columnDefinition = "TEXT")
+    var comentariosGenerales: String? = null
+
+    @Column(name = "evidence_count", nullable = false)
+    var evidenceCount: Int = 0
 }

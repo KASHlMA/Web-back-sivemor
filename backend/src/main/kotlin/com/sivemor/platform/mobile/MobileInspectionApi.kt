@@ -20,6 +20,7 @@ import com.sivemor.platform.domain.UserRepository
 import com.sivemor.platform.domain.VerificationOrderStatus
 import com.sivemor.platform.security.AppUserPrincipal
 import com.sivemor.platform.service.AuditService
+import com.sivemor.platform.service.MerCompatibilityService
 import io.swagger.v3.oas.annotations.Operation
 import io.swagger.v3.oas.annotations.Parameter
 import io.swagger.v3.oas.annotations.media.Content
@@ -277,6 +278,7 @@ class MobileInspectionService(
     private val inspectionRepository: InspectionRepository,
     private val userRepository: UserRepository,
     private val auditService: AuditService,
+    private val merCompatibilityService: MerCompatibilityService,
     private val clock: Clock
 ) {
     @Transactional(readOnly = true)
@@ -556,6 +558,8 @@ class MobileInspectionService(
         } else {
             VerificationOrderStatus.IN_PROGRESS
         }
+
+        merCompatibilityService.syncSubmittedInspection(inspection)
 
         auditService.log(
             actor = inspection.technician,

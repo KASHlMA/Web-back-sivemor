@@ -118,4 +118,30 @@ interface PaymentRepository : JpaRepository<Payment, Long> {
     fun findAllByArchivedFalseOrderByCreatedAtDesc(): List<Payment>
 }
 
+interface VerificacionRepository : JpaRepository<Verificacion, Long> {
+    fun findByInspectionIdAndArchivedFalse(inspectionId: Long): Verificacion?
+
+    @EntityGraph(
+        attributePaths = [
+            "inspection",
+            "inspection.verificationOrder",
+            "inspection.verificationOrder.clientCompany",
+            "inspection.verificationOrder.region",
+            "inspection.orderUnit",
+            "inspection.orderUnit.vehicleUnit",
+            "inspection.technician",
+            "vehicleUnit",
+            "verificationOrder"
+        ]
+    )
+    fun findAllByArchivedFalseOrderByFechaVerificacionDesc(): List<Verificacion>
+}
+
+interface EvaluacionRepository : JpaRepository<Evaluacion, Long> {
+    fun findByVerificacionIdAndArchivedFalse(verificacionId: Long): Evaluacion?
+
+    @EntityGraph(attributePaths = ["verificacion", "verificacion.inspection"])
+    fun findAllByArchivedFalse(): List<Evaluacion>
+}
+
 interface AuditLogRepository : JpaRepository<AuditLog, Long>

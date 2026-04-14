@@ -521,7 +521,7 @@ export function OrdersPage() {
 
   return (
     <ResourceTablePage
-      title="Pedidos"
+      title="Notas"
       endpoint="orders"
       queryKey={["orders"]}
       columns={[

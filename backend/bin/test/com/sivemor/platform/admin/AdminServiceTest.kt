@@ -14,6 +14,8 @@ import com.sivemor.platform.domain.RegionRepository
 import com.sivemor.platform.domain.Role
 import com.sivemor.platform.domain.UserRepository
 import com.sivemor.platform.domain.VehicleUnitRepository
+import com.sivemor.platform.domain.EvaluacionRepository
+import com.sivemor.platform.domain.VerificacionRepository
 import com.sivemor.platform.domain.VerificationOrderRepository
 import com.sivemor.platform.service.AuditService
 import com.sivemor.platform.service.PasswordGenerator
@@ -55,6 +57,8 @@ class AdminServiceTest {
     @MockK private lateinit var orderUnitRepository: OrderUnitRepository
     @MockK private lateinit var paymentRepository: PaymentRepository
     @MockK private lateinit var inspectionRepository: InspectionRepository
+    @MockK private lateinit var verificacionRepository: VerificacionRepository
+    @MockK private lateinit var evaluacionRepository: EvaluacionRepository
     @MockK private lateinit var passwordEncoder: PasswordEncoder
     @MockK private lateinit var auditService: AuditService
     @MockK private lateinit var passwordGenerator: PasswordGenerator
@@ -76,6 +80,8 @@ class AdminServiceTest {
             orderUnitRepository,
             paymentRepository,
             inspectionRepository,
+            verificacionRepository,
+            evaluacionRepository,
             passwordEncoder,
             auditService,
             passwordGenerator,
@@ -83,6 +89,7 @@ class AdminServiceTest {
         )
         every { auditService.log(any(), any(), any(), any(), any()) } just Runs
         every { userCredentialMailer.sendNewPassword(any(), any()) } just Runs
+        every { verificacionRepository.findAllByArchivedFalseOrderByFechaVerificacionDesc() } returns emptyList()
     }
 
     @Test

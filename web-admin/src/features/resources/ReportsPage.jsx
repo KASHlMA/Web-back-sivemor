@@ -17,6 +17,7 @@ function useLookup(key, path) {
 }
 
 export function ReportsPage() {
+  const [selectedInspectionId, setSelectedInspectionId] = useState("");
   const [filters, setFilters] = useState({
     companyId: "",
     regionId: "",
@@ -46,6 +47,12 @@ export function ReportsPage() {
   const reports = useQuery({
     queryKey: ["reports", queryString],
     queryFn: () => api.get(`/admin/reports?${queryString}`)
+  });
+
+  const reportDetail = useQuery({
+    queryKey: ["report-detail", selectedInspectionId],
+    queryFn: () => api.get(`/admin/reports/${selectedInspectionId}`),
+    enabled: Boolean(selectedInspectionId)
   });
 
   const resetFilters = () =>
@@ -131,7 +138,11 @@ export function ReportsPage() {
             </thead>
             <tbody>
               {(reports.data ?? []).map((report) => (
-                <tr key={report.inspectionId}>
+                <tr
+                  key={report.inspectionId}
+                  onClick={() => setSelectedInspectionId(String(report.inspectionId))}
+                  className="cursor-pointer"
+                >
                   <td>{report.orderNumber}</td>
                   <td>{report.clientCompanyName}</td>
                   <td>{report.regionName}</td>
@@ -145,6 +156,43 @@ export function ReportsPage() {
             </tbody>
           </table>
         </div>
+
+        {selectedInspectionId ? (
+          <div className="px-5 pb-5">
+            <PagePanel>
+              <PageTitleBar
+                title="Detalle de evaluacion"
+                subtitle={
+                  reportDetail.data
+                    ? `Fuente ${reportDetail.data.source === "MER" ? "nuevo MER" : "legacy"} para la inspeccion ${reportDetail.data.orderNumber}.`
+                    : "Cargando detalle..."
+                }
+                actions={
+                  <PrimaryActionButton type="button" onClick={() => setSelectedInspectionId("")}>
+                    Cerrar
+                  </PrimaryActionButton>
+                }
+              />
+              {reportDetail.data ? (
+                <div className="grid gap-3 p-5 md:grid-cols-2">
+                  {Object.entries(reportDetail.data.sections ?? {}).map(([sectionName, values]) => (
+                    <section key={sectionName} className="rounded-lg border border-[var(--border)] p-4">
+                      <h4 className="text-sm font-bold uppercase tracking-[0.14em] text-[var(--title)]">{sectionName}</h4>
+                      <div className="mt-3 space-y-2">
+                        {Object.entries(values).map(([field, value]) => (
+                          <div key={field} className="flex items-center justify-between gap-4 text-sm">
+                            <span className="text-[var(--shell-text)]">{field}</span>
+                            <span className="font-semibold text-[var(--title)]">{String(value ?? "-")}</span>
+                          </div>
+                        ))}
+                      </div>
+                    </section>
+                  ))}
+                </div>
+              ) : null}
+            </PagePanel>
+          </div>
+        ) : null}
       </PagePanel>
     </div>
   );

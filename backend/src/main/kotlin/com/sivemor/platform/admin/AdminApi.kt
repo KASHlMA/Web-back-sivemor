@@ -16,11 +16,14 @@ import com.sivemor.platform.domain.OrderUnitRepository
 import com.sivemor.platform.domain.Payment
 import com.sivemor.platform.domain.PaymentRepository
 import com.sivemor.platform.domain.PaymentStatus
+import com.sivemor.platform.domain.EvaluacionRepository
 import com.sivemor.platform.domain.Region
 import com.sivemor.platform.domain.RegionRepository
 import com.sivemor.platform.domain.Role
 import com.sivemor.platform.domain.User
 import com.sivemor.platform.domain.UserRepository
+import com.sivemor.platform.domain.VerificacionRepository
+import com.sivemor.platform.domain.VerificacionVeredicto
 import com.sivemor.platform.domain.VerificationCenter
 import com.sivemor.platform.domain.VerificationCenterRepository
 import com.sivemor.platform.domain.VehicleCategory
@@ -242,6 +245,34 @@ data class ReportSummaryResponse(
     val overallResult: InspectionResult?,
     val failureCount: Int,
     val evidenceCount: Int
+)
+
+data class EvaluationDetailResponse(
+    val verificacionId: Long?,
+    val inspectionId: Long,
+    val source: String,
+    val orderNumber: String,
+    val clientCompanyName: String,
+    val regionName: String,
+    val technicianName: String,
+    val vehiclePlate: String,
+    val vehicleCategory: VehicleCategory,
+    val submittedAt: Instant?,
+    val overallResult: String?,
+    val overallComment: String?,
+    val evidenceCount: Int,
+    val sections: Map<String, Map<String, Any?>>
+)
+
+data class WebVerificationListItemResponse(
+    val verificacionId: Long,
+    val inspectionId: Long,
+    val vehiclePlate: String,
+    val clientCompanyName: String,
+    val noteNumber: String,
+    val approved: Boolean,
+    val statusLabel: String,
+    val submittedAt: Instant
 )
 
 data class FailureBucketResponse(
@@ -574,6 +605,20 @@ class AdminController(
         onlyFailures = onlyFailures
     )
 
+    @Operation(summary = "Get detailed report information for an inspection")
+    @GetMapping("/reports/{inspectionId}")
+    fun reportDetail(@PathVariable inspectionId: Long): EvaluationDetailResponse =
+        adminService.getReportDetail(inspectionId)
+
+    @Operation(summary = "List web verifications from the new MER-compatible store")
+    @GetMapping("/web-verifications")
+    fun webVerifications(): List<WebVerificationListItemResponse> = adminService.listWebVerifications()
+
+    @Operation(summary = "Get a web verification detail by verification id")
+    @GetMapping("/web-verifications/{id}")
+    fun webVerificationDetail(@PathVariable id: Long): EvaluationDetailResponse =
+        adminService.getWebVerificationDetail(id)
+
     @Operation(summary = "Return failure-focused dashboard metrics")
     @GetMapping("/dashboard/failures")
     fun dashboardFailures(): DashboardFailuresResponse = adminService.dashboardFailures()
@@ -591,6 +636,8 @@ class AdminService(
     private val orderUnitRepository: OrderUnitRepository,
     private val paymentRepository: PaymentRepository,
     private val inspectionRepository: InspectionRepository,
+    private val verificacionRepository: VerificacionRepository,
+    private val evaluacionRepository: EvaluacionRepository,
     private val passwordEncoder: PasswordEncoder,
     private val auditService: AuditService,
     private val passwordGenerator: PasswordGenerator,
@@ -966,35 +1013,111 @@ class AdminService(
         from: Instant?,
         to: Instant?,
         onlyFailures: Boolean
-    ): List<ReportSummaryResponse> = inspectionRepository
-        .findAllByStatusAndArchivedFalseOrderBySubmittedAtDesc(InspectionStatus.SUBMITTED)
-        .filter { inspection ->
-            (companyId == null || inspection.verificationOrder.clientCompany.id == companyId) &&
-                (regionId == null || inspection.verificationOrder.region.id == regionId) &&
-                (orderId == null || inspection.verificationOrder.id == orderId) &&
-                (technicianId == null || inspection.technician.id == technicianId) &&
-                (vehicleId == null || inspection.orderUnit.vehicleUnit.id == vehicleId) &&
-                (from == null || (inspection.submittedAt != null && !inspection.submittedAt!!.isBefore(from))) &&
-                (to == null || (inspection.submittedAt != null && !inspection.submittedAt!!.isAfter(to))) &&
-                (!onlyFailures || inspection.overallResult == InspectionResult.FAIL)
+    ): List<ReportSummaryResponse> {
+        val reportByInspectionId = linkedMapOf<Long, ReportSummaryResponse>()
+
+        verificacionRepository.findAllByArchivedFalseOrderByFechaVerificacionDesc()
+            .filter { verificacion ->
+                (companyId == null || verificacion.verificationOrder.clientCompany.id == companyId) &&
+                    (regionId == null || verificacion.verificationOrder.region.id == regionId) &&
+                    (orderId == null || verificacion.verificationOrder.id == orderId) &&
+                    (technicianId == null || verificacion.inspection.technician.id == technicianId) &&
+                    (vehicleId == null || verificacion.vehicleUnit.id == vehicleId) &&
+                    (from == null || !verificacion.fechaVerificacion.isBefore(from)) &&
+                    (to == null || !verificacion.fechaVerificacion.isAfter(to)) &&
+                    (!onlyFailures || verificacion.veredicto == VerificacionVeredicto.REPROBADO)
+            }
+            .forEach { verificacion ->
+                val report = verificacion.toReportSummary(evaluacionRepository.findByVerificacionIdAndArchivedFalse(verificacion.id ?: 0L))
+                reportByInspectionId[report.inspectionId] = report
+            }
+
+        inspectionRepository.findAllByStatusAndArchivedFalseOrderBySubmittedAtDesc(InspectionStatus.SUBMITTED)
+            .filterNot { reportByInspectionId.containsKey(it.id ?: 0L) }
+            .filter { inspection ->
+                (companyId == null || inspection.verificationOrder.clientCompany.id == companyId) &&
+                    (regionId == null || inspection.verificationOrder.region.id == regionId) &&
+                    (orderId == null || inspection.verificationOrder.id == orderId) &&
+                    (technicianId == null || inspection.technician.id == technicianId) &&
+                    (vehicleId == null || inspection.orderUnit.vehicleUnit.id == vehicleId) &&
+                    (from == null || (inspection.submittedAt != null && !inspection.submittedAt!!.isBefore(from))) &&
+                    (to == null || (inspection.submittedAt != null && !inspection.submittedAt!!.isAfter(to))) &&
+                    (!onlyFailures || inspection.overallResult == InspectionResult.FAIL)
+            }
+            .forEach { inspection ->
+                reportByInspectionId[inspection.id ?: 0L] = inspection.toReportSummary()
+            }
+
+        return reportByInspectionId.values.toList()
+    }
+
+    @Transactional(readOnly = true)
+    fun getReportDetail(inspectionId: Long): EvaluationDetailResponse {
+        val verificacion = verificacionRepository.findByInspectionIdAndArchivedFalse(inspectionId)
+        if (verificacion != null) {
+            val evaluacion = evaluacionRepository.findByVerificacionIdAndArchivedFalse(verificacion.id ?: 0L)
+            return verificacion.toEvaluationDetail(evaluacion)
         }
-        .map { it.toReportSummary() }
+
+        return (inspectionRepository.findDetailedById(inspectionId)
+            ?: throw NotFoundException("Inspection $inspectionId was not found"))
+            .toLegacyEvaluationDetail()
+    }
+
+    @Transactional(readOnly = true)
+    fun listWebVerifications(): List<WebVerificationListItemResponse> =
+        verificacionRepository.findAllByArchivedFalseOrderByFechaVerificacionDesc().map { verificacion ->
+            WebVerificationListItemResponse(
+                verificacionId = verificacion.id ?: 0L,
+                inspectionId = verificacion.inspection.id ?: 0L,
+                vehiclePlate = verificacion.vehicleUnit.plate,
+                clientCompanyName = verificacion.verificationOrder.clientCompany.name,
+                noteNumber = verificacion.verificationOrder.orderNumber,
+                approved = verificacion.veredicto == VerificacionVeredicto.APROBADO,
+                statusLabel = if (verificacion.veredicto == VerificacionVeredicto.APROBADO) "Aprobado" else "Reprobado",
+                submittedAt = verificacion.fechaVerificacion
+            )
+        }
+
+    @Transactional(readOnly = true)
+    fun getWebVerificationDetail(id: Long): EvaluationDetailResponse {
+        val verificacion = verificacionRepository.findById(id)
+            .orElseThrow { NotFoundException("Verification $id was not found") }
+            .also {
+                if (it.archived) {
+                    throw NotFoundException("Verification $id was not found")
+                }
+            }
+        val evaluacion = evaluacionRepository.findByVerificacionIdAndArchivedFalse(id)
+        return verificacion.toEvaluationDetail(evaluacion)
+    }
 
     @Transactional(readOnly = true)
     fun dashboardFailures(): DashboardFailuresResponse {
-        val submitted = inspectionRepository.findAllByStatusAndArchivedFalseOrderBySubmittedAtDesc(InspectionStatus.SUBMITTED)
-        val failed = submitted.filter { it.overallResult == InspectionResult.FAIL }
+        val submitted = listReports(
+            companyId = null,
+            regionId = null,
+            orderId = null,
+            technicianId = null,
+            vehicleId = null,
+            from = null,
+            to = null,
+            onlyFailures = false
+        )
+        val failed = submitted.filter {
+            it.overallResult?.name == InspectionResult.FAIL.name || it.overallResult?.name == VerificacionVeredicto.REPROBADO.name
+        }
         val failuresByRegion = failed
-            .groupBy { it.verificationOrder.region.name }
+            .groupBy { it.regionName }
             .map { FailureBucketResponse(label = it.key, count = it.value.size.toLong()) }
             .sortedByDescending { it.count }
 
         return DashboardFailuresResponse(
             totalSubmitted = submitted.size.toLong(),
             totalFailed = failed.size.toLong(),
-            unitsWithProblems = failed.mapNotNull { it.orderUnit.vehicleUnit.id }.distinct().size.toLong(),
+            unitsWithProblems = failed.map { it.vehiclePlate }.distinct().size.toLong(),
             failuresByRegion = failuresByRegion,
-            recentFailures = failed.take(10).map { it.toReportSummary() }
+            recentFailures = failed.take(10)
         )
     }
 
@@ -1104,6 +1227,182 @@ class AdminService(
         failureCount = answers.count { it.answerValue == AnswerValue.FAIL },
         evidenceCount = evidences.size
     )
+
+    private fun com.sivemor.platform.domain.Verificacion.toReportSummary(
+        evaluacion: com.sivemor.platform.domain.Evaluacion?
+    ): ReportSummaryResponse = ReportSummaryResponse(
+        inspectionId = inspection.id ?: 0L,
+        orderNumber = verificationOrder.orderNumber,
+        clientCompanyName = verificationOrder.clientCompany.name,
+        regionName = verificationOrder.region.name,
+        technicianName = inspection.technician.fullName,
+        vehiclePlate = vehicleUnit.plate,
+        vehicleCategory = vehicleUnit.category,
+        submittedAt = fechaVerificacion,
+        overallResult = if (veredicto == VerificacionVeredicto.REPROBADO) InspectionResult.FAIL else InspectionResult.PASS,
+        failureCount = evaluacion?.failureCount() ?: inspection.answers.count { it.answerValue == AnswerValue.FAIL },
+        evidenceCount = evaluacion?.evidenceCount ?: inspection.evidences.size
+    )
+
+    private fun com.sivemor.platform.domain.Verificacion.toEvaluationDetail(
+        evaluacion: com.sivemor.platform.domain.Evaluacion?
+    ): EvaluationDetailResponse = EvaluationDetailResponse(
+        verificacionId = id ?: 0L,
+        inspectionId = inspection.id ?: 0L,
+        source = "MER",
+        orderNumber = verificationOrder.orderNumber,
+        clientCompanyName = verificationOrder.clientCompany.name,
+        regionName = verificationOrder.region.name,
+        technicianName = inspection.technician.fullName,
+        vehiclePlate = vehicleUnit.plate,
+        vehicleCategory = vehicleUnit.category,
+        submittedAt = fechaVerificacion,
+        overallResult = veredicto.name,
+        overallComment = overallComment,
+        evidenceCount = evaluacion?.evidenceCount ?: inspection.evidences.size,
+        sections = evaluacion.toSectionMap()
+    )
+
+    private fun Inspection.toLegacyEvaluationDetail(): EvaluationDetailResponse = EvaluationDetailResponse(
+        verificacionId = null,
+        inspectionId = id ?: 0L,
+        source = "LEGACY",
+        orderNumber = verificationOrder.orderNumber,
+        clientCompanyName = verificationOrder.clientCompany.name,
+        regionName = verificationOrder.region.name,
+        technicianName = technician.fullName,
+        vehiclePlate = orderUnit.vehicleUnit.plate,
+        vehicleCategory = orderUnit.vehicleUnit.category,
+        submittedAt = submittedAt,
+        overallResult = overallResult?.name,
+        overallComment = overallComment,
+        evidenceCount = evidences.size,
+        sections = template.sections
+            .filter { !it.archived }
+            .associate { section ->
+                section.title to section.questions
+                    .filter { !it.archived }
+                    .associate { question ->
+                        question.code to (answers.firstOrNull { it.question.id == question.id }?.answerValue?.name)
+                    } + mapOf("comment" to sectionNotes.firstOrNull { it.section.id == section.id }?.comment)
+            }
+    )
+
+    private fun com.sivemor.platform.domain.Evaluacion?.toSectionMap(): Map<String, Map<String, Any?>> {
+        if (this == null) return emptyMap()
+        return linkedMapOf(
+            "luces" to linkedMapOf(
+                "luces_galibo" to lucesGalibo,
+                "luces_altas" to lucesAltas,
+                "luces_bajas" to lucesBajas,
+                "luces_demarcadoras_delanteras" to lucesDemarcadorasDelanteras,
+                "luces_demarcadoras_traseras" to lucesDemarcadorasTraseras,
+                "luces_indicadoras" to lucesIndicadoras,
+                "faro_izquierdo" to faroIzquierdo,
+                "faro_derecho" to faroDerecho,
+                "luces_direccionales_delanteras" to lucesDireccionalesDelanteras,
+                "luces_direccionales_traseras" to lucesDireccionalesTraseras,
+                "comment" to comentarioLuces
+            ),
+            "llantas" to linkedMapOf(
+                "llantas_rines_delanteros" to llantasRinesDelanteros,
+                "llantas_rines_traseros" to llantasRinesTraseros,
+                "llantas_masas_delanteras" to llantasMasasDelanteras,
+                "llantas_masas_traseras" to llantasMasasTraseras,
+                "llantas_presion_delantera_izquierda" to llantasPresionDelanteraIzquierda,
+                "llantas_presion_delantera_derecha" to llantasPresionDelanteraDerecha,
+                "llantas_presion_trasera_izquierda_1" to llantasPresionTraseraIzquierda1,
+                "llantas_presion_trasera_izquierda_2" to llantasPresionTraseraIzquierda2,
+                "llantas_presion_trasera_derecha_1" to llantasPresionTraseraDerecha1,
+                "llantas_presion_trasera_derecha_2" to llantasPresionTraseraDerecha2,
+                "llantas_profundidad_delantera_izquierda" to llantasProfundidadDelanteraIzquierda,
+                "llantas_profundidad_delantera_derecha" to llantasProfundidadDelanteraDerecha,
+                "llantas_profundidad_trasera_izquierda_1" to llantasProfundidadTraseraIzquierda1,
+                "llantas_profundidad_trasera_izquierda_2" to llantasProfundidadTraseraIzquierda2,
+                "llantas_profundidad_trasera_derecha_1" to llantasProfundidadTraseraDerecha1,
+                "llantas_profundidad_trasera_derecha_2" to llantasProfundidadTraseraDerecha2,
+                "llantas_tuercas_delantera_izquierda" to llantasTuercasDelanteraIzquierda,
+                "llantas_tuercas_delantera_izquierda_faltantes" to llantasTuercasDelanteraIzquierdaFaltantes,
+                "llantas_tuercas_delantera_izquierda_rotas" to llantasTuercasDelanteraIzquierdaRotas,
+                "llantas_tuercas_delantera_derecha" to llantasTuercasDelanteraDerecha,
+                "llantas_tuercas_delantera_derecha_faltantes" to llantasTuercasDelanteraDerechaFaltantes,
+                "llantas_tuercas_delantera_derecha_rotas" to llantasTuercasDelanteraDerechaRotas,
+                "llantas_tuercas_trasera_izquierda" to llantasTuercasTraseraIzquierda,
+                "llantas_tuercas_trasera_izquierda_faltantes" to llantasTuercasTraseraIzquierdaFaltantes,
+                "llantas_tuercas_trasera_izquierda_rotas" to llantasTuercasTraseraIzquierdaRotas,
+                "llantas_tuercas_trasera_derecha" to llantasTuercasTraseraDerecha,
+                "llantas_tuercas_trasera_derecha_faltantes" to llantasTuercasTraseraDerechaFaltantes,
+                "llantas_tuercas_trasera_derecha_rotas" to llantasTuercasTraseraDerechaRotas,
+                "comment" to comentarioLlantas
+            ),
+            "direccion" to linkedMapOf(
+                "direccion_brazo_pitman" to direccionBrazoPitman,
+                "direccion_manijas_puertas" to direccionManijasPuertas,
+                "direccion_chavetas" to direccionChavetas,
+                "direccion_chavetas_faltantes" to direccionChavetasFaltantes,
+                "comment" to comentarioDireccion
+            ),
+            "aire_frenos" to linkedMapOf(
+                "aire_frenos_compresor" to aireFrenosCompresor,
+                "aire_frenos_tanques_aire" to aireFrenosTanquesAire,
+                "aire_frenos_tiempo_carga_psi" to aireFrenosTiempoCargaPsi,
+                "aire_frenos_tiempo_carga_tiempo" to aireFrenosTiempoCargaTiempo,
+                "comment" to comentarioAireFrenos
+            ),
+            "motor_emisiones" to linkedMapOf(
+                "motor_emisiones_humo" to motorEmisionesHumo,
+                "motor_emisiones_gobernado" to motorEmisionesGobernado,
+                "comment" to comentarioMotorEmisiones
+            ),
+            "otros" to linkedMapOf(
+                "otros_caja_direccion" to otrosCajaDireccion,
+                "otros_deposito_aceite" to otrosDepositoAceite,
+                "otros_parabrisas" to otrosParabrisas,
+                "otros_limpiaparabrisas" to otrosLimpiaparabrisas,
+                "otros_juego" to otrosJuego,
+                "otros_escape" to otrosEscape,
+                "comment" to comentarioOtros
+            ),
+            "general" to linkedMapOf(
+                "comentarios_generales" to comentariosGenerales,
+                "evidence_count" to evidenceCount
+            )
+        )
+    }
+
+    private fun com.sivemor.platform.domain.Evaluacion.failureCount(): Int = listOfNotNull(
+        lucesGalibo,
+        lucesAltas,
+        lucesBajas,
+        lucesDemarcadorasDelanteras,
+        lucesDemarcadorasTraseras,
+        lucesIndicadoras,
+        faroIzquierdo,
+        faroDerecho,
+        lucesDireccionalesDelanteras,
+        lucesDireccionalesTraseras,
+        llantasRinesDelanteros,
+        llantasRinesTraseros,
+        llantasMasasDelanteras,
+        llantasMasasTraseras,
+        llantasTuercasDelanteraIzquierda,
+        llantasTuercasDelanteraDerecha,
+        llantasTuercasTraseraIzquierda,
+        llantasTuercasTraseraDerecha,
+        direccionBrazoPitman,
+        direccionManijasPuertas,
+        direccionChavetas,
+        aireFrenosCompresor,
+        aireFrenosTanquesAire,
+        motorEmisionesHumo,
+        motorEmisionesGobernado,
+        otrosCajaDireccion,
+        otrosDepositoAceite,
+        otrosParabrisas,
+        otrosLimpiaparabrisas,
+        otrosJuego,
+        otrosEscape
+    ).count { it == "REPROBADO" }
 
     private fun requireUser(id: Long): User =
         userRepository.findById(id).orElseThrow { NotFoundException("User $id was not found") }

@@ -56,11 +56,16 @@ async function rawRequest(path, { body, headers, skipAuth, ...rest } = {}, retry
     requestHeaders.set("Authorization", `Bearer ${session.accessToken}`);
   }
 
-  const response = await fetch(`${API_BASE_URL}${path}`, {
-    ...rest,
-    headers: requestHeaders,
-    body: requestBody
-  });
+  let response;
+  try {
+    response = await fetch(`${API_BASE_URL}${path}`, {
+      ...rest,
+      headers: requestHeaders,
+      body: requestBody
+    });
+  } catch (error) {
+    throw new Error("No fue posible conectar con el servidor. Intenta nuevamente en unos segundos.");
+  }
 
   if (response.status === 401 && retryOnUnauthorized && !skipAuth) {
     const refreshed = await refreshSession();

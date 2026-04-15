@@ -2,14 +2,17 @@ import { Outlet, createRootRoute, createRoute, createRouter } from "@tanstack/re
 import { ProtectedPage } from "./components/AppShell";
 import { LoginPage } from "./features/auth/LoginPage";
 import { DashboardPage } from "./features/dashboard/DashboardPage";
-import { PlaceholderPage } from "./features/navigation/PlaceholderPage";
 import {
   CedisPage,
   ClientsPage,
   OrdersPage,
+  PaymentsPage,
+  PhysicalDocumentOrdersPage,
   VerificationCentersPage,
   VehiclesPage
 } from "./features/resources/ResourcePages";
+import { PhysicalDocumentOrderDetailPage } from "./features/resources/PhysicalDocumentOrdersPage";
+import { TransactionDetailPage } from "./features/resources/TransactionsPage";
 import { UsersPage } from "./features/resources/UsersPage";
 import { ClientCreatePage, ClientDetailPage, ClientEditPage } from "./features/resources/ClientPages";
 import { CedisCreatePage, CedisDetailPage, CedisEditPage } from "./features/resources/CedisPages";
@@ -116,9 +119,9 @@ const verificationDetailRoute = createRoute({
   component: withProtection(VerificationDetailPlaceholderPage)
 });
 
-const ordersRoute = createRoute({
+const notesRoute = createRoute({
   getParentRoute: () => rootRoute,
-  path: "/orders",
+  path: "/notes",
   component: withProtection(OrdersPage)
 });
 
@@ -170,10 +173,28 @@ const verificationCenterEditRoute = createRoute({
   component: withProtection(VerificationCenterEditPage)
 });
 
-const notesRoute = createRoute({
+const transactionsRoute = createRoute({
   getParentRoute: () => rootRoute,
-  path: "/notes",
-  component: withProtection(() => <PlaceholderPage title="Transacciones" />)
+  path: "/transactions",
+  component: withProtection(PaymentsPage)
+});
+
+const transactionDetailRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: "/transactions/$id",
+  component: withProtection(TransactionDetailPage)
+});
+
+const physicalDocumentOrdersRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: "/pedidos",
+  component: withProtection(PhysicalDocumentOrdersPage)
+});
+
+const physicalDocumentOrderDetailRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: "/pedidos/$id",
+  component: withProtection(PhysicalDocumentOrderDetailPage)
 });
 
 const webVerificationsRoute = createRoute({
@@ -202,7 +223,7 @@ const routeTree = rootRoute.addChildren([
   vehicleEditRoute,
   vehicleHistoryRoute,
   verificationDetailRoute,
-  ordersRoute,
+  notesRoute,
   cedisRoute,
   cedisCreateRoute,
   cedisDetailRoute,
@@ -211,7 +232,10 @@ const routeTree = rootRoute.addChildren([
   verificationCenterCreateRoute,
   verificationCenterDetailRoute,
   verificationCenterEditRoute,
-  notesRoute,
+  transactionsRoute,
+  transactionDetailRoute,
+  physicalDocumentOrdersRoute,
+  physicalDocumentOrderDetailRoute,
   webVerificationsRoute,
   webVerificationDetailRoute
 ]);

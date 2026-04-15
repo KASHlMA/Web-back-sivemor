@@ -10,6 +10,7 @@ import com.sivemor.platform.domain.InspectionResult
 import com.sivemor.platform.domain.InspectionStatus
 import com.sivemor.platform.domain.OrderUnitRepository
 import com.sivemor.platform.domain.PaymentRepository
+import com.sivemor.platform.domain.PhysicalDocumentOrderRepository
 import com.sivemor.platform.domain.RegionRepository
 import com.sivemor.platform.domain.Role
 import com.sivemor.platform.domain.UserRepository
@@ -56,6 +57,7 @@ class AdminServiceTest {
     @MockK private lateinit var verificationOrderRepository: VerificationOrderRepository
     @MockK private lateinit var orderUnitRepository: OrderUnitRepository
     @MockK private lateinit var paymentRepository: PaymentRepository
+    @MockK private lateinit var physicalDocumentOrderRepository: PhysicalDocumentOrderRepository
     @MockK private lateinit var inspectionRepository: InspectionRepository
     @MockK private lateinit var verificacionRepository: VerificacionRepository
     @MockK private lateinit var evaluacionRepository: EvaluacionRepository
@@ -79,6 +81,7 @@ class AdminServiceTest {
             verificationOrderRepository,
             orderUnitRepository,
             paymentRepository,
+            physicalDocumentOrderRepository,
             inspectionRepository,
             verificacionRepository,
             evaluacionRepository,

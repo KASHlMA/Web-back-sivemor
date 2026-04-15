@@ -15,6 +15,7 @@ import com.sivemor.platform.domain.InspectionStatus
 import com.sivemor.platform.domain.OrderUnit
 import com.sivemor.platform.domain.Payment
 import com.sivemor.platform.domain.PaymentStatus
+import com.sivemor.platform.domain.PaymentType
 import com.sivemor.platform.domain.RefreshToken
 import com.sivemor.platform.domain.Region
 import com.sivemor.platform.domain.Role
@@ -274,10 +275,11 @@ object TestEntityFactory {
     ) = Payment().apply {
         this.id = id
         verificationOrder = order
+        paymentType = PaymentType.CARD
         amount = BigDecimal("1250.00")
-        currency = "MXN"
         this.status = status
-        reference = "REF-$id"
+        depositAccount = "Cuenta $id"
+        invoiceNumber = "FAC-$id"
     }
 
     fun templateWithSection(): ChecklistTemplate {

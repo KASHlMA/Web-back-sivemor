@@ -118,6 +118,10 @@ interface PaymentRepository : JpaRepository<Payment, Long> {
     fun findAllByArchivedFalseOrderByCreatedAtDesc(): List<Payment>
 }
 
+interface PhysicalDocumentOrderRepository : JpaRepository<PhysicalDocumentOrder, Long> {
+    fun findAllByArchivedFalseOrderByShippedAtDesc(): List<PhysicalDocumentOrder>
+}
+
 interface VerificacionRepository : JpaRepository<Verificacion, Long> {
     fun findByInspectionIdAndArchivedFalse(inspectionId: Long): Verificacion?
 

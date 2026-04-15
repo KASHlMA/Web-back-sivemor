@@ -73,13 +73,13 @@ export function ResourceTablePage({
       await Promise.all(extraInvalidateQueryKeys.map((key) => queryClient.invalidateQueries({ queryKey: key })));
       closeDialog();
     },
-    onError: (error) => setFeedbackError(error instanceof Error ? error.message : "Request failed")
+    onError: (error) => setFeedbackError(error instanceof Error ? error.message : "No se pudo crear el registro")
   });
 
   const updateMutation = useMutation({
     mutationFn: (values) => {
       if (!editingRow) {
-        throw new Error("Missing row to update");
+        throw new Error("Falta el registro a actualizar");
       }
       return api.put(`/admin/${endpoint}/${editingRow.id}`, toPayload(values));
     },
@@ -88,7 +88,7 @@ export function ResourceTablePage({
       await Promise.all(extraInvalidateQueryKeys.map((key) => queryClient.invalidateQueries({ queryKey: key })));
       closeDialog();
     },
-    onError: (error) => setFeedbackError(error instanceof Error ? error.message : "Request failed")
+    onError: (error) => setFeedbackError(error instanceof Error ? error.message : "No se pudo actualizar el registro")
   });
 
   const deleteMutation = useMutation({
@@ -99,7 +99,7 @@ export function ResourceTablePage({
       setPendingDelete(null);
       setLocalFeedbackMessage(deleteSuccessMessage ?? null);
     },
-    onError: (error) => setFeedbackError(error instanceof Error ? error.message : "Delete failed")
+    onError: (error) => setFeedbackError(error instanceof Error ? error.message : "No se pudo eliminar el registro")
   });
 
   const dialogTitle = useMemo(
@@ -432,6 +432,45 @@ function FieldRenderer({ field, controllerField, error }) {
     );
   }
 
+  if (field.type === "image") {
+    const preview = controllerField.value || "";
+
+    return (
+      <div>
+        <label className="field-label">{field.label}</label>
+        <div className="space-y-3 rounded-lg border border-[var(--border)] bg-[#f8fbf4] p-4">
+          <input
+            type="file"
+            accept="image/*"
+            onChange={(event) => {
+              const file = event.target.files?.[0];
+              if (!file) {
+                controllerField.onChange("");
+                return;
+              }
+
+              const reader = new FileReader();
+              reader.onload = () => controllerField.onChange(typeof reader.result === "string" ? reader.result : "");
+              reader.readAsDataURL(file);
+            }}
+            className="block w-full text-sm text-[var(--shell-text)] file:mr-4 file:rounded-md file:border-0 file:bg-[var(--shell-dark)] file:px-3 file:py-2 file:text-sm file:font-semibold file:text-white hover:file:bg-[var(--shell-dark-strong)]"
+          />
+          {preview ? (
+            <div className="space-y-2">
+              <img src={preview} alt={field.label} className="max-h-48 rounded-lg border border-[var(--border)] object-contain" />
+              <SecondaryActionButton type="button" onClick={() => controllerField.onChange("")}>
+                Quitar foto
+              </SecondaryActionButton>
+            </div>
+          ) : (
+            <p className="text-xs text-[var(--shell-text)]/75">Selecciona una imagen para guardarla junto con el pedido.</p>
+          )}
+        </div>
+        <FieldError message={error} />
+      </div>
+    );
+  }
+
   return (
     <div>
       <label className="field-label">{field.label}</label>
@@ -447,8 +486,34 @@ function FieldRenderer({ field, controllerField, error }) {
 }
 
 export const schemaHelpers = {
-  optionalText: z.string().optional().or(z.literal("")),
-  requiredText: (label) => z.string().min(1, `${label} es obligatorio`)
+  optionalText: z
+    .string()
+    .trim()
+    .refine((value) => value === "" || value.length >= 2, {
+      message: "Debe contener al menos 2 caracteres"
+    })
+    .optional()
+    .or(z.literal("")),
+  requiredText: (label) =>
+    z
+      .string()
+      .trim()
+      .min(1, `${label} es obligatorio`)
+      .min(2, `${label} debe contener al menos 2 caracteres`),
+  email: (label = "Correo") =>
+    z
+      .string()
+      .trim()
+      .min(1, `${label} es obligatorio`)
+      .email(`${label} inválido`),
+  phone: (label = "Telefono") =>
+    z
+      .string()
+      .trim()
+      .min(1, `${label} es obligatorio`)
+      .refine((value) => /^\d{9,}$/.test(value), {
+        message: `${label} debe contener al menos 9 digitos`
+      })
 };
 
 export function renderStatusValue(value) {
@@ -470,6 +535,9 @@ export function renderStatusValue(value) {
     CANCELLED: { label: "Cancelado", tone: "danger" },
     PENDING: { label: "Pendiente", tone: "warning" },
     PAID: { label: "Pagado", tone: "success" },
+    ORDERED: { label: "Pedido", tone: "warning" },
+    SHIPPED: { label: "Enviado", tone: "neutral" },
+    DELIVERED: { label: "Entregado", tone: "success" },
     N2: { label: "N2", tone: "neutral" },
     N3: { label: "N3", tone: "neutral" },
     PASS: { label: "Aprobado", tone: "success" },

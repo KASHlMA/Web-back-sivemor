@@ -11,6 +11,7 @@ import com.sivemor.platform.domain.OrderUnitRepository
 import com.sivemor.platform.domain.Payment
 import com.sivemor.platform.domain.PaymentRepository
 import com.sivemor.platform.domain.PaymentStatus
+import com.sivemor.platform.domain.PaymentType
 import com.sivemor.platform.domain.Region
 import com.sivemor.platform.domain.RegionRepository
 import com.sivemor.platform.domain.Role
@@ -243,11 +244,11 @@ class SeedDataInitializer(
             paymentRepository.save(
                 Payment().apply {
                     verificationOrder = order
+                    paymentType = PaymentType.CARD
                     amount = BigDecimal("1250.00")
-                    currency = "MXN"
                     status = PaymentStatus.PENDING
-                    reference = "PAGO-DEMO-0001"
-                    notes = "Registro de pago inicial para flujo administrativo."
+                    depositAccount = "Cuenta principal demo"
+                    invoiceNumber = "FAC-DEMO-0001"
                 }
             )
         }

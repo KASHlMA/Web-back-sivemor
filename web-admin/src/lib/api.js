@@ -83,7 +83,7 @@ async function rawRequest(path, { body, headers, skipAuth, ...rest } = {}, retry
     const message =
       payload?.message ??
       payload?.error ??
-      `Request failed with status ${response.status}`;
+      `La solicitud falló con el estado ${response.status}`;
     throw new Error(message);
   }
 

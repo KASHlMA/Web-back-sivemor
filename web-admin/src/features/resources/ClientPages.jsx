@@ -13,16 +13,17 @@ import {
   PrimaryActionButton,
   SecondaryActionButton
 } from "../../components/AdminPrimitives";
+import { schemaHelpers } from "../../components/ResourceTablePage";
 import { api } from "../../lib/api";
 import { setFlashMessage } from "../../lib/flashMessage";
 
 const clientSchema = z.object({
-  name: z.string().min(1, "Nombre es obligatorio"),
-  businessName: z.string().min(1, "Razon social es obligatoria"),
-  email: z.string().email("Correo invalido"),
-  phone: z.string().min(1, "Telefono es obligatorio"),
-  alternatePhone: z.string().min(1, "Telefono alternativo es obligatorio"),
-  manager: z.string().min(1, "Gestor es obligatorio")
+  name: schemaHelpers.requiredText("Nombre"),
+  businessName: schemaHelpers.requiredText("Razon social"),
+  email: schemaHelpers.email("Correo"),
+  phone: schemaHelpers.phone("Telefono"),
+  alternatePhone: schemaHelpers.phone("Telefono alternativo"),
+  manager: schemaHelpers.requiredText("Gestor")
 });
 
 const defaultValues = {

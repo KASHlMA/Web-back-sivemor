@@ -25,7 +25,7 @@ export function PageTitleBar({ title, subtitle, search, actions }) {
   );
 }
 
-export function SearchField({ value, onChange, placeholder = "Search..." }) {
+export function SearchField({ value, onChange, placeholder = "Buscar..." }) {
   return (
     <div className="relative min-w-[220px] max-sm:w-full">
       <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-[var(--shell-text)]/70">

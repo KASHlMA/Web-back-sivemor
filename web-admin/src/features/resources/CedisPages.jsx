@@ -13,16 +13,17 @@ import {
   PrimaryActionButton,
   SecondaryActionButton
 } from "../../components/AdminPrimitives";
+import { schemaHelpers } from "../../components/ResourceTablePage";
 import { api } from "../../lib/api";
 import { setFlashMessage } from "../../lib/flashMessage";
 
 const cedisSchema = z.object({
-  name: z.string().min(1, "Nombre es obligatorio"),
-  email: z.string().email("Correo invalido"),
-  phone: z.string().min(1, "Telefono es obligatorio"),
-  alternatePhone: z.string().min(1, "Telefono alternativo es obligatorio"),
-  address: z.string(),
-  manager: z.string()
+  name: schemaHelpers.requiredText("Nombre"),
+  email: schemaHelpers.email("Correo"),
+  phone: schemaHelpers.phone("Telefono"),
+  alternatePhone: schemaHelpers.phone("Telefono alternativo"),
+  address: schemaHelpers.requiredText("Direccion"),
+  manager: schemaHelpers.requiredText("Encargado")
 });
 
 const defaultValues = {

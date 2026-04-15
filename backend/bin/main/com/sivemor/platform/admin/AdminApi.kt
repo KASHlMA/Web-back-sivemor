@@ -16,7 +16,11 @@ import com.sivemor.platform.domain.OrderUnitRepository
 import com.sivemor.platform.domain.Payment
 import com.sivemor.platform.domain.PaymentRepository
 import com.sivemor.platform.domain.PaymentStatus
+import com.sivemor.platform.domain.PaymentType
 import com.sivemor.platform.domain.EvaluacionRepository
+import com.sivemor.platform.domain.PhysicalDocumentOrder
+import com.sivemor.platform.domain.PhysicalDocumentOrderRepository
+import com.sivemor.platform.domain.PhysicalDocumentOrderStatus
 import com.sivemor.platform.domain.Region
 import com.sivemor.platform.domain.RegionRepository
 import com.sivemor.platform.domain.Role
@@ -213,11 +217,11 @@ data class OrderUnitSummary(
 
 data class PaymentUpsertRequest(
     @field:NotNull val verificationOrderId: Long,
+    @field:NotNull val paymentType: PaymentType,
     @field:DecimalMin("0.00") val amount: BigDecimal,
-    @field:NotBlank @field:Size(max = 10) val currency: String = "MXN",
     @field:NotNull val status: PaymentStatus,
-    @field:Size(max = 120) val reference: String? = null,
-    val notes: String? = null,
+    @field:Size(max = 160) val depositAccount: String? = null,
+    @field:Size(max = 120) val invoiceNumber: String? = null,
     val paidAt: Instant? = null
 )
 
@@ -225,12 +229,34 @@ data class PaymentResponse(
     val id: Long,
     val verificationOrderId: Long,
     val orderNumber: String,
+    val paymentType: PaymentType,
     val amount: BigDecimal,
-    val currency: String,
     val status: PaymentStatus,
-    val reference: String?,
-    val notes: String?,
+    val depositAccount: String?,
+    val invoiceNumber: String?,
     val paidAt: Instant?
+)
+
+data class PhysicalDocumentOrderUpsertRequest(
+    @field:NotNull val verificationOrderId: Long,
+    @field:NotNull val shippedAt: Instant,
+    @field:Size(max = 120) val trackingNumber: String? = null,
+    @field:NotNull val status: PhysicalDocumentOrderStatus,
+    @field:Size(max = 160) val receivedBy: String? = null,
+    val photoData: String? = null,
+    val comment: String? = null
+)
+
+data class PhysicalDocumentOrderResponse(
+    val id: Long,
+    val verificationOrderId: Long,
+    val noteNumber: String,
+    val shippedAt: Instant,
+    val trackingNumber: String?,
+    val status: PhysicalDocumentOrderStatus,
+    val receivedBy: String?,
+    val photoData: String?,
+    val comment: String?
 )
 
 data class ReportSummaryResponse(
@@ -550,6 +576,10 @@ class AdminController(
     @GetMapping("/payments")
     fun payments(): List<PaymentResponse> = adminService.listPayments()
 
+    @Operation(summary = "Get a payment record detail")
+    @GetMapping("/payments/{id}")
+    fun paymentById(@PathVariable id: Long): PaymentResponse = adminService.getPayment(id)
+
     @Operation(summary = "Create a payment record")
     @PostMapping("/payments")
     @ResponseStatus(HttpStatus.CREATED)
@@ -576,6 +606,44 @@ class AdminController(
         @PathVariable id: Long
     ): ResponseEntity<Unit> {
         adminService.archivePayment(principal.id, id)
+        return ResponseEntity.noContent().build()
+    }
+
+    @Operation(summary = "List physical document orders")
+    @GetMapping("/physical-document-orders")
+    fun physicalDocumentOrders(): List<PhysicalDocumentOrderResponse> = adminService.listPhysicalDocumentOrders()
+
+    @Operation(summary = "Get a physical document order detail")
+    @GetMapping("/physical-document-orders/{id}")
+    fun physicalDocumentOrderById(@PathVariable id: Long): PhysicalDocumentOrderResponse =
+        adminService.getPhysicalDocumentOrder(id)
+
+    @Operation(summary = "Create a physical document order")
+    @PostMapping("/physical-document-orders")
+    @ResponseStatus(HttpStatus.CREATED)
+    fun createPhysicalDocumentOrder(
+        @Parameter(hidden = true)
+        @AuthenticationPrincipal principal: AppUserPrincipal,
+        @Valid @RequestBody request: PhysicalDocumentOrderUpsertRequest
+    ): PhysicalDocumentOrderResponse = adminService.createPhysicalDocumentOrder(principal.id, request)
+
+    @Operation(summary = "Update a physical document order")
+    @PutMapping("/physical-document-orders/{id}")
+    fun updatePhysicalDocumentOrder(
+        @Parameter(hidden = true)
+        @AuthenticationPrincipal principal: AppUserPrincipal,
+        @PathVariable id: Long,
+        @Valid @RequestBody request: PhysicalDocumentOrderUpsertRequest
+    ): PhysicalDocumentOrderResponse = adminService.updatePhysicalDocumentOrder(principal.id, id, request)
+
+    @Operation(summary = "Archive a physical document order")
+    @DeleteMapping("/physical-document-orders/{id}")
+    fun deletePhysicalDocumentOrder(
+        @Parameter(hidden = true)
+        @AuthenticationPrincipal principal: AppUserPrincipal,
+        @PathVariable id: Long
+    ): ResponseEntity<Unit> {
+        adminService.archivePhysicalDocumentOrder(principal.id, id)
         return ResponseEntity.noContent().build()
     }
 
@@ -635,6 +703,7 @@ class AdminService(
     private val verificationOrderRepository: VerificationOrderRepository,
     private val orderUnitRepository: OrderUnitRepository,
     private val paymentRepository: PaymentRepository,
+    private val physicalDocumentOrderRepository: PhysicalDocumentOrderRepository,
     private val inspectionRepository: InspectionRepository,
     private val verificacionRepository: VerificacionRepository,
     private val evaluacionRepository: EvaluacionRepository,
@@ -970,37 +1039,87 @@ class AdminService(
     @Transactional(readOnly = true)
     fun listPayments(): List<PaymentResponse> = paymentRepository.findAllByArchivedFalseOrderByCreatedAtDesc().map { it.toResponse() }
 
+    @Transactional(readOnly = true)
+    fun getPayment(id: Long): PaymentResponse = requirePayment(id).toResponse()
+
     @Transactional
     fun createPayment(actorId: Long, request: PaymentUpsertRequest): PaymentResponse =
         paymentRepository.save(
             Payment().apply {
                 verificationOrder = requireOrder(request.verificationOrderId)
+                paymentType = request.paymentType
                 amount = request.amount
-                currency = request.currency.uppercase()
                 status = request.status
-                reference = request.reference?.trim()
-                notes = request.notes?.trim()
+                depositAccount = request.depositAccount?.trim()?.ifBlank { null }
+                invoiceNumber = request.invoiceNumber?.trim()?.ifBlank { null }
                 paidAt = request.paidAt
             }
-        ).alsoSaved(actorId, "CREATE_PAYMENT", request.reference ?: "payment").toResponse()
+        ).alsoSaved(actorId, "CREATE_PAYMENT", request.invoiceNumber ?: "payment").toResponse()
 
     @Transactional
     fun updatePayment(actorId: Long, id: Long, request: PaymentUpsertRequest): PaymentResponse =
         requirePayment(id).apply {
             verificationOrder = requireOrder(request.verificationOrderId)
+            paymentType = request.paymentType
             amount = request.amount
-            currency = request.currency.uppercase()
             status = request.status
-            reference = request.reference?.trim()
-            notes = request.notes?.trim()
+            depositAccount = request.depositAccount?.trim()?.ifBlank { null }
+            invoiceNumber = request.invoiceNumber?.trim()?.ifBlank { null }
             paidAt = request.paidAt
-        }.alsoSaved(actorId, "UPDATE_PAYMENT", request.reference ?: "payment").toResponse()
+        }.alsoSaved(actorId, "UPDATE_PAYMENT", request.invoiceNumber ?: "payment").toResponse()
 
     @Transactional
     fun archivePayment(actorId: Long, id: Long) {
         val payment = requirePayment(id)
         payment.archived = true
-        logAction(actorId, "ARCHIVE_PAYMENT", "PAYMENT", payment.id.toString(), mapOf("reference" to payment.reference))
+        logAction(actorId, "ARCHIVE_PAYMENT", "PAYMENT", payment.id.toString(), mapOf("invoiceNumber" to payment.invoiceNumber))
+    }
+
+    @Transactional(readOnly = true)
+    fun listPhysicalDocumentOrders(): List<PhysicalDocumentOrderResponse> =
+        physicalDocumentOrderRepository.findAllByArchivedFalseOrderByShippedAtDesc().map { it.toResponse() }
+
+    @Transactional(readOnly = true)
+    fun getPhysicalDocumentOrder(id: Long): PhysicalDocumentOrderResponse =
+        requirePhysicalDocumentOrder(id).toResponse()
+
+    @Transactional
+    fun createPhysicalDocumentOrder(actorId: Long, request: PhysicalDocumentOrderUpsertRequest): PhysicalDocumentOrderResponse =
+        physicalDocumentOrderRepository.save(
+            PhysicalDocumentOrder().apply {
+                verificationOrder = requireOrder(request.verificationOrderId)
+                shippedAt = request.shippedAt
+                trackingNumber = request.trackingNumber?.trim()?.ifBlank { null }
+                status = request.status
+                receivedBy = request.receivedBy?.trim()?.ifBlank { null }
+                photoData = request.photoData?.trim()?.ifBlank { null }
+                comment = request.comment?.trim()?.ifBlank { null }
+            }
+        ).alsoSaved(actorId, "CREATE_PHYSICAL_DOCUMENT_ORDER", request.trackingNumber ?: "pedido").toResponse()
+
+    @Transactional
+    fun updatePhysicalDocumentOrder(actorId: Long, id: Long, request: PhysicalDocumentOrderUpsertRequest): PhysicalDocumentOrderResponse =
+        requirePhysicalDocumentOrder(id).apply {
+            verificationOrder = requireOrder(request.verificationOrderId)
+            shippedAt = request.shippedAt
+            trackingNumber = request.trackingNumber?.trim()?.ifBlank { null }
+            status = request.status
+            receivedBy = request.receivedBy?.trim()?.ifBlank { null }
+            photoData = request.photoData?.trim()?.ifBlank { null }
+            comment = request.comment?.trim()?.ifBlank { null }
+        }.alsoSaved(actorId, "UPDATE_PHYSICAL_DOCUMENT_ORDER", request.trackingNumber ?: "pedido").toResponse()
+
+    @Transactional
+    fun archivePhysicalDocumentOrder(actorId: Long, id: Long) {
+        val documentOrder = requirePhysicalDocumentOrder(id)
+        documentOrder.archived = true
+        logAction(
+            actorId,
+            "ARCHIVE_PHYSICAL_DOCUMENT_ORDER",
+            "PHYSICAL_DOCUMENT_ORDER",
+            documentOrder.id.toString(),
+            mapOf("noteNumber" to documentOrder.verificationOrder.orderNumber)
+        )
     }
 
     @Transactional(readOnly = true)
@@ -1206,12 +1325,24 @@ class AdminService(
         id = id ?: 0L,
         verificationOrderId = verificationOrder.id ?: 0L,
         orderNumber = verificationOrder.orderNumber,
+        paymentType = paymentType,
         amount = amount,
-        currency = currency,
         status = status,
-        reference = reference,
-        notes = notes,
+        depositAccount = depositAccount,
+        invoiceNumber = invoiceNumber,
         paidAt = paidAt
+    )
+
+    private fun PhysicalDocumentOrder.toResponse(): PhysicalDocumentOrderResponse = PhysicalDocumentOrderResponse(
+        id = id ?: 0L,
+        verificationOrderId = verificationOrder.id ?: 0L,
+        noteNumber = verificationOrder.orderNumber,
+        shippedAt = shippedAt,
+        trackingNumber = trackingNumber,
+        status = status,
+        receivedBy = receivedBy,
+        photoData = photoData,
+        comment = comment
     )
 
     private fun Inspection.toReportSummary(): ReportSummaryResponse = ReportSummaryResponse(
@@ -1483,6 +1614,14 @@ class AdminService(
                 }
             }
 
+    private fun requirePhysicalDocumentOrder(id: Long): PhysicalDocumentOrder =
+        physicalDocumentOrderRepository.findById(id).orElseThrow { NotFoundException("Physical document order $id was not found") }
+            .also {
+                if (it.archived) {
+                    throw NotFoundException("Physical document order $id was not found")
+                }
+            }
+
     private fun <T : Any> T.alsoSaved(actorId: Long, action: String, label: String): T {
         val actor = requireUser(actorId)
         val entityName = this::class.simpleName ?: "ENTITY"
@@ -1495,6 +1634,7 @@ class AdminService(
             is VehicleUnit -> id.toString()
             is VerificationOrder -> id.toString()
             is Payment -> id.toString()
+            is PhysicalDocumentOrder -> id.toString()
             else -> "unknown"
         }
         auditService.log(actor, action, entityName, entityId, mapOf("label" to label))

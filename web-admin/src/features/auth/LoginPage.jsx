@@ -5,12 +5,13 @@ import { useNavigate } from "@tanstack/react-router";
 import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { AlertMessage } from "../../components/AdminPrimitives";
+import { schemaHelpers } from "../../components/ResourceTablePage";
 import { brandAssets } from "../../lib/brand";
 import { useAuth } from "../../lib/session";
 
 const schema = z.object({
-  username: z.string().min(1, "El usuario es obligatorio"),
-  password: z.string().min(1, "La contraseña es obligatoria")
+  username: schemaHelpers.requiredText("El usuario"),
+  password: schemaHelpers.requiredText("La contraseña")
 });
 
 export function LoginPage() {
@@ -54,10 +55,10 @@ export function LoginPage() {
 
           <div className="mt-4">
             <h1 className="text-[2.05rem] font-bold text-[var(--title)]">SIVEMOR</h1>
-            <p className="mt-1 text-sm text-[var(--title)]">Sistema de Verificación de Morelos</p>
+            <p className="mt-1 text-sm text-[var(--title)]">Sistema de Verificacion de Morelos</p>
           </div>
 
-          <h2 className="mt-8 text-[2rem] font-semibold text-[var(--title)]">Iniciar sesión</h2>
+          <h2 className="mt-8 text-[2rem] font-semibold text-[var(--title)]">Iniciar sesion</h2>
 
           <div className="mt-6 text-left">
             <AlertMessage
@@ -65,7 +66,7 @@ export function LoginPage() {
                 mutation.error
                   ? mutation.error instanceof Error
                     ? mutation.error.message
-                    : "No fue posible iniciar sesión"
+                    : "No fue posible iniciar sesion"
                   : null
               }
             />
@@ -82,11 +83,9 @@ export function LoginPage() {
               control={form.control}
               render={({ field, fieldState }) => (
                 <div className="text-left">
-                  <input {...field} placeholder="Email" className="field-base min-h-[51px]" />
+                  <input {...field} placeholder="Correo electrónico" className="field-base min-h-[51px]" />
                   {fieldState.error ? (
-                    <p className="mt-1 text-xs font-semibold text-[var(--danger)]">
-                      {fieldState.error.message}
-                    </p>
+                    <p className="mt-1 text-xs font-semibold text-[var(--danger)]">{fieldState.error.message}</p>
                   ) : null}
                 </div>
               )}
@@ -97,16 +96,9 @@ export function LoginPage() {
               control={form.control}
               render={({ field, fieldState }) => (
                 <div className="text-left">
-                  <input
-                    {...field}
-                    type="password"
-                    placeholder="Password"
-                    className="field-base min-h-[51px]"
-                  />
+                  <input {...field} type="password" placeholder="Contraseña" className="field-base min-h-[51px]" />
                   {fieldState.error ? (
-                    <p className="mt-1 text-xs font-semibold text-[var(--danger)]">
-                      {fieldState.error.message}
-                    </p>
+                    <p className="mt-1 text-xs font-semibold text-[var(--danger)]">{fieldState.error.message}</p>
                   ) : null}
                 </div>
               )}
@@ -117,7 +109,7 @@ export function LoginPage() {
               disabled={mutation.isPending}
               className="mx-auto inline-flex min-h-[37px] w-[158px] items-center justify-center rounded-md bg-[#97aaa0] px-4 text-sm font-semibold text-white transition hover:bg-[#7f9589] disabled:cursor-not-allowed disabled:opacity-60"
             >
-              Iniciar Sesión
+              Iniciar sesión
             </button>
           </form>
         </div>

@@ -164,7 +164,7 @@ export function ReportsPage() {
                 title="Detalle de evaluacion"
                 subtitle={
                   reportDetail.data
-                    ? `Fuente ${reportDetail.data.source === "MER" ? "nuevo MER" : "legacy"} para la inspeccion ${reportDetail.data.orderNumber}.`
+                    ? `Fuente ${reportDetail.data.source === "MER" ? "nuevo MER" : "anterior"} para la inspección ${reportDetail.data.orderNumber}.`
                     : "Cargando detalle..."
                 }
                 actions={

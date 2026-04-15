@@ -14,7 +14,7 @@ import { consumeFlashMessage } from "../../lib/flashMessage";
 
 const userSchema = z.object({
   username: schemaHelpers.requiredText("Usuario"),
-  email: z.string().email("Correo inválido"),
+  email: schemaHelpers.email("Correo"),
   fullName: schemaHelpers.requiredText("Nombre completo"),
   role: z.enum(["ADMIN", "TECHNICIAN"]),
   active: z.boolean()
@@ -34,24 +34,34 @@ const vehicleSchema = z.object({
 });
 
 const orderSchema = z.object({
-  orderNumber: schemaHelpers.requiredText("Número de pedido"),
+  orderNumber: schemaHelpers.requiredText("Numero de nota"),
   clientCompanyId: z.string().min(1, "El cliente es obligatorio"),
   regionId: z.string().min(1, "La región es obligatoria"),
   assignedTechnicianId: z.string().min(1, "El técnico es obligatorio"),
   unitIds: z.array(z.string()).min(1, "Selecciona al menos una unidad"),
   scheduledAt: schemaHelpers.requiredText("Fecha programada"),
-  notes: z.string().optional().or(z.literal("")),
+  notes: schemaHelpers.optionalText,
   status: z.enum(["OPEN", "IN_PROGRESS", "COMPLETED", "CANCELLED"])
 });
 
 const paymentSchema = z.object({
-  verificationOrderId: z.string().min(1, "El pedido es obligatorio"),
+  verificationOrderId: z.string().min(1, "La nota es obligatoria"),
+  paymentType: z.enum(["CASH", "CARD"]),
   amount: z.string().min(1, "El monto es obligatorio"),
-  currency: schemaHelpers.requiredText("Moneda"),
-  status: z.enum(["PENDING", "PAID", "CANCELLED"]),
-  reference: z.string().optional().or(z.literal("")),
-  notes: z.string().optional().or(z.literal("")),
+  status: z.enum(["PENDING", "APPROVED"]),
+  depositAccount: schemaHelpers.optionalText,
+  invoiceNumber: schemaHelpers.optionalText,
   paidAt: z.string().optional().or(z.literal(""))
+});
+
+const physicalDocumentOrderSchema = z.object({
+  verificationOrderId: z.string().min(1, "La nota es obligatoria"),
+  shippedAt: schemaHelpers.requiredText("Fecha de envio"),
+  trackingNumber: z.string().trim().max(120, "La guia no puede exceder 120 caracteres").optional().or(z.literal("")),
+  status: z.enum(["ORDERED", "SHIPPED", "DELIVERED", "CANCELLED"]),
+  receivedBy: z.string().trim().max(160, "Quien recibio no puede exceder 160 caracteres").optional().or(z.literal("")),
+  photoData: z.string().optional().or(z.literal("")),
+  comment: z.string().trim().max(3000, "El comentario es demasiado largo").optional().or(z.literal(""))
 });
 
 function useLookups() {
@@ -235,9 +245,9 @@ export function ClientsPage() {
       schema={z.object({
         name: schemaHelpers.requiredText("Nombre"),
         businessName: schemaHelpers.requiredText("Razón social"),
-        email: z.string().email("Correo inválido"),
-        phone: schemaHelpers.requiredText("Teléfono"),
-        alternatePhone: schemaHelpers.requiredText("Teléfono alternativo"),
+        email: schemaHelpers.email("Correo"),
+        phone: schemaHelpers.phone("Telefono"),
+        alternatePhone: schemaHelpers.phone("Telefono alternativo"),
         manager: schemaHelpers.requiredText("Gestor")
       })}
       fields={[
@@ -399,9 +409,9 @@ export function CedisPage() {
       )}
       schema={z.object({
         name: schemaHelpers.requiredText("Nombre"),
-        email: z.string().email("Correo invalido"),
-        phone: schemaHelpers.requiredText("Telefono"),
-        alternatePhone: schemaHelpers.requiredText("Telefono alternativo")
+        email: schemaHelpers.email("Correo"),
+        phone: schemaHelpers.phone("Telefono"),
+        alternatePhone: schemaHelpers.phone("Telefono alternativo")
       })}
       fields={[
         { name: "name", label: "Nombre", type: "text" },
@@ -475,9 +485,9 @@ export function VerificationCentersPage() {
         address: schemaHelpers.requiredText("Direccion"),
         regionId: z.string().min(1, "Region es obligatoria"),
         manager: schemaHelpers.requiredText("Responsable"),
-        email: z.string().email("Correo inválido"),
-        phone: schemaHelpers.requiredText("Teléfono"),
-        alternatePhone: schemaHelpers.requiredText("Teléfono alternativo"),
+        email: schemaHelpers.email("Correo"),
+        phone: schemaHelpers.phone("Telefono"),
+        alternatePhone: schemaHelpers.phone("Telefono alternativo"),
         schedule: schemaHelpers.requiredText("Horario")
       })}
       fields={[
@@ -525,14 +535,14 @@ export function OrdersPage() {
       endpoint="orders"
       queryKey={["orders"]}
       columns={[
-        { header: "Pedido", render: (row) => renderLinkedText(row.orderNumber), searchableText: (row) => row.orderNumber },
+        { header: "Nota", render: (row) => renderLinkedText(row.orderNumber), searchableText: (row) => row.orderNumber },
         { header: "Empresa", render: (row) => row.clientCompanyName, searchableText: (row) => row.clientCompanyName },
         { header: "Región", render: (row) => row.regionName, searchableText: (row) => row.regionName },
         { header: "Técnico", render: (row) => row.assignedTechnicianName, searchableText: (row) => row.assignedTechnicianName },
         { header: "Estado", render: (row) => renderStatusValue(row.status), searchableText: (row) => row.status },
         {
           header: "No. de unidades",
-          render: (row) => `Pedido de: ${row.units.length} unidades`,
+          render: (row) => `Nota de: ${row.units.length} unidades`,
           searchableText: (row) => row.units.map((item) => item.vehiclePlate).join(" ")
         }
       ]}
@@ -619,72 +629,213 @@ export function OrdersPage() {
 }
 
 export function PaymentsPage() {
+  const navigate = useNavigate();
   const { orders } = useLookups();
 
   return (
     <ResourceTablePage
-      title="Pagos"
+      title="Transacciones"
+      description="Registra los pagos realizados para cada nota y consulta su informacion completa."
       endpoint="payments"
       queryKey={["payments"]}
+      createLabel="Agregar nueva transaccion"
+      loadingMessage="Cargando transacciones..."
+      emptyTitle="No hay transacciones registradas"
+      emptyDescription="Cuando registres pagos relacionados a una nota apareceran aqui."
+      errorMessage="Error al cargar las transacciones"
+      deleteDialogTitle="Eliminar transaccion"
+      deleteDialogDescription="Deseas eliminar esta transaccion?"
+      deleteSuccessMessage="Transaccion eliminada correctamente"
       columns={[
-        { header: "Pedido", render: (row) => renderLinkedText(row.orderNumber), searchableText: (row) => row.orderNumber },
-        { header: "Monto", render: (row) => `${row.amount} ${row.currency}`, searchableText: (row) => String(row.amount) },
-        { header: "Estado", render: (row) => renderStatusValue(row.status), searchableText: (row) => row.status },
-        { header: "Referencia", render: (row) => row.reference ?? "-", searchableText: (row) => row.reference ?? "" }
+        {
+          header: "Id nota",
+          render: (row) => renderLinkedText(row.orderNumber),
+          searchableText: (row) => `${row.orderNumber} ${row.verificationOrderId}`
+        },
+        {
+          header: "Tipo de pago",
+          render: (row) => renderStatusValue(row.paymentType),
+          searchableText: (row) => row.paymentType
+        },
+        { header: "Monto", render: (row) => formatCurrency(row.amount), searchableText: (row) => String(row.amount) },
+        { header: "Estatus", render: (row) => renderStatusValue(row.status), searchableText: (row) => row.status },
+        { header: "Fecha", render: (row) => formatDateTime(row.paidAt), searchableText: (row) => row.paidAt ?? "" }
       ]}
+      renderRowActions={(row, { requestDelete, openEditDialog }) => (
+        <div className="flex justify-end gap-2">
+          <SecondaryActionButton
+            type="button"
+            onClick={() => void navigate({ to: "/transactions/$id", params: { id: String(row.id) } })}
+          >
+            Ver informacion
+          </SecondaryActionButton>
+          <SecondaryActionButton type="button" onClick={() => openEditDialog(row)}>
+            Editar
+          </SecondaryActionButton>
+          <SecondaryActionButton type="button" onClick={() => requestDelete(row)}>
+            Eliminar
+          </SecondaryActionButton>
+        </div>
+      )}
       schema={paymentSchema}
       fields={[
         {
           name: "verificationOrderId",
-          label: "Pedido",
+          label: "Nota",
           type: "select",
           options: (orders.data ?? []).map((item) => ({
             label: item.orderNumber,
             value: String(item.id)
           }))
         },
+        {
+          name: "paymentType",
+          label: "Tipo de pago",
+          type: "select",
+          options: [
+            { label: "Efectivo", value: "CASH" },
+            { label: "Tarjeta", value: "CARD" }
+          ]
+        },
         { name: "amount", label: "Monto", type: "number" },
-        { name: "currency", label: "Moneda", type: "text" },
         {
           name: "status",
-          label: "Estado",
+          label: "Estatus",
           type: "select",
           options: [
             { label: "Pendiente", value: "PENDING" },
-            { label: "Pagado", value: "PAID" },
-            { label: "Cancelado", value: "CANCELLED" }
+            { label: "Aprobado", value: "APPROVED" }
           ]
         },
-        { name: "reference", label: "Referencia", type: "text" },
-        { name: "notes", label: "Notas", type: "textarea" },
+        { name: "depositAccount", label: "Cuenta de deposito", type: "text" },
+        { name: "invoiceNumber", label: "Numero de factura", type: "text" },
         { name: "paidAt", label: "Fecha de pago", type: "datetime" }
       ]}
       defaultValues={{
         verificationOrderId: "",
+        paymentType: "CASH",
         amount: "",
-        currency: "MXN",
         status: "PENDING",
-        reference: "",
-        notes: "",
+        depositAccount: "",
+        invoiceNumber: "",
         paidAt: ""
       }}
       toPayload={(values) => ({
         verificationOrderId: Number(values.verificationOrderId),
+        paymentType: values.paymentType,
         amount: Number(values.amount),
-        currency: values.currency,
         status: values.status,
-        reference: values.reference || null,
-        notes: values.notes || null,
+        depositAccount: values.depositAccount || null,
+        invoiceNumber: values.invoiceNumber || null,
         paidAt: values.paidAt ? new Date(values.paidAt).toISOString() : null
       })}
       toFormValues={(row) => ({
         verificationOrderId: String(row.verificationOrderId),
+        paymentType: row.paymentType,
         amount: String(row.amount),
-        currency: row.currency,
         status: row.status,
-        reference: row.reference ?? "",
-        notes: row.notes ?? "",
+        depositAccount: row.depositAccount ?? "",
+        invoiceNumber: row.invoiceNumber ?? "",
         paidAt: row.paidAt ? toDateTimeInputValue(row.paidAt) : ""
+      })}
+    />
+  );
+}
+
+export function PhysicalDocumentOrdersPage() {
+  const navigate = useNavigate();
+  const { orders } = useLookups();
+
+  return (
+    <ResourceTablePage
+      title="Pedidos"
+      description="Registra cuando un cliente solicita el documento fisico relacionado con una nota."
+      endpoint="physical-document-orders"
+      queryKey={["physical-document-orders"]}
+      createLabel="Agregar nuevo pedido"
+      loadingMessage="Cargando pedidos..."
+      emptyTitle="No hay pedidos registrados"
+      emptyDescription="Cuando registres pedidos de documentos fisicos apareceran aqui."
+      errorMessage="Error al cargar los pedidos"
+      deleteDialogTitle="Eliminar pedido"
+      deleteDialogDescription="Deseas eliminar este pedido?"
+      deleteSuccessMessage="Pedido eliminado correctamente"
+      columns={[
+        { header: "Folio de nota", render: (row) => renderLinkedText(row.noteNumber), searchableText: (row) => row.noteNumber },
+        { header: "Fecha de envio", render: (row) => formatDateTime(row.shippedAt), searchableText: (row) => row.shippedAt },
+        { header: "Numero de guia", render: (row) => row.trackingNumber ?? "-", searchableText: (row) => row.trackingNumber ?? "" },
+        { header: "Estatus", render: (row) => renderStatusValue(row.status), searchableText: (row) => row.status }
+      ]}
+      renderRowActions={(row, { requestDelete, openEditDialog }) => (
+        <div className="flex justify-end gap-2">
+          <SecondaryActionButton
+            type="button"
+            onClick={() => void navigate({ to: "/pedidos/$id", params: { id: String(row.id) } })}
+          >
+            Ver informacion
+          </SecondaryActionButton>
+          <SecondaryActionButton type="button" onClick={() => openEditDialog(row)}>
+            Editar
+          </SecondaryActionButton>
+          <SecondaryActionButton type="button" onClick={() => requestDelete(row)}>
+            Eliminar
+          </SecondaryActionButton>
+        </div>
+      )}
+      schema={physicalDocumentOrderSchema}
+      fields={[
+        {
+          name: "verificationOrderId",
+          label: "Folio de nota",
+          type: "select",
+          options: (orders.data ?? []).map((item) => ({
+            label: item.orderNumber,
+            value: String(item.id)
+          }))
+        },
+        { name: "shippedAt", label: "Fecha de envio", type: "datetime" },
+        { name: "trackingNumber", label: "Numero de guia", type: "text" },
+        {
+          name: "status",
+          label: "Estatus",
+          type: "select",
+          options: [
+            { label: "Pedido", value: "ORDERED" },
+            { label: "Enviado", value: "SHIPPED" },
+            { label: "Entregado", value: "DELIVERED" },
+            { label: "Cancelado", value: "CANCELLED" }
+          ]
+        },
+        { name: "receivedBy", label: "Quien recibio", type: "text" },
+        { name: "photoData", label: "Foto", type: "image" },
+        { name: "comment", label: "Comentario", type: "textarea" }
+      ]}
+      defaultValues={{
+        verificationOrderId: "",
+        shippedAt: "",
+        trackingNumber: "",
+        status: "ORDERED",
+        receivedBy: "",
+        photoData: "",
+        comment: ""
+      }}
+      toPayload={(values) => ({
+        verificationOrderId: Number(values.verificationOrderId),
+        shippedAt: new Date(values.shippedAt).toISOString(),
+        trackingNumber: values.trackingNumber || null,
+        status: values.status,
+        receivedBy: values.receivedBy || null,
+        photoData: values.photoData || null,
+        comment: values.comment || null
+      })}
+      toFormValues={(row) => ({
+        verificationOrderId: String(row.verificationOrderId),
+        shippedAt: toDateTimeInputValue(row.shippedAt),
+        trackingNumber: row.trackingNumber ?? "",
+        status: row.status,
+        receivedBy: row.receivedBy ?? "",
+        photoData: row.photoData ?? "",
+        comment: row.comment ?? ""
       })}
     />
   );
@@ -693,3 +844,22 @@ export function PaymentsPage() {
 function toDateTimeInputValue(value) {
   return new Date(value).toISOString().slice(0, 16);
 }
+
+function formatDateTime(value) {
+  if (!value) {
+    return "-";
+  }
+
+  return new Intl.DateTimeFormat("es-MX", {
+    dateStyle: "short",
+    timeStyle: "short"
+  }).format(new Date(value));
+}
+
+function formatCurrency(value) {
+  return new Intl.NumberFormat("es-MX", {
+    style: "currency",
+    currency: "MXN"
+  }).format(Number(value ?? 0));
+}
+

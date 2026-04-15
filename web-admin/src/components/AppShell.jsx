@@ -5,14 +5,15 @@ import { useAuth } from "../lib/session";
 import { LogoutIcon, MenuIcon, cx } from "./AdminPrimitives";
 
 const navigationItems = [
-  { label: "Dashboard", to: "/" },
+  { label: "Inicio", to: "/" },
   { label: "Vehiculos", to: "/vehicles" },
-  { label: "Notas", to: "/orders" },
+  { label: "Notas", to: "/notes" },
+  { label: "Pedidos", to: "/pedidos" },
   { label: "Usuarios", to: "/users" },
   { label: "Clientes", to: "/clients" },
   { label: "CEDIS", to: "/cedis" },
   { label: "Verificentros", to: "/verification-centers" },
-  { label: "Transacciones", to: "/notes" },
+  { label: "Transacciones", to: "/transactions" },
   { label: "Verificaciones web", to: "/web-verifications" }
 ];
 
@@ -51,6 +52,7 @@ function AppShell({ children }) {
   const vehiclesSelected = pathname === "/vehicles" || pathname.startsWith("/vehiculos");
   const cedisSelected = pathname === "/cedis" || pathname.startsWith("/cedis/");
   const verificationCentersSelected = pathname === "/verification-centers" || pathname.startsWith("/verification-centers/");
+  const transactionsSelected = pathname === "/transactions" || pathname.startsWith("/transactions/");
   const webVerificationsSelected = pathname === "/web-verifications" || pathname.startsWith("/web-verifications/");
 
   const title = useMemo(() => {
@@ -64,6 +66,10 @@ function AppShell({ children }) {
 
     if (pathname.startsWith("/verification-centers")) {
       return "Verificentros";
+    }
+
+    if (pathname.startsWith("/transactions")) {
+      return "Transacciones";
     }
 
     if (pathname.startsWith("/web-verifications")) {
@@ -117,6 +123,8 @@ function AppShell({ children }) {
                       ? cedisSelected
                       : item.to === "/verification-centers"
                         ? verificationCentersSelected
+                        : item.to === "/transactions"
+                          ? transactionsSelected
                         : item.to === "/web-verifications"
                           ? webVerificationsSelected
                         : pathname === item.to;
@@ -148,7 +156,7 @@ function AppShell({ children }) {
                 className="flex w-full items-center justify-center gap-2 rounded-lg bg-[var(--shell-dark-strong)] px-3 py-2.5 text-sm font-bold text-white transition hover:bg-[#0f3023]"
               >
                 <LogoutIcon />
-                Cerrar sesion
+                Cerrar sesión
               </button>
             </div>
           </div>

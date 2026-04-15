@@ -13,6 +13,7 @@ import {
   PrimaryActionButton,
   SecondaryActionButton
 } from "../../components/AdminPrimitives";
+import { schemaHelpers } from "../../components/ResourceTablePage";
 import { api } from "../../lib/api";
 import { setFlashMessage } from "../../lib/flashMessage";
 
@@ -22,15 +23,15 @@ const vehicleTypeOptions = [
 ];
 
 const vehicleSchema = z.object({
-  vin: z.string().min(1, "Número de serie es obligatorio"),
-  plate: z.string().min(1, "Placas es obligatorio"),
+  vin: schemaHelpers.requiredText("Numero de serie"),
+  plate: schemaHelpers.requiredText("Placas"),
   category: z.enum(["N2", "N3"], {
     errorMap: () => ({ message: "El tipo es obligatorio" })
   }),
   clientCompanyId: z.string().min(1, "El cliente es obligatorio"),
   regionId: z.string().min(1, "El CEDIS es obligatorio"),
-  brand: z.string().min(1, "Marca es obligatorio"),
-  model: z.string().min(1, "Modelo es obligatorio")
+  brand: schemaHelpers.requiredText("Marca"),
+  model: schemaHelpers.requiredText("Modelo")
 });
 
 const defaultValues = {
@@ -180,9 +181,9 @@ function VehicleFormPage({ mode }) {
   }, [form, selectedClientRegionId, watchedValues.clientCompanyId]);
 
   const saveSuccessMessage =
-    mode === "edit" ? "Vehículo actualizado correctamente" : "Vehículo registrado correctamente";
+    mode === "edit" ? "Vehiculo actualizado correctamente" : "Vehiculo registrado correctamente";
   const saveErrorMessage =
-    mode === "edit" ? "Error al actualizar el vehículo" : "Error al registrar el vehículo";
+    mode === "edit" ? "Error al actualizar el vehiculo" : "Error al registrar el vehiculo";
 
   const saveVehicleMutation = useMutation({
     mutationFn: (values) => {
@@ -207,8 +208,7 @@ function VehicleFormPage({ mode }) {
       setFlashMessage(saveSuccessMessage);
       await navigate({ to: "/vehiculos" });
     },
-    onError: (error) => {
-      console.error(error);
+    onError: () => {
       setFeedbackError(saveErrorMessage);
     }
   });
@@ -230,9 +230,9 @@ function VehicleFormPage({ mode }) {
     return (
       <div className="space-y-6">
         <PagePanel>
-          <PageTitleBar title="Editar vehículo" />
+          <PageTitleBar title="Editar vehiculo" />
           <div className="px-5 py-5 text-sm font-medium text-[var(--shell-text)]">
-            Cargando información del vehículo...
+            Cargando informacion del vehiculo...
           </div>
         </PagePanel>
       </div>
@@ -243,10 +243,10 @@ function VehicleFormPage({ mode }) {
     return (
       <div className="space-y-6">
         <PagePanel>
-          <PageTitleBar title="Editar vehículo" />
+          <PageTitleBar title="Editar vehiculo" />
           <EmptyState
-            title="No se pudo cargar la información del vehículo"
-            description="Verifica la disponibilidad de los datos del vehículo e intenta nuevamente."
+            title="No se pudo cargar la informacion del vehiculo"
+            description="Verifica la disponibilidad de los datos del vehiculo e intenta nuevamente."
           />
         </PagePanel>
       </div>
@@ -259,25 +259,18 @@ function VehicleFormPage({ mode }) {
 
       <PagePanel>
         <PageTitleBar
-          title={mode === "edit" ? "Editar vehículo" : "Nuevo vehículo"}
+          title={mode === "edit" ? "Editar vehiculo" : "Nuevo vehiculo"}
           subtitle={
             mode === "edit"
-              ? "Actualiza la información registrada del vehículo seleccionado."
-              : "Captura la información requerida para registrar un nuevo vehículo en el sistema."
+              ? "Actualiza la informacion registrada del vehiculo seleccionado."
+              : "Captura la informacion requerida para registrar un nuevo vehiculo en el sistema."
           }
           actions={
             <div className="flex flex-col gap-3 sm:flex-row">
-              <SecondaryActionButton
-                type="button"
-                onClick={() => void navigate({ to: "/vehiculos" })}
-              >
+              <SecondaryActionButton type="button" onClick={() => void navigate({ to: "/vehiculos" })}>
                 Volver
               </SecondaryActionButton>
-              <PrimaryActionButton
-                type="button"
-                onClick={() => void onSubmit()}
-                disabled={saveDisabled}
-              >
+              <PrimaryActionButton type="button" onClick={() => void onSubmit()} disabled={saveDisabled}>
                 Guardar
               </PrimaryActionButton>
             </div>
@@ -286,7 +279,7 @@ function VehicleFormPage({ mode }) {
 
         <div className="grid gap-5 px-5 py-5 md:grid-cols-2">
           <FormField
-            label="Número de serie"
+            label="Numero de serie"
             error={form.formState.errors.vin?.message}
             input={<input {...form.register("vin")} type="text" className="field-base" />}
           />
@@ -373,13 +366,8 @@ function SelectField({ label, value, onChange, options, error, message, disabled
   return (
     <div>
       <label className="field-label">{label}</label>
-      <select
-        value={value ?? ""}
-        onChange={onChange}
-        className="field-base"
-        disabled={disabled}
-      >
-        <option value="">Selecciona una opción</option>
+      <select value={value ?? ""} onChange={onChange} className="field-base" disabled={disabled}>
+        <option value="">Selecciona una opcion</option>
         {options.map((option) => (
           <option key={option.value} value={option.value}>
             {option.label}

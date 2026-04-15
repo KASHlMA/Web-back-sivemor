@@ -13,19 +13,20 @@ import {
   PrimaryActionButton,
   SecondaryActionButton
 } from "../../components/AdminPrimitives";
+import { schemaHelpers } from "../../components/ResourceTablePage";
 import { api } from "../../lib/api";
 import { setFlashMessage } from "../../lib/flashMessage";
 
 const verificationCenterSchema = z.object({
-  name: z.string().min(1, "Nombre es obligatorio"),
-  centerKey: z.string().min(1, "Clave de verificentro es obligatoria"),
-  address: z.string().min(1, "Direccion es obligatoria"),
+  name: schemaHelpers.requiredText("Nombre"),
+  centerKey: schemaHelpers.requiredText("Clave de verificentro"),
+  address: schemaHelpers.requiredText("Direccion"),
   regionId: z.string().min(1, "Region es obligatoria"),
-  manager: z.string().min(1, "Responsable es obligatorio"),
-  email: z.string().email("Correo invalido"),
-  phone: z.string().min(1, "Telefono es obligatorio"),
-  alternatePhone: z.string().min(1, "Telefono alternativo es obligatorio"),
-  schedule: z.string().min(1, "Horario es obligatorio")
+  manager: schemaHelpers.requiredText("Responsable"),
+  email: schemaHelpers.email("Correo"),
+  phone: schemaHelpers.phone("Telefono"),
+  alternatePhone: schemaHelpers.phone("Telefono alternativo"),
+  schedule: schemaHelpers.requiredText("Horario")
 });
 
 const defaultValues = {

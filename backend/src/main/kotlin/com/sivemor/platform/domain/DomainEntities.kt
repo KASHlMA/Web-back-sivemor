@@ -58,7 +58,18 @@ enum class AnswerValue {
 
 enum class PaymentStatus {
     PENDING,
-    PAID,
+    APPROVED
+}
+
+enum class PaymentType {
+    CASH,
+    CARD
+}
+
+enum class PhysicalDocumentOrderStatus {
+    ORDERED,
+    SHIPPED,
+    DELIVERED,
     CANCELLED
 }
 
@@ -474,24 +485,54 @@ class Payment : BaseEntity() {
     @JoinColumn(name = "verification_order_id", nullable = false)
     lateinit var verificationOrder: VerificationOrder
 
+    @Enumerated(EnumType.STRING)
+    @Column(name = "payment_type", nullable = false, length = 20)
+    var paymentType: PaymentType = PaymentType.CASH
+
     @Column(nullable = false, precision = 12, scale = 2)
     lateinit var amount: BigDecimal
 
-    @Column(nullable = false, length = 10)
-    var currency: String = "MXN"
+    @Column(name = "deposit_account", length = 160)
+    var depositAccount: String? = null
+
+    @Column(name = "invoice_number", length = 120)
+    var invoiceNumber: String? = null
 
     @Enumerated(EnumType.STRING)
     @Column(nullable = false, length = 20)
     var status: PaymentStatus = PaymentStatus.PENDING
 
-    @Column(length = 120)
-    var reference: String? = null
-
-    @Column(columnDefinition = "TEXT")
-    var notes: String? = null
-
     @Column(name = "paid_at")
     var paidAt: Instant? = null
+}
+
+@Entity
+@Table(name = "physical_document_orders")
+class PhysicalDocumentOrder : BaseEntity() {
+    @ManyToOne(fetch = FetchType.LAZY, optional = false)
+    @JoinColumn(name = "verification_order_id", nullable = false)
+    lateinit var verificationOrder: VerificationOrder
+
+    @Column(name = "shipped_at", nullable = false)
+    lateinit var shippedAt: Instant
+
+    @Column(name = "tracking_number", length = 120)
+    var trackingNumber: String? = null
+
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false, length = 20)
+    var status: PhysicalDocumentOrderStatus = PhysicalDocumentOrderStatus.ORDERED
+
+    @Column(name = "received_by", length = 160)
+    var receivedBy: String? = null
+
+    @Lob
+    @Basic(fetch = FetchType.LAZY)
+    @Column(name = "photo_data", columnDefinition = "LONGTEXT")
+    var photoData: String? = null
+
+    @Column(columnDefinition = "TEXT")
+    var comment: String? = null
 }
 
 @Entity

@@ -12,7 +12,7 @@ import { api } from "../../lib/api";
 
 const userSchema = z.object({
   username: schemaHelpers.requiredText("Usuario"),
-  email: z.string().email("Correo inválido"),
+  email: schemaHelpers.email("Correo"),
   fullName: schemaHelpers.requiredText("Nombre completo"),
   role: z.enum(["ADMIN", "TECHNICIAN"]),
   active: z.boolean()

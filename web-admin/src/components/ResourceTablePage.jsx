@@ -40,7 +40,7 @@ export function ResourceTablePage({
   createLabel = "Agregar nuevo",
   loadingMessage = "Cargando registros...",
   emptyTitle = "No hay registros disponibles",
-  emptyDescription = "Cuando existan elementos en este m\u00f3dulo aparecer\u00e1n aqu\u00ed.",
+  emptyDescription = "Cuando existan elementos en este modulo apareceran aqui.",
   errorMessage = "Error al cargar los registros",
   deleteDialogTitle,
   deleteDialogDescription,
@@ -170,7 +170,7 @@ export function ResourceTablePage({
   const shouldRenderActions = renderRowActions !== null;
   const resolvedDeleteDialogTitle = deleteDialogTitle ?? `Eliminar ${title}`;
   const resolvedDeleteDialogDescription =
-    deleteDialogDescription ?? `\u00bfEst\u00e1s seguro de eliminar este registro de ${title.toLowerCase()}?`;
+    deleteDialogDescription ?? `Estas seguro de eliminar este registro de ${title.toLowerCase()}?`;
   const hasRows = filteredRows.length > 0;
 
   return (
@@ -251,7 +251,7 @@ export function ResourceTablePage({
                       title={search ? "No hay coincidencias" : emptyTitle}
                       description={
                         search
-                          ? "Prueba con otro t\u00e9rmino o limpia la b\u00fasqueda para volver a ver todos los registros."
+                          ? "Prueba con otro termino o limpia la busqueda para volver a ver todos los registros."
                           : emptyDescription
                       }
                     />
@@ -263,7 +263,7 @@ export function ResourceTablePage({
 
           {!query.isLoading && !query.isError && hasRows ? (
             <div className="mt-4 flex flex-col gap-3 border-t border-[var(--border)] px-2 pt-4 sm:flex-row sm:items-center sm:justify-between">
-              <span className="text-sm font-medium text-[var(--shell-text)]">P\u00e1gina {page} de {totalPages}</span>
+              <span className="text-sm font-medium text-[var(--shell-text)]">Pagina {page} de {totalPages}</span>
               <div className="flex gap-2">
                 <SecondaryActionButton type="button" onClick={() => setPage((current) => Math.max(1, current - 1))} disabled={page === 1}>
                   Anterior
@@ -367,7 +367,7 @@ function FieldRenderer({ field, controllerField, error }) {
           onChange={(event) => controllerField.onChange(event.target.value)}
           className="field-base"
         >
-          <option value="">Selecciona una opci\u00f3n</option>
+          <option value="">Selecciona una opcion</option>
           {(field.options ?? []).map((option) => (
             <option key={option.value} value={option.value}>
               {option.label}
@@ -398,7 +398,7 @@ function FieldRenderer({ field, controllerField, error }) {
             </option>
           ))}
         </select>
-        <p className="mt-1 text-xs text-[var(--shell-text)]/70">Mant\u00e9n presionada la tecla Ctrl para seleccionar varias opciones.</p>
+        <p className="mt-1 text-xs text-[var(--shell-text)]/70">Manten presionada la tecla Ctrl para seleccionar varias opciones.</p>
         <FieldError message={error} />
       </div>
     );
@@ -494,14 +494,14 @@ export const schemaHelpers = {
       .string()
       .trim()
       .min(1, `${label} es obligatorio`)
-      .email(`${label} inv\u00e1lido`),
-  phone: (label = "Tel\u00e9fono") =>
+      .email(`${label} invalido`),
+  phone: (label = "Telefono") =>
     z
       .string()
       .trim()
       .min(1, `${label} es obligatorio`)
       .refine((value) => /^\d{9,}$/.test(value), {
-        message: `${label} debe contener al menos 9 d\u00edgitos`
+        message: `${label} debe contener al menos 9 digitos`
       })
 };
 
@@ -517,7 +517,7 @@ export function renderStatusValue(value) {
   const normalized = String(value).toUpperCase();
   const map = {
     ADMIN: { label: "Administrador", tone: "neutral" },
-    TECHNICIAN: { label: "T\u00e9cnico", tone: "neutral" },
+    TECHNICIAN: { label: "Tecnico", tone: "neutral" },
     OPEN: { label: "Abierto", tone: "warning" },
     IN_PROGRESS: { label: "En progreso", tone: "warning" },
     COMPLETED: { label: "Completado", tone: "success" },

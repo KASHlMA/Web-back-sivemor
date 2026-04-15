@@ -7,7 +7,7 @@ import {
   renderStatusValue,
   schemaHelpers
 } from "../../components/ResourceTablePage";
-import { SecondaryActionButton } from "../../components/AdminPrimitives";
+import { ConfirmDialog, SecondaryActionButton } from "../../components/AdminPrimitives";
 import { api } from "../../lib/api";
 
 const userSchema = z.object({
@@ -21,27 +21,30 @@ const userSchema = z.object({
 export function UsersPage() {
   const queryClient = useQueryClient();
   const [feedbackMessage, setFeedbackMessage] = useState(null);
+  const [pendingResetUser, setPendingResetUser] = useState(null);
   const resetPasswordMutation = useMutation({
     mutationFn: (userId) => api.post(`/admin/users/${userId}/password/reset`, {}),
     onSuccess: async (response) => {
-      setFeedbackMessage(response?.message ?? "La nueva contrase\u00f1a fue enviada por correo");
+      setFeedbackMessage(response?.message ?? "La nueva contrasena fue enviada por correo");
+      setPendingResetUser(null);
       await queryClient.invalidateQueries({ queryKey: ["users"] });
       await queryClient.invalidateQueries({ queryKey: ["users-lookup"] });
     },
     onError: (error) => {
-      setFeedbackMessage(error instanceof Error ? error.message : "No se pudo regenerar la contrase\u00f1a");
+      setFeedbackMessage(error instanceof Error ? error.message : "No se pudo regenerar la contrasena");
     }
   });
 
   return (
-    <ResourceTablePage
+    <>
+      <ResourceTablePage
       title="Usuarios"
-      description="Administra usuarios administrativos y t\u00e9cnicos de captura."
+      description="Administra usuarios administrativos y tecnicos de captura."
       endpoint="users"
       queryKey={["users"]}
       feedbackMessage={feedbackMessage}
       createLabel="Agregar nuevo usuario"
-      emptyDescription="Cuando registres usuarios, su contrase\u00f1a se generar\u00e1 autom\u00e1ticamente y se enviar\u00e1 a su correo."
+      emptyDescription="Cuando registres usuarios, su contrasena se generara automaticamente y se enviara a su correo."
       columns={[
         { header: "Usuario", render: (row) => renderLinkedText(row.username), searchableText: (row) => row.username },
         { header: "Nombre", render: (row) => row.fullName, searchableText: (row) => row.fullName },
@@ -58,11 +61,11 @@ export function UsersPage() {
             type="button"
             onClick={() => {
               setFeedbackMessage(null);
-              void resetPasswordMutation.mutateAsync(row.id);
+              setPendingResetUser(row);
             }}
             disabled={resetPasswordMutation.isPending}
           >
-            Generar contrase\u00f1a
+            Generar contrasena
           </SecondaryActionButton>
           <SecondaryActionButton type="button" onClick={() => requestDelete(row)}>
             Eliminar
@@ -80,7 +83,7 @@ export function UsersPage() {
           type: "select",
           options: [
             { label: "Administrador", value: "ADMIN" },
-            { label: "T\u00e9cnico", value: "TECHNICIAN" }
+            { label: "Tecnico", value: "TECHNICIAN" }
           ]
         },
         { name: "active", label: "Activo", type: "checkbox" }
@@ -100,6 +103,25 @@ export function UsersPage() {
         role: row.role,
         active: row.active
       })}
-    />
+      />
+      <ConfirmDialog
+        open={Boolean(pendingResetUser)}
+        title="Confirmar cambio de contrasena"
+        description={
+          pendingResetUser
+            ? `Se generara una nueva contrasena para ${pendingResetUser.fullName}. Deseas continuar?`
+            : ""
+        }
+        confirmLabel="Cambiar contrasena"
+        cancelLabel="Cancelar"
+        onCancel={() => setPendingResetUser(null)}
+        onConfirm={async () => {
+          if (pendingResetUser) {
+            setFeedbackMessage(null);
+            await resetPasswordMutation.mutateAsync(pendingResetUser.id);
+          }
+        }}
+      />
+    </>
   );
 }

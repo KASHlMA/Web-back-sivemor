@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+﻿import { useMemo, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useNavigate } from "@tanstack/react-router";
 import { z } from "zod";
@@ -34,7 +34,7 @@ const vehicleSchema = z.object({
 });
 
 const orderSchema = z.object({
-  orderNumber: schemaHelpers.requiredText("N?mero de nota"),
+  orderNumber: schemaHelpers.requiredText("Número de nota"),
   clientCompanyId: z.string().min(1, "El cliente es obligatorio"),
   regionId: z.string().min(1, "La región es obligatoria"),
   assignedTechnicianId: z.string().min(1, "El técnico es obligatorio"),
@@ -95,24 +95,24 @@ export function UsersPage() {
   const resetPasswordMutation = useMutation({
     mutationFn: (userId) => api.post(`/admin/users/${userId}/password/reset`, {}),
     onSuccess: async (response) => {
-      setFeedbackMessage(response?.message ?? "La nueva contraseÃ±a fue enviada por correo");
+      setFeedbackMessage(response?.message ?? "La nueva contraseÃƒÂ±a fue enviada por correo");
       await queryClient.invalidateQueries({ queryKey: ["users"] });
       await queryClient.invalidateQueries({ queryKey: ["users-lookup"] });
     },
     onError: (error) => {
-      setFeedbackMessage(error instanceof Error ? error.message : "No se pudo regenerar la contraseÃ±a");
+      setFeedbackMessage(error instanceof Error ? error.message : "No se pudo regenerar la contraseÃƒÂ±a");
     }
   });
 
   return (
     <ResourceTablePage
       title="Usuarios"
-      description="Administra usuarios administrativos y técnicos de captura."
+      description="Administra usuarios administrativos y tÃ©cnicos de captura."
       endpoint="users"
       queryKey={["users"]}
       feedbackMessage={feedbackMessage}
       createLabel="Agregar nuevo usuario"
-      emptyDescription="Cuando registres usuarios, su contraseÃƒÂ±a se generarÃƒÂ¡ automÃƒÂ¡ticamente y se enviarÃƒÂ¡ a su correo."
+      emptyDescription="Cuando registres usuarios, su contraseÃƒÆ’Ã‚Â±a se generarÃƒÆ’Ã‚Â¡ automÃƒÆ’Ã‚Â¡ticamente y se enviarÃƒÆ’Ã‚Â¡ a su correo."
       columns={[
         { header: "Usuario", render: (row) => renderLinkedText(row.username), searchableText: (row) => row.username },
         { header: "Nombre", render: (row) => row.fullName, searchableText: (row) => row.fullName },
@@ -133,7 +133,7 @@ export function UsersPage() {
             }}
             disabled={resetPasswordMutation.isPending}
           >
-            Generar contraseÃƒÂ±a
+            Generar contraseÃƒÆ’Ã‚Â±a
           </SecondaryActionButton>
           <SecondaryActionButton type="button" onClick={() => requestDelete(row)}>
             Eliminar
@@ -151,11 +151,11 @@ export function UsersPage() {
           type: "select",
           options: [
             { label: "Administrador", value: "ADMIN" },
-            { label: "Técnico", value: "TECHNICIAN" }
+            { label: "TÃ©cnico", value: "TECHNICIAN" }
           ]
         },
         { name: "active", label: "Activo", type: "checkbox" },
-        { name: "password", label: "Contraseña", type: "text" }
+        { name: "password", label: "ContraseÃ±a", type: "text" }
       ]}
       defaultValues={{
         username: "",
@@ -242,8 +242,8 @@ export function ClientsPage() {
         name: schemaHelpers.requiredText("Nombre"),
         businessName: schemaHelpers.requiredText("Razón social"),
         email: schemaHelpers.email("Correo"),
-        phone: schemaHelpers.phone("Tel?fono"),
-        alternatePhone: schemaHelpers.phone("Tel?fono alternativo"),
+        phone: schemaHelpers.phone("Teléfono"),
+        alternatePhone: schemaHelpers.phone("Teléfono alternativo"),
         manager: schemaHelpers.requiredText("Gestor")
       })}
       fields={[
@@ -282,29 +282,36 @@ export function VehiclesPage() {
 
   return (
     <ResourceTablePage
-      title="Vehículos"
+      title="Vehiculos"
       endpoint="vehicles"
       queryKey={["vehicles"]}
       feedbackMessage={feedbackMessage}
-      onCreateAction={() => void navigate({ to: "/veh?culos/nuevo" })}
+      deleteDialogTitle="Eliminar vehiculo"
+      deleteDialogDescription="Deseas eliminar este vehiculo?"
+      deleteSuccessMessage="Vehiculo eliminado correctamente"
+      extraInvalidateQueryKeys={[["vehicles-lookup"]]}
+      onCreateAction={() => void navigate({ to: "/vehiculos/nuevo" })}
       columns={[
         { header: "Placa", render: (row) => renderLinkedText(row.plate), searchableText: (row) => row.plate },
-        { header: "Número de serie", render: (row) => row.vin, searchableText: (row) => row.vin },
+        { header: "Numero de serie", render: (row) => row.vin, searchableText: (row) => row.vin },
         { header: "CEDIS", render: (row) => row.clientCompanyName, searchableText: (row) => row.clientCompanyName }
       ]}
-      renderRowActions={(row) => (
+      renderRowActions={(row, { requestDelete }) => (
         <div className="table-actions">
           <SecondaryActionButton
             type="button"
-            onClick={() => void navigate({ to: "/veh?culos/$id/editar", params: { id: String(row.id) } })}
+            onClick={() => void navigate({ to: "/vehiculos/$id/editar", params: { id: String(row.id) } })}
           >
-            Editar información
+            Editar informacion
           </SecondaryActionButton>
           <SecondaryActionButton
             type="button"
-            onClick={() => void navigate({ to: "/veh?culos/$id/historial", params: { id: String(row.id) } })}
+            onClick={() => void navigate({ to: "/vehiculos/$id/historial", params: { id: String(row.id) } })}
           >
             Ver historial
+          </SecondaryActionButton>
+          <SecondaryActionButton type="button" onClick={() => requestDelete(row)}>
+            Eliminar
           </SecondaryActionButton>
         </div>
       )}
@@ -323,7 +330,7 @@ export function VehiclesPage() {
         { name: "vin", label: "VIN", type: "text" },
         {
           name: "category",
-          label: "Categoría",
+          label: "CategorÃ­a",
           type: "select",
           options: [
             { label: "N2", value: "N2" },
@@ -364,14 +371,14 @@ export function CedisPage() {
   return (
     <ResourceTablePage
       title="CEDIS"
-      description="Administra los centros de distribuci?n registrados en el sistema."
+      description="Administra los centros de distribucion registrados en el sistema."
       endpoint="cedis"
       queryKey={["cedis"]}
       feedbackMessage={feedbackMessage}
       createLabel="Agregar nuevo CEDIS"
       loadingMessage="Cargando CEDIS..."
       emptyTitle="No hay CEDIS registrados"
-      emptyDescription="Cuando existan CEDIS registrados aparecer?n aqu?."
+      emptyDescription="Cuando existan CEDIS registrados apareceran aqui."
       errorMessage="Error al cargar los CEDIS"
       deleteDialogTitle="Eliminar CEDIS"
       deleteDialogDescription="Deseas eliminar este CEDIS?"
@@ -380,9 +387,9 @@ export function CedisPage() {
       columns={[
         { header: "Nombre", render: (row) => renderLinkedText(row.name), searchableText: (row) => row.name },
         { header: "Correo", render: (row) => row.email, searchableText: (row) => row.email },
-        { header: "Tel?fono", render: (row) => row.phone, searchableText: (row) => row.phone },
+        { header: "Telefono", render: (row) => row.phone, searchableText: (row) => row.phone },
         {
-          header: "Tel?fono alternativo",
+          header: "Telefono alternativo",
           render: (row) => row.alternatePhone,
           searchableText: (row) => row.alternatePhone
         }
@@ -393,7 +400,7 @@ export function CedisPage() {
             type="button"
             onClick={() => void navigate({ to: "/cedis/$id", params: { id: String(row.id) } })}
           >
-            Ver informaci?n
+            Ver informacion
           </SecondaryActionButton>
           <SecondaryActionButton
             type="button"
@@ -406,14 +413,14 @@ export function CedisPage() {
       schema={z.object({
         name: schemaHelpers.requiredText("Nombre"),
         email: schemaHelpers.email("Correo"),
-        phone: schemaHelpers.phone("Tel?fono"),
-        alternatePhone: schemaHelpers.phone("Tel?fono alternativo")
+        phone: schemaHelpers.phone("Telefono"),
+        alternatePhone: schemaHelpers.phone("Telefono alternativo")
       })}
       fields={[
         { name: "name", label: "Nombre", type: "text" },
         { name: "email", label: "Correo", type: "text" },
-        { name: "phone", label: "Tel?fono", type: "text" },
-        { name: "alternatePhone", label: "Tel?fono alternativo", type: "text" }
+        { name: "phone", label: "Telefono", type: "text" },
+        { name: "alternatePhone", label: "Telefono alternativo", type: "text" }
       ]}
       defaultValues={{
         name: "",
@@ -478,19 +485,19 @@ export function VerificationCentersPage() {
       schema={z.object({
         name: schemaHelpers.requiredText("Nombre"),
         centerKey: schemaHelpers.requiredText("Clave de verificentro"),
-        address: schemaHelpers.requiredText("Direcci?n"),
-        regionId: z.string().min(1, "Region es obligatoria"),
+        address: schemaHelpers.requiredText("Dirección"),
+        regionId: z.string().min(1, "Región es obligatoria"),
         manager: schemaHelpers.requiredText("Responsable"),
         email: schemaHelpers.email("Correo"),
-        phone: schemaHelpers.phone("Tel?fono"),
-        alternatePhone: schemaHelpers.phone("Tel?fono alternativo"),
+        phone: schemaHelpers.phone("Teléfono"),
+        alternatePhone: schemaHelpers.phone("Teléfono alternativo"),
         schedule: schemaHelpers.requiredText("Horario")
       })}
       fields={[
         { name: "name", label: "Nombre", type: "text" },
         { name: "centerKey", label: "Clave de verificentro", type: "text" },
-        { name: "address", label: "Direcci?n", type: "text" },
-        { name: "regionId", label: "Region", type: "text" },
+        { name: "address", label: "Dirección", type: "text" },
+        { name: "regionId", label: "Región", type: "text" },
         { name: "manager", label: "Responsable", type: "text" },
         { name: "email", label: "Correo", type: "text" },
         { name: "phone", label: "Teléfono", type: "text" },
@@ -631,17 +638,17 @@ export function PaymentsPage() {
   return (
     <ResourceTablePage
       title="Transacciones"
-      description="Registra los pagos realizados para cada nota y consulta su informaci\u00f3n completa."
+      description="Registra los pagos realizados para cada nota y consulta su informacion completa."
       endpoint="payments"
       queryKey={["payments"]}
-      createLabel="Agregar nueva transacci\u00f3n"
+      createLabel="Agregar nueva transaccion"
       loadingMessage="Cargando transacciones..."
       emptyTitle="No hay transacciones registradas"
-      emptyDescription="Cuando registres pagos relacionados a una nota aparecer\u00e1n aqu\u00ed."
+      emptyDescription="Cuando registres pagos relacionados a una nota apareceran aqui."
       errorMessage="Error al cargar las transacciones"
-      deleteDialogTitle="Eliminar transacci\u00f3n"
-      deleteDialogDescription="\u00bfDeseas eliminar esta transacci\u00f3n?"
-      deleteSuccessMessage="Transacci\u00f3n eliminada correctamente"
+      deleteDialogTitle="Eliminar transaccion"
+      deleteDialogDescription="Deseas eliminar esta transaccion?"
+      deleteSuccessMessage="Transaccion eliminada correctamente"
       columns={[
         {
           header: "Id nota",
@@ -649,7 +656,7 @@ export function PaymentsPage() {
           searchableText: (row) => `${row.orderNumber} ${row.verificationOrderId}`
         },
         {
-          header: "M\u00e9todo de pago",
+          header: "Metodo de pago",
           render: (row) => renderStatusValue(row.paymentType),
           searchableText: (row) => row.paymentType
         },
@@ -663,7 +670,7 @@ export function PaymentsPage() {
             type="button"
             onClick={() => void navigate({ to: "/transactions/$id", params: { id: String(row.id) } })}
           >
-            Ver informaci\u00f3n
+            Ver informacion
           </SecondaryActionButton>
           <SecondaryActionButton type="button" onClick={() => openEditDialog(row)}>
             Editar
@@ -704,7 +711,7 @@ export function PaymentsPage() {
           ]
         },
         { name: "depositAccount", label: "Cuenta de deposito", type: "text" },
-        { name: "invoiceNumber", label: "N\u00famero de factura", type: "text" },
+        { name: "invoiceNumber", label: "Numero de factura", type: "text" },
         { name: "paidAt", label: "Fecha de pago", type: "datetime" }
       ]}
       defaultValues={{
@@ -745,21 +752,21 @@ export function PhysicalDocumentOrdersPage() {
   return (
     <ResourceTablePage
       title="Pedidos"
-      description="Registra cuando un cliente solicita el documento f?sico relacionado con una nota."
+      description="Registra cuando un cliente solicita el documento fisico relacionado con una nota."
       endpoint="physical-document-orders"
       queryKey={["physical-document-orders"]}
       createLabel="Agregar nuevo pedido"
       loadingMessage="Cargando pedidos..."
       emptyTitle="No hay pedidos registrados"
-      emptyDescription="Cuando registres pedidos de documentos f?sicos aparecer?n aqu?."
+      emptyDescription="Cuando registres pedidos de documentos fisicos apareceran aqui."
       errorMessage="Error al cargar los pedidos"
       deleteDialogTitle="Eliminar pedido"
       deleteDialogDescription="Deseas eliminar este pedido?"
       deleteSuccessMessage="Pedido eliminado correctamente"
       columns={[
         { header: "Folio de nota", render: (row) => renderLinkedText(row.noteNumber), searchableText: (row) => row.noteNumber },
-        { header: "Fecha de env?o", render: (row) => formatDateTime(row.shippedAt), searchableText: (row) => row.shippedAt },
-        { header: "N?mero de gu?a", render: (row) => row.trackingNumber ?? "-", searchableText: (row) => row.trackingNumber ?? "" },
+        { header: "Fecha de envio", render: (row) => formatDateTime(row.shippedAt), searchableText: (row) => row.shippedAt },
+        { header: "Numero de guia", render: (row) => row.trackingNumber ?? "-", searchableText: (row) => row.trackingNumber ?? "" },
         { header: "Estatus", render: (row) => renderStatusValue(row.status), searchableText: (row) => row.status }
       ]}
       renderRowActions={(row, { requestDelete, openEditDialog }) => (
@@ -768,7 +775,7 @@ export function PhysicalDocumentOrdersPage() {
             type="button"
             onClick={() => void navigate({ to: "/pedidos/$id", params: { id: String(row.id) } })}
           >
-            Ver informaci?n
+            Ver informacion
           </SecondaryActionButton>
           <SecondaryActionButton type="button" onClick={() => openEditDialog(row)}>
             Editar
@@ -789,8 +796,8 @@ export function PhysicalDocumentOrdersPage() {
             value: String(item.id)
           }))
         },
-        { name: "shippedAt", label: "Fecha de env?o", type: "datetime" },
-        { name: "trackingNumber", label: "N?mero de gu?a", type: "text" },
+        { name: "shippedAt", label: "Fecha de envio", type: "datetime" },
+        { name: "trackingNumber", label: "Numero de guia", type: "text" },
         {
           name: "status",
           label: "Estatus",
@@ -802,7 +809,7 @@ export function PhysicalDocumentOrdersPage() {
             { label: "Cancelado", value: "CANCELLED" }
           ]
         },
-        { name: "receivedBy", label: "Qui?n recibi?", type: "text" },
+        { name: "receivedBy", label: "Quien recibio", type: "text" },
         { name: "photoData", label: "Foto", type: "image" },
         { name: "comment", label: "Comentario", type: "textarea" }
       ]}

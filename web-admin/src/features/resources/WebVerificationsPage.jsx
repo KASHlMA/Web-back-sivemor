@@ -36,7 +36,7 @@ export function WebVerificationsPage() {
         ) : (query.data ?? []).length === 0 ? (
           <EmptyState
             title="Aun no hay verificaciones registradas"
-            description="Cuando una inspeccion movil se envie y se sincronice con el MER nuevo aparecera aqui."
+            description={"Cuando una inspecci\u00f3n m\u00f3vil se env\u00ede y se sincronice aparecer\u00e1 aqu\u00ed."}
           />
         ) : (
           <div className="table-shell px-3 pb-4 md:px-5">

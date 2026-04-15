@@ -24,10 +24,10 @@ export function TransactionDetailPage() {
   const details = useMemo(
     () => [
       { label: "Id de nota", value: transactionQuery.data?.orderNumber ?? "-" },
-      { label: "M\u00e9todo de pago", value: transactionQuery.data?.paymentType ?? null, isStatus: true },
+      { label: "Metodo de pago", value: transactionQuery.data?.paymentType ?? null, isStatus: true },
       { label: "Monto", value: formatCurrency(transactionQuery.data?.amount) },
-      { label: "Cuenta de dep\u00f3sito", value: transactionQuery.data?.depositAccount ?? "-" },
-      { label: "N\u00famero de factura", value: transactionQuery.data?.invoiceNumber ?? "-" },
+      { label: "Cuenta de deposito", value: transactionQuery.data?.depositAccount ?? "-" },
+      { label: "Numero de factura", value: transactionQuery.data?.invoiceNumber ?? "-" },
       { label: "Estado", value: transactionQuery.data?.status ?? null, isStatus: true },
       { label: "Fecha de pago", value: formatDateTime(transactionQuery.data?.paidAt) }
     ],
@@ -38,8 +38,8 @@ export function TransactionDetailPage() {
     return (
       <div className="space-y-6">
         <PagePanel>
-          <PageTitleBar title="Detalle de transacci\u00f3n" />
-          <div className="px-5 py-5 text-sm font-medium text-[var(--shell-text)]">Cargando informaci\u00f3n de la transacci\u00f3n...</div>
+          <PageTitleBar title="Detalle de transaccion" />
+          <div className="px-5 py-5 text-sm font-medium text-[var(--shell-text)]">Cargando informacion de la transaccion...</div>
         </PagePanel>
       </div>
     );
@@ -50,7 +50,7 @@ export function TransactionDetailPage() {
       <div className="space-y-6">
         <PagePanel>
           <PageTitleBar
-            title="Detalle de transacci\u00f3n"
+            title="Detalle de transaccion"
             actions={
               <SecondaryActionButton type="button" onClick={() => void navigate({ to: "/transactions" })}>
                 Volver
@@ -58,7 +58,7 @@ export function TransactionDetailPage() {
             }
           />
           <EmptyState
-            title="No se pudo cargar la informaci\u00f3n de la transacci\u00f3n"
+            title="No se pudo cargar la informacion de la transaccion"
             description="Verifica que el registro exista e intenta nuevamente."
           />
         </PagePanel>
@@ -70,8 +70,8 @@ export function TransactionDetailPage() {
     <div className="space-y-6">
       <PagePanel>
         <PageTitleBar
-          title="Detalle de transacci\u00f3n"
-          subtitle="Consulta la informaci\u00f3n completa del pago registrado para la nota."
+          title="Detalle de transaccion"
+          subtitle="Consulta la informacion completa del pago registrado para la nota."
           actions={
             <SecondaryActionButton type="button" onClick={() => void navigate({ to: "/transactions" })}>
               Volver al listado

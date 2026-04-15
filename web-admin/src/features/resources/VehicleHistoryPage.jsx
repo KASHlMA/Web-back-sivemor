@@ -56,8 +56,8 @@ export function VehicleHistoryPage() {
         statusLabel: report.overallResult === "PASS" ? "Aprobado" : "Reprobado",
         description:
           report.failureCount > 0
-            ? `Se detectaron ${report.failureCount} fallas en la verificación`
-            : "Verificación aprobada sin fallas registradas"
+            ? `Se detectaron ${report.failureCount} fallas en la verificacion`
+            : "Verificacion aprobada sin fallas registradas"
       };
     });
   }, [clientsQuery.data, reportsQuery.data, vehicleRecord]);
@@ -116,8 +116,8 @@ export function VehicleHistoryPage() {
         <div className="space-y-4 px-5 py-5">
           {cards.length === 0 ? (
             <EmptyState
-              title="No hay verificaciones registradas para este vehículo"
-              description="Cuando existan verificaciones asociadas a esta unidad aparecerán aquí."
+              title="No hay verificaciones registradas para este vehiculo"
+              description="Cuando existan verificaciones asociadas a esta unidad apareceran aqui."
             />
           ) : (
             cards.map((card) => (
@@ -150,7 +150,7 @@ export function VehicleHistoryPage() {
                       })
                     }
                   >
-                    Ver información
+                    Ver informacion
                   </PrimaryActionButton>
                 </div>
               </article>
@@ -170,8 +170,8 @@ export function VerificationDetailPlaceholderPage() {
     <div className="space-y-6">
       <PagePanel>
         <PageTitleBar
-          title="Detalle de verificación"
-          subtitle={`Verificación ${params.id}`}
+          title="Detalle de verificacion"
+          subtitle={`Verificacion ${params.id}`}
           actions={
             <SecondaryActionButton type="button" onClick={() => void navigate({ to: "/vehiculos" })}>
               Volver
@@ -181,7 +181,7 @@ export function VerificationDetailPlaceholderPage() {
 
         <div className="px-5 py-5">
           <EmptyState
-            title="El detalle de verificación aún no está disponible"
+            title="El detalle de verificacion aun no esta disponible"
             description="Esta pantalla queda lista como punto de navegación compatible dentro de web-admin."
           />
         </div>

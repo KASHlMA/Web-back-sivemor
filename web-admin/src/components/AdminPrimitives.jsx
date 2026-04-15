@@ -61,14 +61,6 @@ export function ActionGroup({ className = "", children }) {
   return <div className={cx("action-group", className)}>{children}</div>;
 }
 
-export function DangerTextButton({ className = "", children, ...props }) {
-  return (
-    <button className={cx("btn-text-danger", className)} {...props}>
-      {children}
-    </button>
-  );
-}
-
 export function StatusChip({ label, tone = "neutral" }) {
   const toneMap = {
     neutral: { background: "var(--neutral-bg)", color: "var(--shell-text)" },

@@ -8,7 +8,6 @@ import {
   ActionGroup,
   AlertMessage,
   ConfirmDialog,
-  DangerTextButton,
   EditIcon,
   EmptyState,
   FieldError,
@@ -38,10 +37,10 @@ export function ResourceTablePage({
   renderRowActions,
   onCreateAction,
   feedbackMessage,
-  createLabel = "Agregar Nuevo",
+  createLabel = "Agregar nuevo",
   loadingMessage = "Cargando registros...",
   emptyTitle = "No hay registros disponibles",
-  emptyDescription = "Cuando existan elementos en este módulo aparecerán aquí.",
+  emptyDescription = "Cuando existan elementos en este m\u00f3dulo aparecer\u00e1n aqu\u00ed.",
   errorMessage = "Error al cargar los registros",
   deleteDialogTitle,
   deleteDialogDescription,
@@ -104,10 +103,7 @@ export function ResourceTablePage({
     onError: (error) => setFeedbackError(error instanceof Error ? error.message : "No se pudo eliminar el registro")
   });
 
-  const dialogTitle = useMemo(
-    () => (editingRow ? `Editar ${title}` : `Nuevo ${title}`),
-    [editingRow, title]
-  );
+  const dialogTitle = useMemo(() => (editingRow ? `Editar ${title}` : `Nuevo ${title}`), [editingRow, title]);
 
   const filteredRows = useMemo(() => {
     const rows = query.data ?? [];
@@ -174,7 +170,7 @@ export function ResourceTablePage({
   const shouldRenderActions = renderRowActions !== null;
   const resolvedDeleteDialogTitle = deleteDialogTitle ?? `Eliminar ${title}`;
   const resolvedDeleteDialogDescription =
-    deleteDialogDescription ?? `¿Estás seguro de eliminar este registro de ${title.toLowerCase()}?`;
+    deleteDialogDescription ?? `\u00bfEst\u00e1s seguro de eliminar este registro de ${title.toLowerCase()}?`;
   const hasRows = filteredRows.length > 0;
 
   return (
@@ -233,20 +229,14 @@ export function ResourceTablePage({
                             renderRowActions(row, { requestDelete: setPendingDelete, openEditDialog })
                           ) : (
                             <ActionGroup className="table-actions">
-                              <SecondaryActionButton
-                                type="button"
-                                onClick={() => openEditDialog(row)}
-                              >
+                              <SecondaryActionButton type="button" onClick={() => openEditDialog(row)}>
                                 <EditIcon />
                                 Editar
                               </SecondaryActionButton>
-                              <DangerTextButton
-                                type="button"
-                                onClick={() => setPendingDelete(row)}
-                              >
+                              <SecondaryActionButton type="button" onClick={() => setPendingDelete(row)}>
                                 <TrashIcon />
                                 Eliminar
-                              </DangerTextButton>
+                              </SecondaryActionButton>
                             </ActionGroup>
                           )}
                         </td>
@@ -261,7 +251,7 @@ export function ResourceTablePage({
                       title={search ? "No hay coincidencias" : emptyTitle}
                       description={
                         search
-                          ? "Prueba con otro término o limpia la búsqueda para volver a ver todos los registros."
+                          ? "Prueba con otro t\u00e9rmino o limpia la b\u00fasqueda para volver a ver todos los registros."
                           : emptyDescription
                       }
                     />
@@ -273,7 +263,7 @@ export function ResourceTablePage({
 
           {!query.isLoading && !query.isError && hasRows ? (
             <div className="mt-4 flex flex-col gap-3 border-t border-[var(--border)] px-2 pt-4 sm:flex-row sm:items-center sm:justify-between">
-              <span className="text-sm font-medium text-[var(--shell-text)]">Página {page} de {totalPages}</span>
+              <span className="text-sm font-medium text-[var(--shell-text)]">P\u00e1gina {page} de {totalPages}</span>
               <div className="flex gap-2">
                 <SecondaryActionButton type="button" onClick={() => setPage((current) => Math.max(1, current - 1))} disabled={page === 1}>
                   Anterior
@@ -377,7 +367,7 @@ function FieldRenderer({ field, controllerField, error }) {
           onChange={(event) => controllerField.onChange(event.target.value)}
           className="field-base"
         >
-          <option value="">Selecciona una opcion</option>
+          <option value="">Selecciona una opci\u00f3n</option>
           {(field.options ?? []).map((option) => (
             <option key={option.value} value={option.value}>
               {option.label}
@@ -408,14 +398,13 @@ function FieldRenderer({ field, controllerField, error }) {
             </option>
           ))}
         </select>
-        <p className="mt-1 text-xs text-[var(--shell-text)]/70">Mantén presionada la tecla Ctrl para seleccionar varias opciones.</p>
+        <p className="mt-1 text-xs text-[var(--shell-text)]/70">Mant\u00e9n presionada la tecla Ctrl para seleccionar varias opciones.</p>
         <FieldError message={error} />
       </div>
     );
   }
 
-  const inputType =
-    field.type === "number" ? "number" : field.type === "datetime" ? "datetime-local" : "text";
+  const inputType = field.type === "number" ? "number" : field.type === "datetime" ? "datetime-local" : "text";
 
   if (field.type === "textarea") {
     return (
@@ -505,14 +494,14 @@ export const schemaHelpers = {
       .string()
       .trim()
       .min(1, `${label} es obligatorio`)
-      .email(`${label} inválido`),
-  phone: (label = "Teléfono") =>
+      .email(`${label} inv\u00e1lido`),
+  phone: (label = "Tel\u00e9fono") =>
     z
       .string()
       .trim()
       .min(1, `${label} es obligatorio`)
       .refine((value) => /^\d{9,}$/.test(value), {
-        message: `${label} debe contener al menos 9 dígitos`
+        message: `${label} debe contener al menos 9 d\u00edgitos`
       })
 };
 
@@ -528,13 +517,16 @@ export function renderStatusValue(value) {
   const normalized = String(value).toUpperCase();
   const map = {
     ADMIN: { label: "Administrador", tone: "neutral" },
-    TECHNICIAN: { label: "Técnico", tone: "neutral" },
+    TECHNICIAN: { label: "T\u00e9cnico", tone: "neutral" },
     OPEN: { label: "Abierto", tone: "warning" },
     IN_PROGRESS: { label: "En progreso", tone: "warning" },
     COMPLETED: { label: "Completado", tone: "success" },
     CANCELLED: { label: "Cancelado", tone: "danger" },
     PENDING: { label: "Pendiente", tone: "warning" },
+    APPROVED: { label: "Pagado", tone: "success" },
     PAID: { label: "Pagado", tone: "success" },
+    CASH: { label: "Efectivo", tone: "neutral" },
+    CARD: { label: "Tarjeta", tone: "neutral" },
     ORDERED: { label: "Pedido", tone: "warning" },
     SHIPPED: { label: "Enviado", tone: "neutral" },
     DELIVERED: { label: "Entregado", tone: "success" },

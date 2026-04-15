@@ -135,13 +135,9 @@ export function UsersPage() {
           >
             Generar contraseÃƒÂ±a
           </SecondaryActionButton>
-          <button
-            type="button"
-            onClick={() => requestDelete(row)}
-            className="btn-text-danger"
-          >
+          <SecondaryActionButton type="button" onClick={() => requestDelete(row)}>
             Eliminar
-          </button>
+          </SecondaryActionButton>
         </div>
       )}
       schema={userSchema}
@@ -635,17 +631,17 @@ export function PaymentsPage() {
   return (
     <ResourceTablePage
       title="Transacciones"
-      description="Registra los pagos realizados para cada nota y consulta su informaci?n completa."
+      description="Registra los pagos realizados para cada nota y consulta su informaci\u00f3n completa."
       endpoint="payments"
       queryKey={["payments"]}
-      createLabel="Agregar nueva transacci?n"
-      loadingMessage="Cargando transacci?nes..."
-      emptyTitle="No hay transacci?nes registradas"
-      emptyDescription="Cuando registres pagos relacionados a una nota aparecer?n aqu?."
-      errorMessage="Error al cargar las transacci?nes"
-      deleteDialogTitle="Eliminar transacci?n"
-      deleteDialogDescription="Deseas eliminar esta transacci?n?"
-      deleteSuccessMessage="Transaccion eliminada correctamente"
+      createLabel="Agregar nueva transacci\u00f3n"
+      loadingMessage="Cargando transacciones..."
+      emptyTitle="No hay transacciones registradas"
+      emptyDescription="Cuando registres pagos relacionados a una nota aparecer\u00e1n aqu\u00ed."
+      errorMessage="Error al cargar las transacciones"
+      deleteDialogTitle="Eliminar transacci\u00f3n"
+      deleteDialogDescription="\u00bfDeseas eliminar esta transacci\u00f3n?"
+      deleteSuccessMessage="Transacci\u00f3n eliminada correctamente"
       columns={[
         {
           header: "Id nota",
@@ -653,12 +649,12 @@ export function PaymentsPage() {
           searchableText: (row) => `${row.orderNumber} ${row.verificationOrderId}`
         },
         {
-          header: "Tipo de pago",
+          header: "M\u00e9todo de pago",
           render: (row) => renderStatusValue(row.paymentType),
           searchableText: (row) => row.paymentType
         },
         { header: "Monto", render: (row) => formatCurrency(row.amount), searchableText: (row) => String(row.amount) },
-        { header: "Estatus", render: (row) => renderStatusValue(row.status), searchableText: (row) => row.status },
+        { header: "Estado", render: (row) => renderStatusValue(row.status), searchableText: (row) => row.status },
         { header: "Fecha", render: (row) => formatDateTime(row.paidAt), searchableText: (row) => row.paidAt ?? "" }
       ]}
       renderRowActions={(row, { requestDelete, openEditDialog }) => (
@@ -667,7 +663,7 @@ export function PaymentsPage() {
             type="button"
             onClick={() => void navigate({ to: "/transactions/$id", params: { id: String(row.id) } })}
           >
-            Ver informaci?n
+            Ver informaci\u00f3n
           </SecondaryActionButton>
           <SecondaryActionButton type="button" onClick={() => openEditDialog(row)}>
             Editar
@@ -708,7 +704,7 @@ export function PaymentsPage() {
           ]
         },
         { name: "depositAccount", label: "Cuenta de deposito", type: "text" },
-        { name: "invoiceNumber", label: "N?mero de factura", type: "text" },
+        { name: "invoiceNumber", label: "N\u00famero de factura", type: "text" },
         { name: "paidAt", label: "Fecha de pago", type: "datetime" }
       ]}
       defaultValues={{

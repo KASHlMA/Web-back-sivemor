@@ -5,7 +5,6 @@ import {
   EmptyState,
   PagePanel,
   PageTitleBar,
-  PrimaryActionButton,
   SecondaryActionButton
 } from "../../components/AdminPrimitives";
 import { renderStatusValue } from "../../components/ResourceTablePage";
@@ -25,11 +24,11 @@ export function TransactionDetailPage() {
   const details = useMemo(
     () => [
       { label: "Id de nota", value: transactionQuery.data?.orderNumber ?? "-" },
-      { label: "Tipo de pago", value: transactionQuery.data?.paymentType ?? null, isStatus: true },
+      { label: "M\u00e9todo de pago", value: transactionQuery.data?.paymentType ?? null, isStatus: true },
       { label: "Monto", value: formatCurrency(transactionQuery.data?.amount) },
-      { label: "Cuenta de deposito", value: transactionQuery.data?.depositAccount ?? "-" },
-      { label: "N?mero de factura", value: transactionQuery.data?.invoiceNumber ?? "-" },
-      { label: "Estatus", value: transactionQuery.data?.status ?? null, isStatus: true },
+      { label: "Cuenta de dep\u00f3sito", value: transactionQuery.data?.depositAccount ?? "-" },
+      { label: "N\u00famero de factura", value: transactionQuery.data?.invoiceNumber ?? "-" },
+      { label: "Estado", value: transactionQuery.data?.status ?? null, isStatus: true },
       { label: "Fecha de pago", value: formatDateTime(transactionQuery.data?.paidAt) }
     ],
     [transactionQuery.data]
@@ -39,8 +38,8 @@ export function TransactionDetailPage() {
     return (
       <div className="space-y-6">
         <PagePanel>
-          <PageTitleBar title="Detalle de transacci?n" />
-          <div className="px-5 py-5 text-sm font-medium text-[var(--shell-text)]">Cargando informaci?n de la transacci?n...</div>
+          <PageTitleBar title="Detalle de transacci\u00f3n" />
+          <div className="px-5 py-5 text-sm font-medium text-[var(--shell-text)]">Cargando informaci\u00f3n de la transacci\u00f3n...</div>
         </PagePanel>
       </div>
     );
@@ -51,7 +50,7 @@ export function TransactionDetailPage() {
       <div className="space-y-6">
         <PagePanel>
           <PageTitleBar
-            title="Detalle de transacci?n"
+            title="Detalle de transacci\u00f3n"
             actions={
               <SecondaryActionButton type="button" onClick={() => void navigate({ to: "/transactions" })}>
                 Volver
@@ -59,7 +58,7 @@ export function TransactionDetailPage() {
             }
           />
           <EmptyState
-            title="No se pudo cargar la informaci?n de la transacci?n"
+            title="No se pudo cargar la informaci\u00f3n de la transacci\u00f3n"
             description="Verifica que el registro exista e intenta nuevamente."
           />
         </PagePanel>
@@ -71,14 +70,12 @@ export function TransactionDetailPage() {
     <div className="space-y-6">
       <PagePanel>
         <PageTitleBar
-          title="Detalle de transacci?n"
-          subtitle="Consulta la informaci?n completa del pago registrado para la nota."
+          title="Detalle de transacci\u00f3n"
+          subtitle="Consulta la informaci\u00f3n completa del pago registrado para la nota."
           actions={
-            <div className="action-group">
-              <PrimaryActionButton type="button" onClick={() => void navigate({ to: "/transactions" })}>
-                Volver al listado
-              </PrimaryActionButton>
-            </div>
+            <SecondaryActionButton type="button" onClick={() => void navigate({ to: "/transactions" })}>
+              Volver al listado
+            </SecondaryActionButton>
           }
         />
 

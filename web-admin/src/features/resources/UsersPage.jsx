@@ -24,24 +24,24 @@ export function UsersPage() {
   const resetPasswordMutation = useMutation({
     mutationFn: (userId) => api.post(`/admin/users/${userId}/password/reset`, {}),
     onSuccess: async (response) => {
-      setFeedbackMessage(response?.message ?? "La nueva contraseña fue enviada por correo");
+      setFeedbackMessage(response?.message ?? "La nueva contrase\u00f1a fue enviada por correo");
       await queryClient.invalidateQueries({ queryKey: ["users"] });
       await queryClient.invalidateQueries({ queryKey: ["users-lookup"] });
     },
     onError: (error) => {
-      setFeedbackMessage(error instanceof Error ? error.message : "No se pudo regenerar la contraseña");
+      setFeedbackMessage(error instanceof Error ? error.message : "No se pudo regenerar la contrase\u00f1a");
     }
   });
 
   return (
     <ResourceTablePage
       title="Usuarios"
-      description="Administra usuarios administrativos y técnicos de captura."
+      description="Administra usuarios administrativos y t\u00e9cnicos de captura."
       endpoint="users"
       queryKey={["users"]}
       feedbackMessage={feedbackMessage}
       createLabel="Agregar nuevo usuario"
-      emptyDescription="Cuando registres usuarios, su contraseña se generará automáticamente y se enviará a su correo."
+      emptyDescription="Cuando registres usuarios, su contrase\u00f1a se generar\u00e1 autom\u00e1ticamente y se enviar\u00e1 a su correo."
       columns={[
         { header: "Usuario", render: (row) => renderLinkedText(row.username), searchableText: (row) => row.username },
         { header: "Nombre", render: (row) => row.fullName, searchableText: (row) => row.fullName },
@@ -62,15 +62,11 @@ export function UsersPage() {
             }}
             disabled={resetPasswordMutation.isPending}
           >
-            Generar contraseña
+            Generar contrase\u00f1a
           </SecondaryActionButton>
-          <button
-            type="button"
-            onClick={() => requestDelete(row)}
-            className="btn-text-danger"
-          >
+          <SecondaryActionButton type="button" onClick={() => requestDelete(row)}>
             Eliminar
-          </button>
+          </SecondaryActionButton>
         </div>
       )}
       schema={userSchema}
@@ -84,7 +80,7 @@ export function UsersPage() {
           type: "select",
           options: [
             { label: "Administrador", value: "ADMIN" },
-            { label: "Técnico", value: "TECHNICIAN" }
+            { label: "T\u00e9cnico", value: "TECHNICIAN" }
           ]
         },
         { name: "active", label: "Activo", type: "checkbox" }

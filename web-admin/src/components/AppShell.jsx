@@ -6,7 +6,7 @@ import { LogoutIcon, MenuIcon, cx } from "./AdminPrimitives";
 
 const navigationItems = [
   { label: "Inicio", to: "/" },
-  { label: "Vehículos", to: "/vehicles" },
+  { label: "Veh\u00edculos", to: "/vehicles" },
   { label: "Notas", to: "/notes" },
   { label: "Pedidos", to: "/pedidos" },
   { label: "Usuarios", to: "/users" },
@@ -57,7 +57,7 @@ function AppShell({ children }) {
 
   const title = useMemo(() => {
     if (pathname.startsWith("/vehiculos")) {
-      return "Vehículos";
+      return "Veh\u00edculos";
     }
 
     if (pathname.startsWith("/cedis")) {
@@ -99,7 +99,7 @@ function AppShell({ children }) {
           <img src={brandAssets.logoLight} alt="SIVEMOR" className="w-[74px] md:w-[92px]" />
           <div className="min-w-0 flex-1">
             <h1 className="text-[2rem] font-bold leading-none">SIVEMOR</h1>
-            <p className="mt-1 text-sm text-white/95">Sistema de Verificación de Morelos</p>
+            <p className="mt-1 text-sm text-white/95">Sistema de Verificaci\u00f3n de Morelos</p>
           </div>
           <p className="hidden text-base font-bold tracking-[0.02em] md:block">{title}</p>
         </div>
@@ -125,9 +125,9 @@ function AppShell({ children }) {
                         ? verificationCentersSelected
                         : item.to === "/transactions"
                           ? transactionsSelected
-                        : item.to === "/web-verifications"
-                          ? webVerificationsSelected
-                        : pathname === item.to;
+                          : item.to === "/web-verifications"
+                            ? webVerificationsSelected
+                            : pathname === item.to;
 
                 return (
                   <button
@@ -156,7 +156,7 @@ function AppShell({ children }) {
                 className="flex w-full items-center justify-center gap-2 rounded-lg bg-[var(--shell-dark-strong)] px-3 py-2.5 text-sm font-bold text-white transition hover:bg-[#0f3023]"
               >
                 <LogoutIcon />
-                Cerrar sesión
+                Cerrar sesi\u00f3n
               </button>
             </div>
           </div>

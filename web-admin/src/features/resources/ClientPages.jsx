@@ -19,10 +19,10 @@ import { setFlashMessage } from "../../lib/flashMessage";
 
 const clientSchema = z.object({
   name: schemaHelpers.requiredText("Nombre"),
-  businessName: schemaHelpers.requiredText("Raz?n social"),
+  businessName: schemaHelpers.requiredText("Razon social"),
   email: schemaHelpers.email("Correo"),
-  phone: schemaHelpers.phone("Tel?fono"),
-  alternatePhone: schemaHelpers.phone("Tel?fono alternativo"),
+  phone: schemaHelpers.phone("Telefono"),
+  alternatePhone: schemaHelpers.phone("Telefono alternativo"),
   manager: schemaHelpers.requiredText("Gestor")
 });
 
@@ -118,7 +118,7 @@ function ClientFormPage({ mode }) {
       <div className="space-y-6">
         <PagePanel>
           <PageTitleBar title="Editar cliente" />
-          <div className="px-5 py-5 text-sm font-medium text-[var(--shell-text)]">Cargando informaci?n del cliente...</div>
+          <div className="px-5 py-5 text-sm font-medium text-[var(--shell-text)]">Cargando informacion del cliente...</div>
         </PagePanel>
       </div>
     );
@@ -137,7 +137,7 @@ function ClientFormPage({ mode }) {
             }
           />
           <EmptyState
-            title="No se pudo cargar la informaci?n del cliente"
+            title="No se pudo cargar la informacion del cliente"
             description="Verifica que el registro exista e intenta nuevamente."
           />
         </PagePanel>
@@ -154,8 +154,8 @@ function ClientFormPage({ mode }) {
           title={mode === "edit" ? "Editar cliente" : "Nuevo cliente"}
           subtitle={
             mode === "edit"
-              ? "Actualiza la informaci?n registrada del cliente seleccionado."
-              : "Captura la informaci?n necesaria para registrar un nuevo cliente."
+              ? "Actualiza la informacion registrada del cliente seleccionado."
+              : "Captura la informacion necesaria para registrar un nuevo cliente."
           }
           actions={
             <div className="action-group">
@@ -176,18 +176,18 @@ function ClientFormPage({ mode }) {
         <div className="grid gap-5 px-5 py-5 md:grid-cols-2">
           <FormField label="Nombre" error={form.formState.errors.name?.message} input={<input {...form.register("name")} type="text" className="field-base" />} />
           <FormField
-            label="Raz?n social"
+            label="Razon social"
             error={form.formState.errors.businessName?.message}
             input={<input {...form.register("businessName")} type="text" className="field-base" />}
           />
           <FormField label="Correo" error={form.formState.errors.email?.message} input={<input {...form.register("email")} type="text" className="field-base" />} />
           <FormField
-            label="Tel?fono"
+            label="Telefono"
             error={form.formState.errors.phone?.message}
             input={<input {...phoneField} type="text" inputMode="numeric" className="field-base" />}
           />
           <FormField
-            label="Tel?fono alternativo"
+            label="Telefono alternativo"
             error={form.formState.errors.alternatePhone?.message}
             input={<input {...alternatePhoneField} type="text" inputMode="numeric" className="field-base" />}
           />
@@ -212,10 +212,10 @@ export function ClientDetailPage() {
   const details = useMemo(
     () => [
       { label: "Nombre", value: clientQuery.data?.name ?? "-" },
-      { label: "Raz?n social", value: clientQuery.data?.businessName ?? "-" },
+      { label: "Razon social", value: clientQuery.data?.businessName ?? "-" },
       { label: "Correo", value: clientQuery.data?.email ?? "-" },
-      { label: "Tel?fono", value: clientQuery.data?.phone ?? "-" },
-      { label: "Tel?fono alternativo", value: clientQuery.data?.alternatePhone ?? "-" },
+      { label: "Telefono", value: clientQuery.data?.phone ?? "-" },
+      { label: "Telefono alternativo", value: clientQuery.data?.alternatePhone ?? "-" },
       { label: "Gestor", value: clientQuery.data?.manager ?? "-" }
     ],
     [clientQuery.data]
@@ -226,7 +226,7 @@ export function ClientDetailPage() {
       <div className="space-y-6">
         <PagePanel>
           <PageTitleBar title="Detalle de cliente" />
-          <div className="px-5 py-5 text-sm font-medium text-[var(--shell-text)]">Cargando informaci?n del cliente...</div>
+          <div className="px-5 py-5 text-sm font-medium text-[var(--shell-text)]">Cargando informacion del cliente...</div>
         </PagePanel>
       </div>
     );
@@ -245,7 +245,7 @@ export function ClientDetailPage() {
             }
           />
           <EmptyState
-            title="No se pudo cargar la informaci?n del cliente"
+            title="No se pudo cargar la informacion del cliente"
             description="Verifica que el registro exista e intenta nuevamente."
           />
         </PagePanel>
@@ -258,11 +258,11 @@ export function ClientDetailPage() {
       <PagePanel>
         <PageTitleBar
           title="Detalle de cliente"
-          subtitle="Consulta la informaci?n registrada del cliente seleccionado."
+          subtitle="Consulta la informacion registrada del cliente seleccionado."
           actions={
             <div className="action-group">
               <SecondaryActionButton type="button" onClick={() => void navigate({ to: "/clients/$id/editar", params: { id: clientId } })}>
-                Editar informaci?n
+                Editar informacion
               </SecondaryActionButton>
               <SecondaryActionButton type="button" onClick={() => void navigate({ to: "/clients" })}>
                 Volver

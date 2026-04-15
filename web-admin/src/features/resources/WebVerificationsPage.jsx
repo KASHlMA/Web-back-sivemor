@@ -23,7 +23,7 @@ export function WebVerificationsPage() {
       <PagePanel>
         <PageTitleBar
           title="Verificaciones web"
-          subtitle="Consulta las ultimas verificaciones recibidas desde m?vil y abre el detalle completo del formulario."
+          subtitle="Consulta las ultimas verificaciones recibidas desde movil y abre el detalle completo del formulario."
         />
 
         {query.isLoading ? (
@@ -36,7 +36,7 @@ export function WebVerificationsPage() {
         ) : (query.data ?? []).length === 0 ? (
           <EmptyState
             title="Aun no hay verificaciones registradas"
-            description="Cuando una inspecci?n m?vil se envie y se sincronice con el MER nuevo aparecer? aqu?."
+            description="Cuando una inspeccion movil se envie y se sincronice con el MER nuevo aparecera aqui."
           />
         ) : (
           <div className="table-shell px-3 pb-4 md:px-5">
@@ -46,7 +46,7 @@ export function WebVerificationsPage() {
                   <th>ID verificacion</th>
                   <th>Placa</th>
                   <th>Empresa</th>
-                  <th>N?mero de nota</th>
+                  <th>Numero de nota</th>
                   <th>Estado</th>
                   <th>Fecha</th>
                   <th>Acciones</th>
@@ -103,7 +103,7 @@ export function WebVerificationDetailPage() {
 
   const orderedSections = useMemo(() => {
     const sections = query.data?.sections ?? {};
-    const preferredOrder = ["luces", "llantas", "direcci?n", "aire_frenos", "motor_emisiones", "otros", "general"];
+    const preferredOrder = ["luces", "llantas", "direccion", "aire_frenos", "motor_emisiones", "otros", "general"];
     return preferredOrder.filter((key) => sections[key]).map((key) => [key, sections[key]]);
   }, [query.data]);
 
@@ -114,8 +114,8 @@ export function WebVerificationDetailPage() {
           title="Detalle de verificacion"
           subtitle={
             query.data
-              ? `Verificaci?n ${query.data.verificacionId} para la nota ${query.data.orderNumber}.`
-              : "Consulta la informaci?n capturada desde el formulario m?vil."
+              ? `Verificacion ${query.data.verificacionId} para la nota ${query.data.orderNumber}.`
+              : "Consulta la informacion capturada desde el formulario movil."
           }
           actions={
             <SecondaryActionButton type="button" onClick={() => void navigate({ to: "/web-verifications" })}>
@@ -137,7 +137,7 @@ export function WebVerificationDetailPage() {
               <SummaryField label="ID verificacion" value={query.data.verificacionId} />
               <SummaryField label="Placa" value={query.data.vehiclePlate} />
               <SummaryField label="Empresa" value={query.data.clientCompanyName} />
-              <SummaryField label="N?mero de nota" value={query.data.orderNumber} />
+              <SummaryField label="Numero de nota" value={query.data.orderNumber} />
               <SummaryField label="Resultado" value={query.data.overallResult ?? "-"} />
               <SummaryField label="Fecha" value={formatDateTime(query.data.submittedAt)} />
             </section>

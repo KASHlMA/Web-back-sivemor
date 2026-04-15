@@ -20,9 +20,9 @@ import { setFlashMessage } from "../../lib/flashMessage";
 const cedisSchema = z.object({
   name: schemaHelpers.requiredText("Nombre"),
   email: schemaHelpers.email("Correo"),
-  phone: schemaHelpers.phone("Telefono"),
-  alternatePhone: schemaHelpers.phone("Telefono alternativo"),
-  address: schemaHelpers.requiredText("Direccion"),
+  phone: schemaHelpers.phone("Tel?fono"),
+  alternatePhone: schemaHelpers.phone("Tel?fono alternativo"),
+  address: schemaHelpers.requiredText("Direcci?n"),
   manager: schemaHelpers.requiredText("Encargado")
 });
 
@@ -120,7 +120,7 @@ function CedisFormPage({ mode }) {
       <div className="space-y-6">
         <PagePanel>
           <PageTitleBar title="Editar CEDIS" />
-          <div className="px-5 py-5 text-sm font-medium text-[var(--shell-text)]">Cargando informacion del CEDIS...</div>
+          <div className="px-5 py-5 text-sm font-medium text-[var(--shell-text)]">Cargando informaci?n del CEDIS...</div>
         </PagePanel>
       </div>
     );
@@ -139,7 +139,7 @@ function CedisFormPage({ mode }) {
             }
           />
           <EmptyState
-            title="No se pudo cargar la informacion del CEDIS"
+            title="No se pudo cargar la informaci?n del CEDIS"
             description="Verifica que el registro exista e intenta nuevamente."
           />
         </PagePanel>
@@ -156,11 +156,11 @@ function CedisFormPage({ mode }) {
           title={mode === "edit" ? "Editar CEDIS" : "Nuevo CEDIS"}
           subtitle={
             mode === "edit"
-              ? "Actualiza la informacion registrada del CEDIS seleccionado."
-              : "Captura la informacion necesaria para registrar un nuevo CEDIS."
+              ? "Actualiza la informaci?n registrada del CEDIS seleccionado."
+              : "Captura la informaci?n necesaria para registrar un nuevo CEDIS."
           }
           actions={
-            <div className="flex flex-col gap-3 sm:flex-row">
+            <div className="action-group">
               <SecondaryActionButton type="button" onClick={() => void navigate({ to: "/cedis" })}>
                 Volver
               </SecondaryActionButton>
@@ -175,16 +175,16 @@ function CedisFormPage({ mode }) {
           <FormField label="Nombre" error={form.formState.errors.name?.message} input={<input {...form.register("name")} type="text" className="field-base" />} />
           <FormField label="Correo" error={form.formState.errors.email?.message} input={<input {...form.register("email")} type="text" className="field-base" />} />
           <FormField
-            label="Telefono"
+            label="Tel?fono"
             error={form.formState.errors.phone?.message}
             input={<input {...phoneField} type="text" inputMode="numeric" className="field-base" />}
           />
           <FormField
-            label="Telefono alternativo"
+            label="Tel?fono alternativo"
             error={form.formState.errors.alternatePhone?.message}
             input={<input {...alternatePhoneField} type="text" inputMode="numeric" className="field-base" />}
           />
-          <FormField label="Direccion" error={form.formState.errors.address?.message} input={<input {...form.register("address")} type="text" className="field-base" />} />
+          <FormField label="Direcci?n" error={form.formState.errors.address?.message} input={<input {...form.register("address")} type="text" className="field-base" />} />
           <FormField label="Encargado" error={form.formState.errors.manager?.message} input={<input {...form.register("manager")} type="text" className="field-base" />} />
         </div>
       </PagePanel>
@@ -207,8 +207,8 @@ export function CedisDetailPage() {
     () => [
       { label: "Nombre", value: cedisQuery.data?.name ?? "-" },
       { label: "Correo", value: cedisQuery.data?.email ?? "-" },
-      { label: "Telefono", value: cedisQuery.data?.phone ?? "-" },
-      { label: "Telefono alternativo", value: cedisQuery.data?.alternatePhone ?? "-" }
+      { label: "Tel?fono", value: cedisQuery.data?.phone ?? "-" },
+      { label: "Tel?fono alternativo", value: cedisQuery.data?.alternatePhone ?? "-" }
     ],
     [cedisQuery.data]
   );
@@ -218,7 +218,7 @@ export function CedisDetailPage() {
       <div className="space-y-6">
         <PagePanel>
           <PageTitleBar title="Detalle de CEDIS" />
-          <div className="px-5 py-5 text-sm font-medium text-[var(--shell-text)]">Cargando informacion del CEDIS...</div>
+          <div className="px-5 py-5 text-sm font-medium text-[var(--shell-text)]">Cargando informaci?n del CEDIS...</div>
         </PagePanel>
       </div>
     );
@@ -237,7 +237,7 @@ export function CedisDetailPage() {
             }
           />
           <EmptyState
-            title="No se pudo cargar la informacion del CEDIS"
+            title="No se pudo cargar la informaci?n del CEDIS"
             description="Verifica que el registro exista e intenta nuevamente."
           />
         </PagePanel>
@@ -250,11 +250,11 @@ export function CedisDetailPage() {
       <PagePanel>
         <PageTitleBar
           title="Detalle de CEDIS"
-          subtitle="Consulta la informacion registrada del CEDIS seleccionado."
+          subtitle="Consulta la informaci?n registrada del CEDIS seleccionado."
           actions={
-            <div className="flex flex-col gap-3 sm:flex-row">
+            <div className="action-group">
               <SecondaryActionButton type="button" onClick={() => void navigate({ to: "/cedis/$id/editar", params: { id: cedisId } })}>
-                Editar informacion
+                Editar informaci?n
               </SecondaryActionButton>
               <SecondaryActionButton type="button" onClick={() => void navigate({ to: "/cedis" })}>
                 Volver

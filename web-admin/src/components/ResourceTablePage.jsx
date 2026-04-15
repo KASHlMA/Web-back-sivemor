@@ -5,8 +5,10 @@ import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { api } from "../lib/api";
 import {
+  ActionGroup,
   AlertMessage,
   ConfirmDialog,
+  DangerTextButton,
   EditIcon,
   EmptyState,
   FieldError,
@@ -39,7 +41,7 @@ export function ResourceTablePage({
   createLabel = "Agregar Nuevo",
   loadingMessage = "Cargando registros...",
   emptyTitle = "No hay registros disponibles",
-  emptyDescription = "Cuando existan elementos en este modulo apareceran aqui.",
+  emptyDescription = "Cuando existan elementos en este módulo aparecerán aquí.",
   errorMessage = "Error al cargar los registros",
   deleteDialogTitle,
   deleteDialogDescription,
@@ -172,7 +174,7 @@ export function ResourceTablePage({
   const shouldRenderActions = renderRowActions !== null;
   const resolvedDeleteDialogTitle = deleteDialogTitle ?? `Eliminar ${title}`;
   const resolvedDeleteDialogDescription =
-    deleteDialogDescription ?? `Estas seguro de eliminar este registro de ${title.toLowerCase()}?`;
+    deleteDialogDescription ?? `¿Estás seguro de eliminar este registro de ${title.toLowerCase()}?`;
   const hasRows = filteredRows.length > 0;
 
   return (
@@ -230,24 +232,22 @@ export function ResourceTablePage({
                           {renderRowActions ? (
                             renderRowActions(row, { requestDelete: setPendingDelete, openEditDialog })
                           ) : (
-                            <div className="flex justify-end gap-2">
-                              <button
+                            <ActionGroup className="table-actions">
+                              <SecondaryActionButton
                                 type="button"
                                 onClick={() => openEditDialog(row)}
-                                className="inline-flex items-center gap-1 rounded-md px-2 py-1.5 text-sm font-semibold text-[var(--shell-text)] transition hover:bg-[var(--panel-alt)]"
                               >
                                 <EditIcon />
                                 Editar
-                              </button>
-                              <button
+                              </SecondaryActionButton>
+                              <DangerTextButton
                                 type="button"
                                 onClick={() => setPendingDelete(row)}
-                                className="inline-flex items-center gap-1 rounded-md px-2 py-1.5 text-sm font-semibold text-[var(--danger)] transition hover:bg-[#f9ebe7]"
                               >
                                 <TrashIcon />
                                 Eliminar
-                              </button>
-                            </div>
+                              </DangerTextButton>
+                            </ActionGroup>
                           )}
                         </td>
                       ) : null}
@@ -261,7 +261,7 @@ export function ResourceTablePage({
                       title={search ? "No hay coincidencias" : emptyTitle}
                       description={
                         search
-                          ? "Prueba con otro termino o limpia la busqueda para volver a ver todos los registros."
+                          ? "Prueba con otro término o limpia la búsqueda para volver a ver todos los registros."
                           : emptyDescription
                       }
                     />
@@ -273,7 +273,7 @@ export function ResourceTablePage({
 
           {!query.isLoading && !query.isError && hasRows ? (
             <div className="mt-4 flex flex-col gap-3 border-t border-[var(--border)] px-2 pt-4 sm:flex-row sm:items-center sm:justify-between">
-              <span className="text-sm font-medium text-[var(--shell-text)]">Pagina {page} de {totalPages}</span>
+              <span className="text-sm font-medium text-[var(--shell-text)]">Página {page} de {totalPages}</span>
               <div className="flex gap-2">
                 <SecondaryActionButton type="button" onClick={() => setPage((current) => Math.max(1, current - 1))} disabled={page === 1}>
                   Anterior
@@ -408,7 +408,7 @@ function FieldRenderer({ field, controllerField, error }) {
             </option>
           ))}
         </select>
-        <p className="mt-1 text-xs text-[var(--shell-text)]/70">Manten presionada la tecla Ctrl para seleccionar varias opciones.</p>
+        <p className="mt-1 text-xs text-[var(--shell-text)]/70">Mantén presionada la tecla Ctrl para seleccionar varias opciones.</p>
         <FieldError message={error} />
       </div>
     );
@@ -506,13 +506,13 @@ export const schemaHelpers = {
       .trim()
       .min(1, `${label} es obligatorio`)
       .email(`${label} inválido`),
-  phone: (label = "Telefono") =>
+  phone: (label = "Teléfono") =>
     z
       .string()
       .trim()
       .min(1, `${label} es obligatorio`)
       .refine((value) => /^\d{9,}$/.test(value), {
-        message: `${label} debe contener al menos 9 digitos`
+        message: `${label} debe contener al menos 9 dígitos`
       })
 };
 
@@ -528,7 +528,7 @@ export function renderStatusValue(value) {
   const normalized = String(value).toUpperCase();
   const map = {
     ADMIN: { label: "Administrador", tone: "neutral" },
-    TECHNICIAN: { label: "Tecnico", tone: "neutral" },
+    TECHNICIAN: { label: "Técnico", tone: "neutral" },
     OPEN: { label: "Abierto", tone: "warning" },
     IN_PROGRESS: { label: "En progreso", tone: "warning" },
     COMPLETED: { label: "Completado", tone: "success" },

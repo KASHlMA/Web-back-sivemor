@@ -66,6 +66,14 @@ textarea {
     border-color: var(--border-strong);
   }
 
+  .page-toolbar {
+    @apply flex w-full flex-col gap-3 sm:w-auto sm:flex-row sm:items-center sm:justify-end;
+  }
+
+  .action-group {
+    @apply flex w-full flex-col gap-3 sm:w-auto sm:flex-row sm:items-center;
+  }
+
   .field-base {
     @apply w-full rounded-lg border bg-white px-4 py-3 text-sm text-[var(--title)] outline-none transition;
     border-color: var(--border-strong);
@@ -110,14 +118,28 @@ textarea {
     background: var(--danger);
   }
 
+  .btn-text-danger {
+    @apply inline-flex min-h-[40px] items-center justify-center rounded-lg px-4 py-2.5 text-sm font-semibold transition;
+    color: var(--danger);
+  }
+
+  .btn-text-danger:hover:not(:disabled) {
+    background: #f9ebe7;
+  }
+
   .btn-danger:hover:not(:disabled) {
     background: #993e32;
   }
 
   .btn-primary:disabled,
   .btn-secondary:disabled,
-  .btn-danger:disabled {
+  .btn-danger:disabled,
+  .btn-text-danger:disabled {
     @apply cursor-not-allowed opacity-60;
+  }
+
+  .table-actions {
+    @apply flex flex-col items-stretch justify-end gap-2 sm:flex-row sm:items-center;
   }
 
   .table-shell {

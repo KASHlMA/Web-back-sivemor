@@ -50,7 +50,7 @@ export function UsersPage() {
         { header: "Activo", render: (row) => renderStatusValue(row.active), searchableText: (row) => String(row.active) }
       ]}
       renderRowActions={(row, { requestDelete, openEditDialog }) => (
-        <div className="flex justify-end gap-2">
+        <div className="table-actions">
           <SecondaryActionButton type="button" onClick={() => openEditDialog(row)}>
             Editar
           </SecondaryActionButton>
@@ -67,7 +67,7 @@ export function UsersPage() {
           <button
             type="button"
             onClick={() => requestDelete(row)}
-            className="inline-flex items-center gap-1 rounded-md px-2 py-1.5 text-sm font-semibold text-[var(--danger)] transition hover:bg-[#f9ebe7]"
+            className="btn-text-danger"
           >
             Eliminar
           </button>

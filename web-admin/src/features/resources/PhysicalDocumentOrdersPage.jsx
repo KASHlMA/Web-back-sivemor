@@ -27,10 +27,10 @@ export function PhysicalDocumentOrderDetailPage() {
   const details = useMemo(
     () => [
       { label: "Folio de nota", value: orderQuery.data?.noteNumber ?? "-" },
-      { label: "Fecha de envio", value: orderQuery.data ? formatDateTime(orderQuery.data.shippedAt) : "-" },
-      { label: "Numero de guia", value: orderQuery.data?.trackingNumber ?? "-" },
+      { label: "Fecha de env?o", value: orderQuery.data ? formatDateTime(orderQuery.data.shippedAt) : "-" },
+      { label: "N?mero de gu?a", value: orderQuery.data?.trackingNumber ?? "-" },
       { label: "Estatus", value: orderQuery.data?.status ?? null, isStatus: true },
-      { label: "Quien recibio", value: orderQuery.data?.receivedBy ?? "-" },
+      { label: "Qui?n recibio", value: orderQuery.data?.receivedBy ?? "-" },
       { label: "Comentario", value: orderQuery.data?.comment ?? "-" }
     ],
     [orderQuery.data]
@@ -41,7 +41,7 @@ export function PhysicalDocumentOrderDetailPage() {
       <div className="space-y-6">
         <PagePanel>
           <PageTitleBar title="Detalle de pedido" />
-          <div className="px-5 py-5 text-sm font-medium text-[var(--shell-text)]">Cargando informacion del pedido...</div>
+          <div className="px-5 py-5 text-sm font-medium text-[var(--shell-text)]">Cargando informaci?n del pedido...</div>
         </PagePanel>
       </div>
     );
@@ -60,7 +60,7 @@ export function PhysicalDocumentOrderDetailPage() {
             }
           />
           <EmptyState
-            title="No se pudo cargar la informacion del pedido"
+            title="No se pudo cargar la informaci?n del pedido"
             description="Verifica que el registro exista e intenta nuevamente."
           />
         </PagePanel>
@@ -73,9 +73,9 @@ export function PhysicalDocumentOrderDetailPage() {
       <PagePanel>
         <PageTitleBar
           title="Detalle de pedido"
-          subtitle="Consulta la informacion completa del envio del documento fisico."
+          subtitle="Consulta la informaci?n completa del env?o del documento f?sico."
           actions={
-            <div className="flex flex-col gap-3 sm:flex-row">
+            <div className="action-group">
               <PrimaryActionButton type="button" onClick={() => void navigate({ to: "/pedidos" })}>
                 Volver al listado
               </PrimaryActionButton>

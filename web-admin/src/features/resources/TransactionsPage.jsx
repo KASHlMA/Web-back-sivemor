@@ -28,7 +28,7 @@ export function TransactionDetailPage() {
       { label: "Tipo de pago", value: transactionQuery.data?.paymentType ?? null, isStatus: true },
       { label: "Monto", value: formatCurrency(transactionQuery.data?.amount) },
       { label: "Cuenta de deposito", value: transactionQuery.data?.depositAccount ?? "-" },
-      { label: "Numero de factura", value: transactionQuery.data?.invoiceNumber ?? "-" },
+      { label: "N?mero de factura", value: transactionQuery.data?.invoiceNumber ?? "-" },
       { label: "Estatus", value: transactionQuery.data?.status ?? null, isStatus: true },
       { label: "Fecha de pago", value: formatDateTime(transactionQuery.data?.paidAt) }
     ],
@@ -39,8 +39,8 @@ export function TransactionDetailPage() {
     return (
       <div className="space-y-6">
         <PagePanel>
-          <PageTitleBar title="Detalle de transaccion" />
-          <div className="px-5 py-5 text-sm font-medium text-[var(--shell-text)]">Cargando informacion de la transaccion...</div>
+          <PageTitleBar title="Detalle de transacci?n" />
+          <div className="px-5 py-5 text-sm font-medium text-[var(--shell-text)]">Cargando informaci?n de la transacci?n...</div>
         </PagePanel>
       </div>
     );
@@ -51,7 +51,7 @@ export function TransactionDetailPage() {
       <div className="space-y-6">
         <PagePanel>
           <PageTitleBar
-            title="Detalle de transaccion"
+            title="Detalle de transacci?n"
             actions={
               <SecondaryActionButton type="button" onClick={() => void navigate({ to: "/transactions" })}>
                 Volver
@@ -59,7 +59,7 @@ export function TransactionDetailPage() {
             }
           />
           <EmptyState
-            title="No se pudo cargar la informacion de la transaccion"
+            title="No se pudo cargar la informaci?n de la transacci?n"
             description="Verifica que el registro exista e intenta nuevamente."
           />
         </PagePanel>
@@ -71,10 +71,10 @@ export function TransactionDetailPage() {
     <div className="space-y-6">
       <PagePanel>
         <PageTitleBar
-          title="Detalle de transaccion"
-          subtitle="Consulta la informacion completa del pago registrado para la nota."
+          title="Detalle de transacci?n"
+          subtitle="Consulta la informaci?n completa del pago registrado para la nota."
           actions={
-            <div className="flex flex-col gap-3 sm:flex-row">
+            <div className="action-group">
               <PrimaryActionButton type="button" onClick={() => void navigate({ to: "/transactions" })}>
                 Volver al listado
               </PrimaryActionButton>

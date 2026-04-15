@@ -34,7 +34,7 @@ const vehicleSchema = z.object({
 });
 
 const orderSchema = z.object({
-  orderNumber: schemaHelpers.requiredText("Numero de nota"),
+  orderNumber: schemaHelpers.requiredText("N?mero de nota"),
   clientCompanyId: z.string().min(1, "El cliente es obligatorio"),
   regionId: z.string().min(1, "La región es obligatoria"),
   assignedTechnicianId: z.string().min(1, "El técnico es obligatorio"),
@@ -56,10 +56,10 @@ const paymentSchema = z.object({
 
 const physicalDocumentOrderSchema = z.object({
   verificationOrderId: z.string().min(1, "La nota es obligatoria"),
-  shippedAt: schemaHelpers.requiredText("Fecha de envio"),
-  trackingNumber: z.string().trim().max(120, "La guia no puede exceder 120 caracteres").optional().or(z.literal("")),
+  shippedAt: schemaHelpers.requiredText("Fecha de env?o"),
+  trackingNumber: z.string().trim().max(120, "La gu?a no puede exceder 120 caracteres").optional().or(z.literal("")),
   status: z.enum(["ORDERED", "SHIPPED", "DELIVERED", "CANCELLED"]),
-  receivedBy: z.string().trim().max(160, "Quien recibio no puede exceder 160 caracteres").optional().or(z.literal("")),
+  receivedBy: z.string().trim().max(160, "Qui?n recibi? no puede exceder 160 caracteres").optional().or(z.literal("")),
   photoData: z.string().optional().or(z.literal("")),
   comment: z.string().trim().max(3000, "El comentario es demasiado largo").optional().or(z.literal(""))
 });
@@ -121,7 +121,7 @@ export function UsersPage() {
         { header: "Activo", render: (row) => renderStatusValue(row.active), searchableText: (row) => String(row.active) }
       ]}
       renderRowActions={(row, { requestDelete, openEditDialog }) => (
-        <div className="flex justify-end gap-2">
+        <div className="table-actions">
           <SecondaryActionButton type="button" onClick={() => openEditDialog(row)}>
             Editar
           </SecondaryActionButton>
@@ -138,7 +138,7 @@ export function UsersPage() {
           <button
             type="button"
             onClick={() => requestDelete(row)}
-            className="inline-flex items-center gap-1 rounded-md px-2 py-1.5 text-sm font-semibold text-[var(--danger)] transition hover:bg-[#f9ebe7]"
+            className="btn-text-danger"
           >
             Eliminar
           </button>
@@ -212,7 +212,7 @@ export function ClientsPage() {
       createLabel="Agregar nuevo cliente"
       loadingMessage="Cargando clientes..."
       emptyTitle="No hay clientes registrados"
-      emptyDescription="Cuando existan clientes registrados apareceran aqui."
+      emptyDescription="Cuando existan clientes registrados aparecer?n aqu?."
       errorMessage="Error al cargar los clientes"
       deleteDialogTitle="Eliminar cliente"
       deleteDialogDescription="Deseas eliminar este cliente?"
@@ -230,7 +230,7 @@ export function ClientsPage() {
         }
       ]}
       renderRowActions={(row, { requestDelete }) => (
-        <div className="flex justify-end gap-2">
+        <div className="table-actions">
           <SecondaryActionButton
             type="button"
             onClick={() => void navigate({ to: "/clients/$id", params: { id: String(row.id) } })}
@@ -246,8 +246,8 @@ export function ClientsPage() {
         name: schemaHelpers.requiredText("Nombre"),
         businessName: schemaHelpers.requiredText("Razón social"),
         email: schemaHelpers.email("Correo"),
-        phone: schemaHelpers.phone("Telefono"),
-        alternatePhone: schemaHelpers.phone("Telefono alternativo"),
+        phone: schemaHelpers.phone("Tel?fono"),
+        alternatePhone: schemaHelpers.phone("Tel?fono alternativo"),
         manager: schemaHelpers.requiredText("Gestor")
       })}
       fields={[
@@ -290,23 +290,23 @@ export function VehiclesPage() {
       endpoint="vehicles"
       queryKey={["vehicles"]}
       feedbackMessage={feedbackMessage}
-      onCreateAction={() => void navigate({ to: "/vehiculos/nuevo" })}
+      onCreateAction={() => void navigate({ to: "/veh?culos/nuevo" })}
       columns={[
         { header: "Placa", render: (row) => renderLinkedText(row.plate), searchableText: (row) => row.plate },
         { header: "Número de serie", render: (row) => row.vin, searchableText: (row) => row.vin },
         { header: "CEDIS", render: (row) => row.clientCompanyName, searchableText: (row) => row.clientCompanyName }
       ]}
       renderRowActions={(row) => (
-        <div className="flex justify-end gap-2">
+        <div className="table-actions">
           <SecondaryActionButton
             type="button"
-            onClick={() => void navigate({ to: "/vehiculos/$id/editar", params: { id: String(row.id) } })}
+            onClick={() => void navigate({ to: "/veh?culos/$id/editar", params: { id: String(row.id) } })}
           >
             Editar información
           </SecondaryActionButton>
           <SecondaryActionButton
             type="button"
-            onClick={() => void navigate({ to: "/vehiculos/$id/historial", params: { id: String(row.id) } })}
+            onClick={() => void navigate({ to: "/veh?culos/$id/historial", params: { id: String(row.id) } })}
           >
             Ver historial
           </SecondaryActionButton>
@@ -368,14 +368,14 @@ export function CedisPage() {
   return (
     <ResourceTablePage
       title="CEDIS"
-      description="Administra los centros de distribucion registrados en el sistema."
+      description="Administra los centros de distribuci?n registrados en el sistema."
       endpoint="cedis"
       queryKey={["cedis"]}
       feedbackMessage={feedbackMessage}
       createLabel="Agregar nuevo CEDIS"
       loadingMessage="Cargando CEDIS..."
       emptyTitle="No hay CEDIS registrados"
-      emptyDescription="Cuando existan CEDIS registrados apareceran aqui."
+      emptyDescription="Cuando existan CEDIS registrados aparecer?n aqu?."
       errorMessage="Error al cargar los CEDIS"
       deleteDialogTitle="Eliminar CEDIS"
       deleteDialogDescription="Deseas eliminar este CEDIS?"
@@ -384,20 +384,20 @@ export function CedisPage() {
       columns={[
         { header: "Nombre", render: (row) => renderLinkedText(row.name), searchableText: (row) => row.name },
         { header: "Correo", render: (row) => row.email, searchableText: (row) => row.email },
-        { header: "Telefono", render: (row) => row.phone, searchableText: (row) => row.phone },
+        { header: "Tel?fono", render: (row) => row.phone, searchableText: (row) => row.phone },
         {
-          header: "Telefono alternativo",
+          header: "Tel?fono alternativo",
           render: (row) => row.alternatePhone,
           searchableText: (row) => row.alternatePhone
         }
       ]}
       renderRowActions={(row, { requestDelete }) => (
-        <div className="flex justify-end gap-2">
+        <div className="table-actions">
           <SecondaryActionButton
             type="button"
             onClick={() => void navigate({ to: "/cedis/$id", params: { id: String(row.id) } })}
           >
-            Ver informacion
+            Ver informaci?n
           </SecondaryActionButton>
           <SecondaryActionButton
             type="button"
@@ -410,14 +410,14 @@ export function CedisPage() {
       schema={z.object({
         name: schemaHelpers.requiredText("Nombre"),
         email: schemaHelpers.email("Correo"),
-        phone: schemaHelpers.phone("Telefono"),
-        alternatePhone: schemaHelpers.phone("Telefono alternativo")
+        phone: schemaHelpers.phone("Tel?fono"),
+        alternatePhone: schemaHelpers.phone("Tel?fono alternativo")
       })}
       fields={[
         { name: "name", label: "Nombre", type: "text" },
         { name: "email", label: "Correo", type: "text" },
-        { name: "phone", label: "Telefono", type: "text" },
-        { name: "alternatePhone", label: "Telefono alternativo", type: "text" }
+        { name: "phone", label: "Tel?fono", type: "text" },
+        { name: "alternatePhone", label: "Tel?fono alternativo", type: "text" }
       ]}
       defaultValues={{
         name: "",
@@ -450,7 +450,7 @@ export function VerificationCentersPage() {
       createLabel="Agregar nuevo verificentro"
       loadingMessage="Cargando verificentros..."
       emptyTitle="No hay verificentros registrados"
-      emptyDescription="Cuando existan verificentros registrados apareceran aqui."
+      emptyDescription="Cuando existan verificentros registrados aparecer?n aqu?."
       errorMessage="Error al cargar los verificentros"
       deleteDialogTitle="Eliminar verificentro"
       deleteDialogDescription="Deseas eliminar este verificentro?"
@@ -467,7 +467,7 @@ export function VerificationCentersPage() {
         }
       ]}
       renderRowActions={(row, { requestDelete }) => (
-        <div className="flex justify-end gap-2">
+        <div className="table-actions">
           <SecondaryActionButton
             type="button"
             onClick={() => void navigate({ to: "/verification-centers/$id", params: { id: String(row.id) } })}
@@ -482,18 +482,18 @@ export function VerificationCentersPage() {
       schema={z.object({
         name: schemaHelpers.requiredText("Nombre"),
         centerKey: schemaHelpers.requiredText("Clave de verificentro"),
-        address: schemaHelpers.requiredText("Direccion"),
+        address: schemaHelpers.requiredText("Direcci?n"),
         regionId: z.string().min(1, "Region es obligatoria"),
         manager: schemaHelpers.requiredText("Responsable"),
         email: schemaHelpers.email("Correo"),
-        phone: schemaHelpers.phone("Telefono"),
-        alternatePhone: schemaHelpers.phone("Telefono alternativo"),
+        phone: schemaHelpers.phone("Tel?fono"),
+        alternatePhone: schemaHelpers.phone("Tel?fono alternativo"),
         schedule: schemaHelpers.requiredText("Horario")
       })}
       fields={[
         { name: "name", label: "Nombre", type: "text" },
         { name: "centerKey", label: "Clave de verificentro", type: "text" },
-        { name: "address", label: "Direccion", type: "text" },
+        { name: "address", label: "Direcci?n", type: "text" },
         { name: "regionId", label: "Region", type: "text" },
         { name: "manager", label: "Responsable", type: "text" },
         { name: "email", label: "Correo", type: "text" },
@@ -635,16 +635,16 @@ export function PaymentsPage() {
   return (
     <ResourceTablePage
       title="Transacciones"
-      description="Registra los pagos realizados para cada nota y consulta su informacion completa."
+      description="Registra los pagos realizados para cada nota y consulta su informaci?n completa."
       endpoint="payments"
       queryKey={["payments"]}
-      createLabel="Agregar nueva transaccion"
-      loadingMessage="Cargando transacciones..."
-      emptyTitle="No hay transacciones registradas"
-      emptyDescription="Cuando registres pagos relacionados a una nota apareceran aqui."
-      errorMessage="Error al cargar las transacciones"
-      deleteDialogTitle="Eliminar transaccion"
-      deleteDialogDescription="Deseas eliminar esta transaccion?"
+      createLabel="Agregar nueva transacci?n"
+      loadingMessage="Cargando transacci?nes..."
+      emptyTitle="No hay transacci?nes registradas"
+      emptyDescription="Cuando registres pagos relacionados a una nota aparecer?n aqu?."
+      errorMessage="Error al cargar las transacci?nes"
+      deleteDialogTitle="Eliminar transacci?n"
+      deleteDialogDescription="Deseas eliminar esta transacci?n?"
       deleteSuccessMessage="Transaccion eliminada correctamente"
       columns={[
         {
@@ -662,12 +662,12 @@ export function PaymentsPage() {
         { header: "Fecha", render: (row) => formatDateTime(row.paidAt), searchableText: (row) => row.paidAt ?? "" }
       ]}
       renderRowActions={(row, { requestDelete, openEditDialog }) => (
-        <div className="flex justify-end gap-2">
+        <div className="table-actions">
           <SecondaryActionButton
             type="button"
             onClick={() => void navigate({ to: "/transactions/$id", params: { id: String(row.id) } })}
           >
-            Ver informacion
+            Ver informaci?n
           </SecondaryActionButton>
           <SecondaryActionButton type="button" onClick={() => openEditDialog(row)}>
             Editar
@@ -708,7 +708,7 @@ export function PaymentsPage() {
           ]
         },
         { name: "depositAccount", label: "Cuenta de deposito", type: "text" },
-        { name: "invoiceNumber", label: "Numero de factura", type: "text" },
+        { name: "invoiceNumber", label: "N?mero de factura", type: "text" },
         { name: "paidAt", label: "Fecha de pago", type: "datetime" }
       ]}
       defaultValues={{
@@ -749,30 +749,30 @@ export function PhysicalDocumentOrdersPage() {
   return (
     <ResourceTablePage
       title="Pedidos"
-      description="Registra cuando un cliente solicita el documento fisico relacionado con una nota."
+      description="Registra cuando un cliente solicita el documento f?sico relacionado con una nota."
       endpoint="physical-document-orders"
       queryKey={["physical-document-orders"]}
       createLabel="Agregar nuevo pedido"
       loadingMessage="Cargando pedidos..."
       emptyTitle="No hay pedidos registrados"
-      emptyDescription="Cuando registres pedidos de documentos fisicos apareceran aqui."
+      emptyDescription="Cuando registres pedidos de documentos f?sicos aparecer?n aqu?."
       errorMessage="Error al cargar los pedidos"
       deleteDialogTitle="Eliminar pedido"
       deleteDialogDescription="Deseas eliminar este pedido?"
       deleteSuccessMessage="Pedido eliminado correctamente"
       columns={[
         { header: "Folio de nota", render: (row) => renderLinkedText(row.noteNumber), searchableText: (row) => row.noteNumber },
-        { header: "Fecha de envio", render: (row) => formatDateTime(row.shippedAt), searchableText: (row) => row.shippedAt },
-        { header: "Numero de guia", render: (row) => row.trackingNumber ?? "-", searchableText: (row) => row.trackingNumber ?? "" },
+        { header: "Fecha de env?o", render: (row) => formatDateTime(row.shippedAt), searchableText: (row) => row.shippedAt },
+        { header: "N?mero de gu?a", render: (row) => row.trackingNumber ?? "-", searchableText: (row) => row.trackingNumber ?? "" },
         { header: "Estatus", render: (row) => renderStatusValue(row.status), searchableText: (row) => row.status }
       ]}
       renderRowActions={(row, { requestDelete, openEditDialog }) => (
-        <div className="flex justify-end gap-2">
+        <div className="table-actions">
           <SecondaryActionButton
             type="button"
             onClick={() => void navigate({ to: "/pedidos/$id", params: { id: String(row.id) } })}
           >
-            Ver informacion
+            Ver informaci?n
           </SecondaryActionButton>
           <SecondaryActionButton type="button" onClick={() => openEditDialog(row)}>
             Editar
@@ -793,8 +793,8 @@ export function PhysicalDocumentOrdersPage() {
             value: String(item.id)
           }))
         },
-        { name: "shippedAt", label: "Fecha de envio", type: "datetime" },
-        { name: "trackingNumber", label: "Numero de guia", type: "text" },
+        { name: "shippedAt", label: "Fecha de env?o", type: "datetime" },
+        { name: "trackingNumber", label: "N?mero de gu?a", type: "text" },
         {
           name: "status",
           label: "Estatus",
@@ -806,7 +806,7 @@ export function PhysicalDocumentOrdersPage() {
             { label: "Cancelado", value: "CANCELLED" }
           ]
         },
-        { name: "receivedBy", label: "Quien recibio", type: "text" },
+        { name: "receivedBy", label: "Qui?n recibi?", type: "text" },
         { name: "photoData", label: "Foto", type: "image" },
         { name: "comment", label: "Comentario", type: "textarea" }
       ]}

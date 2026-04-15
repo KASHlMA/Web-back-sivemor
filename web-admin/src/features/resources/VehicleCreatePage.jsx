@@ -23,7 +23,7 @@ const vehicleTypeOptions = [
 ];
 
 const vehicleSchema = z.object({
-  vin: schemaHelpers.requiredText("Numero de serie"),
+  vin: schemaHelpers.requiredText("N?mero de serie"),
   plate: schemaHelpers.requiredText("Placas"),
   category: z.enum(["N2", "N3"], {
     errorMap: () => ({ message: "El tipo es obligatorio" })
@@ -181,9 +181,9 @@ function VehicleFormPage({ mode }) {
   }, [form, selectedClientRegionId, watchedValues.clientCompanyId]);
 
   const saveSuccessMessage =
-    mode === "edit" ? "Vehiculo actualizado correctamente" : "Vehiculo registrado correctamente";
+    mode === "edit" ? "Veh?culo actualizado correctamente" : "Veh?culo registrado correctamente";
   const saveErrorMessage =
-    mode === "edit" ? "Error al actualizar el vehiculo" : "Error al registrar el vehiculo";
+    mode === "edit" ? "Error al actualizar el veh?culo" : "Error al registrar el veh?culo";
 
   const saveVehicleMutation = useMutation({
     mutationFn: (values) => {
@@ -206,7 +206,7 @@ function VehicleFormPage({ mode }) {
       await queryClient.invalidateQueries({ queryKey: ["vehicles"] });
       await queryClient.invalidateQueries({ queryKey: ["vehicles-lookup"] });
       setFlashMessage(saveSuccessMessage);
-      await navigate({ to: "/vehiculos" });
+      await navigate({ to: "/veh?culos" });
     },
     onError: () => {
       setFeedbackError(saveErrorMessage);
@@ -230,9 +230,9 @@ function VehicleFormPage({ mode }) {
     return (
       <div className="space-y-6">
         <PagePanel>
-          <PageTitleBar title="Editar vehiculo" />
+          <PageTitleBar title="Editar veh?culo" />
           <div className="px-5 py-5 text-sm font-medium text-[var(--shell-text)]">
-            Cargando informacion del vehiculo...
+            Cargando informaci?n del veh?culo...
           </div>
         </PagePanel>
       </div>
@@ -243,10 +243,10 @@ function VehicleFormPage({ mode }) {
     return (
       <div className="space-y-6">
         <PagePanel>
-          <PageTitleBar title="Editar vehiculo" />
+          <PageTitleBar title="Editar veh?culo" />
           <EmptyState
-            title="No se pudo cargar la informacion del vehiculo"
-            description="Verifica la disponibilidad de los datos del vehiculo e intenta nuevamente."
+            title="No se pudo cargar la informaci?n del veh?culo"
+            description="Verifica la disponibilidad de los datos del veh?culo e intenta nuevamente."
           />
         </PagePanel>
       </div>
@@ -259,15 +259,15 @@ function VehicleFormPage({ mode }) {
 
       <PagePanel>
         <PageTitleBar
-          title={mode === "edit" ? "Editar vehiculo" : "Nuevo vehiculo"}
+          title={mode === "edit" ? "Editar veh?culo" : "Nuevo veh?culo"}
           subtitle={
             mode === "edit"
-              ? "Actualiza la informacion registrada del vehiculo seleccionado."
-              : "Captura la informacion requerida para registrar un nuevo vehiculo en el sistema."
+              ? "Actualiza la informaci?n registrada del veh?culo seleccionado."
+              : "Captura la informaci?n requerida para registrar un nuevo veh?culo en el sistema."
           }
           actions={
-            <div className="flex flex-col gap-3 sm:flex-row">
-              <SecondaryActionButton type="button" onClick={() => void navigate({ to: "/vehiculos" })}>
+            <div className="action-group">
+              <SecondaryActionButton type="button" onClick={() => void navigate({ to: "/veh?culos" })}>
                 Volver
               </SecondaryActionButton>
               <PrimaryActionButton type="button" onClick={() => void onSubmit()} disabled={saveDisabled}>
@@ -279,7 +279,7 @@ function VehicleFormPage({ mode }) {
 
         <div className="grid gap-5 px-5 py-5 md:grid-cols-2">
           <FormField
-            label="Numero de serie"
+            label="N?mero de serie"
             error={form.formState.errors.vin?.message}
             input={<input {...form.register("vin")} type="text" className="field-base" />}
           />

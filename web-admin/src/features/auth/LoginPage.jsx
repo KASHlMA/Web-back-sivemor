@@ -55,10 +55,10 @@ export function LoginPage() {
 
           <div className="mt-4">
             <h1 className="text-[2.05rem] font-bold text-[var(--title)]">SIVEMOR</h1>
-            <p className="mt-1 text-sm text-[var(--title)]">Sistema de Verificacion de Morelos</p>
+            <p className="mt-1 text-sm text-[var(--title)]">Sistema de Verificación de Morelos</p>
           </div>
 
-          <h2 className="mt-8 text-[2rem] font-semibold text-[var(--title)]">Iniciar sesion</h2>
+          <h2 className="mt-8 text-[2rem] font-semibold text-[var(--title)]">Iniciar sesión</h2>
 
           <div className="mt-6 text-left">
             <AlertMessage
@@ -66,7 +66,7 @@ export function LoginPage() {
                 mutation.error
                   ? mutation.error instanceof Error
                     ? mutation.error.message
-                    : "No fue posible iniciar sesion"
+                    : "No fue posible iniciar sesión"
                   : null
               }
             />

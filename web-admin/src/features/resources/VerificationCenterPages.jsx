@@ -20,12 +20,12 @@ import { setFlashMessage } from "../../lib/flashMessage";
 const verificationCenterSchema = z.object({
   name: schemaHelpers.requiredText("Nombre"),
   centerKey: schemaHelpers.requiredText("Clave de verificentro"),
-  address: schemaHelpers.requiredText("Direccion"),
-  regionId: z.string().min(1, "Region es obligatoria"),
+  address: schemaHelpers.requiredText("Dirección"),
+  regionId: z.string().min(1, "Región es obligatoria"),
   manager: schemaHelpers.requiredText("Responsable"),
   email: schemaHelpers.email("Correo"),
-  phone: schemaHelpers.phone("Telefono"),
-  alternatePhone: schemaHelpers.phone("Telefono alternativo"),
+  phone: schemaHelpers.phone("Teléfono"),
+  alternatePhone: schemaHelpers.phone("Teléfono alternativo"),
   schedule: schemaHelpers.requiredText("Horario")
 });
 
@@ -139,7 +139,7 @@ function VerificationCenterFormPage({ mode }) {
       <div className="space-y-6">
         <PagePanel>
           <PageTitleBar title="Editar verificentro" />
-          <div className="px-5 py-5 text-sm font-medium text-[var(--shell-text)]">Cargando informacion del verificentro...</div>
+          <div className="px-5 py-5 text-sm font-medium text-[var(--shell-text)]">Cargando información del verificentro...</div>
         </PagePanel>
       </div>
     );
@@ -158,7 +158,7 @@ function VerificationCenterFormPage({ mode }) {
             }
           />
           <EmptyState
-            title="No se pudo cargar la informacion del verificentro"
+            title="No se pudo cargar la información del verificentro"
             description="Verifica que el registro exista e intenta nuevamente."
           />
         </PagePanel>
@@ -192,11 +192,11 @@ function VerificationCenterFormPage({ mode }) {
           title={mode === "edit" ? "Editar verificentro" : "Nuevo verificentro"}
           subtitle={
             mode === "edit"
-              ? "Actualiza la informacion registrada del verificentro."
-              : "Captura la informacion necesaria para registrar un nuevo verificentro."
+              ? "Actualiza la información registrada del verificentro."
+              : "Captura la información necesaria para registrar un nuevo verificentro."
           }
           actions={
-            <div className="flex flex-col gap-3 sm:flex-row">
+            <div className="action-group">
               <SecondaryActionButton type="button" onClick={() => void navigate({ to: "/verification-centers" })}>
                 Volver
               </SecondaryActionButton>
@@ -214,13 +214,13 @@ function VerificationCenterFormPage({ mode }) {
         <div className="grid gap-5 px-5 py-5 md:grid-cols-2">
           <FormField label="Nombre" error={form.formState.errors.name?.message} input={<input {...form.register("name")} type="text" className="field-base" />} />
           <FormField label="Clave de verificentro" error={form.formState.errors.centerKey?.message} input={<input {...form.register("centerKey")} type="text" className="field-base" />} />
-          <FormField label="Direccion" error={form.formState.errors.address?.message} input={<input {...form.register("address")} type="text" className="field-base" />} />
+          <FormField label="Dirección" error={form.formState.errors.address?.message} input={<input {...form.register("address")} type="text" className="field-base" />} />
           <FormField
-            label="Region"
+            label="Región"
             error={form.formState.errors.regionId?.message}
             input={
               <select {...form.register("regionId")} className="field-base">
-                <option value="">Selecciona una region</option>
+                <option value="">Selecciona una región</option>
                 {regionOptions.map((option) => (
                   <option key={option.value} value={option.value}>
                     {option.label}
@@ -232,12 +232,12 @@ function VerificationCenterFormPage({ mode }) {
           <FormField label="Responsable" error={form.formState.errors.manager?.message} input={<input {...form.register("manager")} type="text" className="field-base" />} />
           <FormField label="Correo" error={form.formState.errors.email?.message} input={<input {...form.register("email")} type="text" className="field-base" />} />
           <FormField
-            label="Telefono"
+            label="Teléfono"
             error={form.formState.errors.phone?.message}
             input={<input {...phoneField} type="text" inputMode="numeric" className="field-base" />}
           />
           <FormField
-            label="Telefono alternativo"
+            label="Teléfono alternativo"
             error={form.formState.errors.alternatePhone?.message}
             input={<input {...alternatePhoneField} type="text" inputMode="numeric" className="field-base" />}
           />
@@ -263,12 +263,12 @@ export function VerificationCenterDetailPage() {
     () => [
       { label: "Nombre", value: verificationCenterQuery.data?.name ?? "-" },
       { label: "Clave de verificentro", value: verificationCenterQuery.data?.centerKey ?? "-" },
-      { label: "Direccion", value: verificationCenterQuery.data?.address ?? "-" },
-      { label: "Region", value: verificationCenterQuery.data?.regionName ?? "-" },
+      { label: "Dirección", value: verificationCenterQuery.data?.address ?? "-" },
+      { label: "Región", value: verificationCenterQuery.data?.regionName ?? "-" },
       { label: "Responsable", value: verificationCenterQuery.data?.manager ?? "-" },
       { label: "Correo", value: verificationCenterQuery.data?.email ?? "-" },
-      { label: "Telefono", value: verificationCenterQuery.data?.phone ?? "-" },
-      { label: "Telefono alternativo", value: verificationCenterQuery.data?.alternatePhone ?? "-" },
+      { label: "Teléfono", value: verificationCenterQuery.data?.phone ?? "-" },
+      { label: "Teléfono alternativo", value: verificationCenterQuery.data?.alternatePhone ?? "-" },
       { label: "Horario", value: verificationCenterQuery.data?.schedule ?? "-" }
     ],
     [verificationCenterQuery.data]
@@ -279,7 +279,7 @@ export function VerificationCenterDetailPage() {
       <div className="space-y-6">
         <PagePanel>
           <PageTitleBar title="Detalle de verificentro" />
-          <div className="px-5 py-5 text-sm font-medium text-[var(--shell-text)]">Cargando informacion del verificentro...</div>
+          <div className="px-5 py-5 text-sm font-medium text-[var(--shell-text)]">Cargando información del verificentro...</div>
         </PagePanel>
       </div>
     );
@@ -298,7 +298,7 @@ export function VerificationCenterDetailPage() {
             }
           />
           <EmptyState
-            title="No se pudo cargar la informacion del verificentro"
+            title="No se pudo cargar la información del verificentro"
             description="Verifica que el registro exista e intenta nuevamente."
           />
         </PagePanel>
@@ -311,16 +311,16 @@ export function VerificationCenterDetailPage() {
       <PagePanel>
         <PageTitleBar
           title="Detalle de verificentro"
-          subtitle="Consulta la informacion registrada del verificentro seleccionado."
+          subtitle="Consulta la información registrada del verificentro seleccionado."
           actions={
-            <div className="flex flex-col gap-3 sm:flex-row">
+            <div className="action-group">
               <SecondaryActionButton
                 type="button"
                 onClick={() =>
                   void navigate({ to: "/verification-centers/$id/editar", params: { id: verificationCenterId } })
                 }
               >
-                Editar informacion
+                Editar información
               </SecondaryActionButton>
               <SecondaryActionButton type="button" onClick={() => void navigate({ to: "/verification-centers" })}>
                 Volver

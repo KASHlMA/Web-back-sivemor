@@ -17,7 +17,7 @@ export function PageTitleBar({ title, subtitle, search, actions }) {
           <p className="mt-1 max-w-3xl text-sm text-[rgba(30,53,47,0.84)]">{subtitle}</p>
         ) : null}
       </div>
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
+      <div className="page-toolbar">
         {search}
         {actions}
       </div>
@@ -52,6 +52,18 @@ export function PrimaryActionButton({ className = "", children, ...props }) {
 export function SecondaryActionButton({ className = "", children, ...props }) {
   return (
     <button className={cx("btn-secondary gap-2", className)} {...props}>
+      {children}
+    </button>
+  );
+}
+
+export function ActionGroup({ className = "", children }) {
+  return <div className={cx("action-group", className)}>{children}</div>;
+}
+
+export function DangerTextButton({ className = "", children, ...props }) {
+  return (
+    <button className={cx("btn-text-danger", className)} {...props}>
       {children}
     </button>
   );

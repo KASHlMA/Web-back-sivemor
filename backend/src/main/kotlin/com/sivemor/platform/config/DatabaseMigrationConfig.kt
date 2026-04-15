@@ -15,14 +15,17 @@ class DatabaseMigrationConfig {
         .locations("classpath:db/migration")
         .load()
 
-    @Bean
-    fun entityManagerFactoryDependsOnFlyway(): BeanFactoryPostProcessor = BeanFactoryPostProcessor { beanFactory ->
-        val beanName = "entityManagerFactory"
-        if (beanFactory.containsBeanDefinition(beanName)) {
-            val beanDefinition = beanFactory.getBeanDefinition(beanName)
-            val dependsOn = beanDefinition.dependsOn?.toMutableSet() ?: mutableSetOf()
-            dependsOn += "flyway"
-            beanDefinition.setDependsOn(*dependsOn.toTypedArray())
+    companion object {
+        @Bean
+        @JvmStatic
+        fun entityManagerFactoryDependsOnFlyway(): BeanFactoryPostProcessor = BeanFactoryPostProcessor { beanFactory ->
+            val beanName = "entityManagerFactory"
+            if (beanFactory.containsBeanDefinition(beanName)) {
+                val beanDefinition = beanFactory.getBeanDefinition(beanName)
+                val dependsOn = beanDefinition.dependsOn?.toMutableSet() ?: mutableSetOf()
+                dependsOn += "flyway"
+                beanDefinition.setDependsOn(*dependsOn.toTypedArray())
+            }
         }
     }
 }

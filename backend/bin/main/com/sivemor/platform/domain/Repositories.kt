@@ -43,7 +43,9 @@ interface VerificationCenterRepository : JpaRepository<VerificationCenter, Long>
 
 interface VehicleUnitRepository : JpaRepository<VehicleUnit, Long> {
     fun findAllByArchivedFalseOrderByPlateAsc(): List<VehicleUnit>
+    fun findByPlateIgnoreCase(plate: String): VehicleUnit?
     fun findByPlateIgnoreCaseAndArchivedFalse(plate: String): VehicleUnit?
+    fun findByVinIgnoreCase(vin: String): VehicleUnit?
     fun findByVinIgnoreCaseAndArchivedFalse(vin: String): VehicleUnit?
 }
 

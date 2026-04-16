@@ -47,6 +47,40 @@ class SeedDataInitializer(
     private val passwordEncoder: PasswordEncoder,
     private val clock: Clock
 ) : ApplicationRunner {
+    private fun ensureVehicle(
+        clientCompany: ClientCompany,
+        plate: String,
+        vin: String,
+        category: VehicleCategory,
+        brand: String,
+        model: String
+    ): VehicleUnit {
+        val existingVehicle = vehicleUnitRepository.findByPlateIgnoreCase(plate)
+            ?: vehicleUnitRepository.findByVinIgnoreCase(vin)
+
+        if (existingVehicle != null) {
+            existingVehicle.archived = false
+            existingVehicle.clientCompany = clientCompany
+            existingVehicle.plate = plate
+            existingVehicle.vin = vin
+            existingVehicle.category = category
+            existingVehicle.brand = brand
+            existingVehicle.model = model
+            return vehicleUnitRepository.save(existingVehicle)
+        }
+
+        return vehicleUnitRepository.save(
+            VehicleUnit().apply {
+                this.clientCompany = clientCompany
+                this.plate = plate
+                this.vin = vin
+                this.category = category
+                this.brand = brand
+                this.model = model
+            }
+        )
+    }
+
     @Transactional
     override fun run(args: ApplicationArguments) {
         val northRegion = regionRepository.findAllByArchivedFalseOrderByNameAsc()
@@ -108,41 +142,30 @@ class SeedDataInitializer(
                 }
             )
 
-        val existingVehicles = vehicleUnitRepository.findAllByArchivedFalseOrderByPlateAsc()
-        val vehicle = existingVehicles.firstOrNull { it.plate == "MOR-001-A" }
-            ?: vehicleUnitRepository.save(
-                VehicleUnit().apply {
-                    this.clientCompany = clientCompany
-                    plate = "MOR-001-A"
-                    vin = "3ALACXDT3JDJP0010"
-                    category = VehicleCategory.N2
-                    brand = "Freightliner"
-                    model = "M2 106"
-                }
-            )
-        val secondVehicle = existingVehicles.firstOrNull { it.plate == "MOR-002-A" }
-            ?: vehicleUnitRepository.save(
-                VehicleUnit().apply {
-                    this.clientCompany = clientCompany
-                    plate = "MOR-002-A"
-                    vin = "3ALACXDT3JDJP0011"
-                    category = VehicleCategory.N3
-                    brand = "Kenworth"
-                    model = "T680"
-                }
-            )
-        if (existingVehicles.none { it.plate == "MOR-003-A" }) {
-            vehicleUnitRepository.save(
-                VehicleUnit().apply {
-                    this.clientCompany = secondaryClient
-                    plate = "MOR-003-A"
-                    vin = "1HTMMAAN94H603002"
-                    category = VehicleCategory.N2
-                    brand = "International"
-                    model = "4300"
-                }
-            )
-        }
+        val vehicle = ensureVehicle(
+            clientCompany = clientCompany,
+            plate = "MOR-001-A",
+            vin = "3ALACXDT3JDJP0010",
+            category = VehicleCategory.N2,
+            brand = "Freightliner",
+            model = "M2 106"
+        )
+        val secondVehicle = ensureVehicle(
+            clientCompany = clientCompany,
+            plate = "MOR-002-A",
+            vin = "3ALACXDT3JDJP0011",
+            category = VehicleCategory.N3,
+            brand = "Kenworth",
+            model = "T680"
+        )
+        ensureVehicle(
+            clientCompany = secondaryClient,
+            plate = "MOR-003-A",
+            vin = "1HTMMAAN94H603002",
+            category = VehicleCategory.N2,
+            brand = "International",
+            model = "4300"
+        )
 
         if (checklistTemplateRepository.count() == 0L) {
             val template = ChecklistTemplate().apply {

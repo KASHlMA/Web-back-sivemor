@@ -32,6 +32,7 @@ services:
       GRADLE_USER_HOME: /tmp/gradle-home
     volumes:
       - ./backend:/workspace
+      - backend_project_gradle:/workspace/.gradle
     healthcheck:
       test:
         [
@@ -79,4 +80,5 @@ services:
       retries: 20
 
 volumes:
+  backend_project_gradle:
   web_admin_node_modules:

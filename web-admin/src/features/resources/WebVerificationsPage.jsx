@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 import { useNavigate, useParams } from "@tanstack/react-router";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
@@ -12,7 +12,6 @@ import {
 } from "../../components/AdminPrimitives";
 import { api } from "../../lib/api";
 
-const SECTION_ORDER = ["luces", "llantas", "direccion", "aire_frenos", "motor_emisiones", "otros", "general"];
 const ENUM_OPTIONS = [
   { label: "Aprobado", value: "APROBADO" },
   { label: "Reprobado", value: "REPROBADO" },
@@ -98,7 +97,8 @@ export function WebVerificationDetailPage() {
   const queryClient = useQueryClient();
   const params = useParams({ strict: false });
   const verificationId = String(params.id ?? "");
-  const [draftSections, setDraftSections] = useState({});
+  const [draftFormSections, setDraftFormSections] = useState([]);
+  const [overallComment, setOverallComment] = useState("");
   const [feedbackMessage, setFeedbackMessage] = useState("");
 
   const query = useQuery({
@@ -108,8 +108,9 @@ export function WebVerificationDetailPage() {
   });
 
   useEffect(() => {
-    if (query.data?.sections) {
-      setDraftSections(cloneSections(query.data.sections));
+    if (query.data?.formSections) {
+      setDraftFormSections(cloneFormSections(query.data.formSections));
+      setOverallComment(query.data.overallComment ?? "");
       setFeedbackMessage("");
     }
   }, [query.data]);
@@ -117,7 +118,8 @@ export function WebVerificationDetailPage() {
   const mutation = useMutation({
     mutationFn: (payload) => api.put(`/admin/web-verifications/${verificationId}`, payload),
     onSuccess: async (response) => {
-      setDraftSections(cloneSections(response.sections ?? {}));
+      setDraftFormSections(cloneFormSections(response.formSections ?? []));
+      setOverallComment(response.overallComment ?? "");
       setFeedbackMessage("Cambios guardados correctamente.");
       await queryClient.invalidateQueries({ queryKey: ["web-verification-detail", verificationId] });
       await queryClient.invalidateQueries({ queryKey: ["web-verifications"] });
@@ -127,24 +129,37 @@ export function WebVerificationDetailPage() {
     }
   });
 
-  const orderedSections = useMemo(
-    () => SECTION_ORDER.filter((key) => draftSections[key]).map((key) => [key, draftSections[key]]),
-    [draftSections]
-  );
+  const handleSectionNoteChange = (sectionId, value) => {
+    setDraftFormSections((current) =>
+      current.map((section) => (section.sectionId === sectionId ? { ...section, note: value } : section))
+    );
+  };
 
-  const handleValueChange = (sectionName, field, value) => {
-    setDraftSections((current) => ({
-      ...current,
-      [sectionName]: {
-        ...(current[sectionName] ?? {}),
-        [field]: value
-      }
-    }));
+  const handleQuestionChange = (sectionId, questionId, field, value) => {
+    setDraftFormSections((current) =>
+      current.map((section) =>
+        section.sectionId === sectionId
+          ? {
+              ...section,
+              questions: section.questions.map((question) =>
+                question.questionId === questionId ? { ...question, [field]: value } : question
+              )
+            }
+          : section
+      )
+    );
   };
 
   const handleSave = () => {
     setFeedbackMessage("");
-    mutation.mutate({ sections: draftSections });
+    mutation.mutate({
+      formSections: draftFormSections,
+      sections: {
+        general: {
+          comentarios_generales: overallComment
+        }
+      }
+    });
   };
 
   return (
@@ -188,23 +203,129 @@ export function WebVerificationDetailPage() {
               <SummaryField label="Fecha" value={formatDateTime(query.data.submittedAt)} />
             </section>
 
-            {orderedSections.map(([sectionName, values]) => (
-              <section key={sectionName} className="rounded-2xl border border-[var(--border)] bg-white p-5 shadow-[var(--shadow)]">
-                <h2 className="text-lg font-bold capitalize text-[var(--title)]">{formatSectionName(sectionName)}</h2>
-                <div className="mt-4 grid gap-3 md:grid-cols-2 xl:grid-cols-3">
-                  {Object.entries(values).map(([field, value]) => (
-                    <article
-                      key={field}
-                      className={field === "comment" || field === "comentarios_generales" ? "md:col-span-2 xl:col-span-3" : ""}
-                    >
-                      <label className="text-xs font-bold uppercase tracking-[0.06em] text-[var(--shell-text)]/75">
-                        {formatFieldName(field)}
-                      </label>
-                      <EditableField
-                        field={field}
-                        value={value}
-                        onChange={(nextValue) => handleValueChange(sectionName, field, nextValue)}
-                      />
+            <section className="rounded-2xl border border-[var(--border)] bg-white p-5 shadow-[var(--shadow)]">
+              <h2 className="text-lg font-bold text-[var(--title)]">Comentarios generales</h2>
+              <textarea
+                value={overallComment}
+                onChange={(event) => setOverallComment(event.target.value)}
+                rows={4}
+                className="field-base mt-4 min-h-28"
+              />
+            </section>
+
+            <section className="rounded-2xl border border-[var(--border)] bg-white p-5 shadow-[var(--shadow)]">
+              <div className="flex items-center justify-between gap-3">
+                <div>
+                  <h2 className="text-lg font-bold text-[var(--title)]">Evidencias</h2>
+                  <p className="mt-1 text-sm text-[var(--shell-text)]/80">
+                    {query.data.evidences?.length
+                      ? "Archivos capturados desde la inspeccion movil."
+                      : "Esta verificacion no tiene evidencias adjuntas."}
+                  </p>
+                </div>
+                <StatusChip
+                  label={`${query.data.evidences?.length ?? 0} archivo${(query.data.evidences?.length ?? 0) === 1 ? "" : "s"}`}
+                  tone="neutral"
+                />
+              </div>
+
+              {(query.data.evidences?.length ?? 0) > 0 ? (
+                <div className="mt-5 grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+                  {query.data.evidences.map((evidence) => (
+                    <article key={evidence.id} className="overflow-hidden rounded-2xl border border-[var(--border)] bg-[var(--panel)]">
+                      {evidence.mimeType?.startsWith("image/") ? (
+                        <a href={evidence.previewUrl} target="_blank" rel="noreferrer" className="block">
+                          <img
+                            src={evidence.previewUrl}
+                            alt={evidence.filename}
+                            className="h-52 w-full bg-slate-100 object-cover"
+                          />
+                        </a>
+                      ) : (
+                        <a
+                          href={evidence.previewUrl}
+                          target="_blank"
+                          rel="noreferrer"
+                          className="flex h-52 items-center justify-center bg-slate-100 px-4 text-center text-sm font-semibold text-[var(--title)]"
+                        >
+                          Abrir archivo
+                        </a>
+                      )}
+
+                      <div className="space-y-2 p-4">
+                        <p className="truncate text-sm font-semibold text-[var(--title)]">{evidence.filename}</p>
+                        <p className="text-xs uppercase tracking-[0.05em] text-[var(--shell-text)]/70">
+                          {evidence.sectionName ? formatSectionName(evidence.sectionName) : "Sin seccion"}
+                        </p>
+                        <p className="text-sm text-[var(--shell-text)]/80">{formatDateTime(evidence.capturedAt)}</p>
+                        <p className="text-sm text-[var(--shell-text)]/80">{evidence.comment || "Sin comentario"}</p>
+                      </div>
+                    </article>
+                  ))}
+                </div>
+              ) : null}
+            </section>
+
+            {draftFormSections.map((section) => (
+              <section key={section.sectionId} className="rounded-2xl border border-[var(--border)] bg-white p-5 shadow-[var(--shadow)]">
+                <div className="flex flex-col gap-2">
+                  <h2 className="text-lg font-bold text-[var(--title)]">{section.title}</h2>
+                  {section.description ? <p className="text-sm text-[var(--shell-text)]/80">{section.description}</p> : null}
+                </div>
+
+                <div className="mt-4">
+                  <label className="text-xs font-bold uppercase tracking-[0.06em] text-[var(--shell-text)]/75">
+                    Comentario de seccion
+                  </label>
+                  <textarea
+                    value={section.note ?? ""}
+                    onChange={(event) => handleSectionNoteChange(section.sectionId, event.target.value)}
+                    rows={3}
+                    className="field-base mt-2 min-h-24"
+                  />
+                </div>
+
+                <div className="mt-5 space-y-4">
+                  {(section.questions ?? []).map((question) => (
+                    <article key={question.questionId} className="rounded-2xl border border-[var(--border)] bg-[var(--panel)] p-4">
+                      <div>
+                        <p className="text-sm font-semibold text-[var(--title)]">{question.prompt}</p>
+                        <p className="mt-1 text-xs uppercase tracking-[0.05em] text-[var(--shell-text)]/70">
+                          {question.code} {question.required ? "| Obligatoria" : "| Opcional"}
+                        </p>
+                      </div>
+
+                      <div className="mt-4 grid gap-3 md:grid-cols-2">
+                        <div>
+                          <label className="text-xs font-bold uppercase tracking-[0.06em] text-[var(--shell-text)]/75">
+                            Respuesta
+                          </label>
+                          <select
+                            value={String(question.answer ?? "")}
+                            onChange={(event) => handleQuestionChange(section.sectionId, question.questionId, "answer", event.target.value)}
+                            className="field-base mt-2"
+                          >
+                            <option value="">Sin valor</option>
+                            {ENUM_OPTIONS.map((option) => (
+                              <option key={option.value} value={option.value}>
+                                {option.label}
+                              </option>
+                            ))}
+                          </select>
+                        </div>
+
+                        <div className="md:col-span-2">
+                          <label className="text-xs font-bold uppercase tracking-[0.06em] text-[var(--shell-text)]/75">
+                            Comentario
+                          </label>
+                          <textarea
+                            value={question.comment ?? ""}
+                            onChange={(event) => handleQuestionChange(section.sectionId, question.questionId, "comment", event.target.value)}
+                            rows={3}
+                            className="field-base mt-2 min-h-24"
+                          />
+                        </div>
+                      </div>
                     </article>
                   ))}
                 </div>
@@ -217,59 +338,6 @@ export function WebVerificationDetailPage() {
   );
 }
 
-function EditableField({ field, value, onChange }) {
-  const normalizedValue = value ?? "";
-
-  if (field === "evidence_count") {
-    return (
-      <input
-        value={String(normalizedValue)}
-        disabled
-        className="field-base mt-2 cursor-not-allowed bg-slate-100"
-        readOnly
-      />
-    );
-  }
-
-  if (field === "comment" || field === "comentarios_generales") {
-    return (
-      <textarea
-        value={String(normalizedValue)}
-        onChange={(event) => onChange(event.target.value)}
-        rows={4}
-        className="field-base mt-2 min-h-28"
-      />
-    );
-  }
-
-  if (isEnumField(value)) {
-    return (
-      <select
-        value={String(normalizedValue)}
-        onChange={(event) => onChange(event.target.value)}
-        className="field-base mt-2"
-      >
-        <option value="">Sin valor</option>
-        {ENUM_OPTIONS.map((option) => (
-          <option key={option.value} value={option.value}>
-            {option.label}
-          </option>
-        ))}
-      </select>
-    );
-  }
-
-  return (
-    <input
-      type={typeof value === "number" ? "number" : "text"}
-      step={typeof value === "number" && !Number.isInteger(value) ? "0.01" : "1"}
-      value={String(normalizedValue)}
-      onChange={(event) => onChange(event.target.value)}
-      className="field-base mt-2"
-    />
-  );
-}
-
 function SummaryField({ label, value }) {
   return (
     <div>
@@ -279,24 +347,19 @@ function SummaryField({ label, value }) {
   );
 }
 
-function cloneSections(sections) {
-  return Object.fromEntries(
-    Object.entries(sections ?? {}).map(([sectionName, values]) => [
-      sectionName,
-      Object.fromEntries(Object.entries(values ?? {}).map(([field, value]) => [field, value ?? ""]))
-    ])
-  );
-}
-
-function isEnumField(value) {
-  return ["APROBADO", "REPROBADO", "NO_APLICA"].includes(String(value ?? "").toUpperCase());
+function cloneFormSections(sections) {
+  return (sections ?? []).map((section) => ({
+    ...section,
+    note: section.note ?? "",
+    questions: (section.questions ?? []).map((question) => ({
+      ...question,
+      answer: question.answer ?? "",
+      comment: question.comment ?? ""
+    }))
+  }));
 }
 
 function formatSectionName(value) {
-  return value.replaceAll("_", " ");
-}
-
-function formatFieldName(value) {
   return value.replaceAll("_", " ");
 }
 

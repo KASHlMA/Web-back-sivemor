@@ -727,10 +727,6 @@ class MobileInspectionService(
             throw BadRequestException("Required questions are still unanswered")
         }
 
-        if (inspection.evidences.size < 3) {
-            throw BadRequestException("At least three evidences are required before submission")
-        }
-
         inspection.status = InspectionStatus.SUBMITTED
         inspection.submittedAt = Instant.now(clock)
         inspection.overallResult = if (inspection.answers.any { it.answerValue == AnswerValue.FAIL }) {

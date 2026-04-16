@@ -19,6 +19,7 @@ import com.sivemor.platform.domain.EvaluacionRepository
 import com.sivemor.platform.domain.VerificacionRepository
 import com.sivemor.platform.domain.VerificationOrderRepository
 import com.sivemor.platform.service.AuditService
+import com.sivemor.platform.service.MerCompatibilityService
 import com.sivemor.platform.service.PasswordGenerator
 import com.sivemor.platform.service.UserCredentialMailer
 import com.sivemor.platform.support.TestEntityFactory.client
@@ -65,6 +66,7 @@ class AdminServiceTest {
     @MockK private lateinit var auditService: AuditService
     @MockK private lateinit var passwordGenerator: PasswordGenerator
     @MockK private lateinit var userCredentialMailer: UserCredentialMailer
+    @MockK private lateinit var merCompatibilityService: MerCompatibilityService
 
     private lateinit var adminService: AdminService
 
@@ -88,7 +90,8 @@ class AdminServiceTest {
             passwordEncoder,
             auditService,
             passwordGenerator,
-            userCredentialMailer
+            userCredentialMailer,
+            merCompatibilityService
         )
         every { auditService.log(any(), any(), any(), any(), any()) } just Runs
         every { userCredentialMailer.sendNewPassword(any(), any()) } just Runs

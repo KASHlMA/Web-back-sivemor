@@ -38,6 +38,7 @@ import com.sivemor.platform.domain.VerificationOrderRepository
 import com.sivemor.platform.domain.VerificationOrderStatus
 import com.sivemor.platform.security.AppUserPrincipal
 import com.sivemor.platform.service.AuditService
+import com.sivemor.platform.service.MerCompatibilityService
 import com.sivemor.platform.service.PasswordGenerator
 import com.sivemor.platform.service.UserCredentialMailer
 import io.swagger.v3.oas.annotations.Operation
@@ -69,6 +70,7 @@ import org.springframework.web.bind.annotation.ResponseStatus
 import org.springframework.web.bind.annotation.RestController
 import java.math.BigDecimal
 import java.time.Instant
+import java.util.Base64
 
 data class UserUpsertRequest(
     @field:NotBlank @field:Size(max = 100) val username: String,
@@ -287,7 +289,50 @@ data class EvaluationDetailResponse(
     val overallResult: String?,
     val overallComment: String?,
     val evidenceCount: Int,
+    val evidences: List<EvaluationEvidenceResponse>,
+    val formSections: List<InspectionFormSectionResponse>,
     val sections: Map<String, Map<String, Any?>>
+)
+
+data class EvaluationEvidenceResponse(
+    val id: Long,
+    val sectionName: String?,
+    val filename: String,
+    val mimeType: String,
+    val capturedAt: Instant,
+    val comment: String?,
+    val previewUrl: String
+)
+
+data class InspectionFormQuestionResponse(
+    val questionId: Long,
+    val code: String,
+    val prompt: String,
+    val required: Boolean,
+    val displayOrder: Int,
+    val answer: String?,
+    val comment: String?
+)
+
+data class InspectionFormSectionResponse(
+    val sectionId: Long,
+    val title: String,
+    val description: String?,
+    val displayOrder: Int,
+    val note: String?,
+    val questions: List<InspectionFormQuestionResponse>
+)
+
+data class InspectionFormQuestionUpdateRequest(
+    val questionId: Long,
+    val answer: String? = null,
+    val comment: String? = null
+)
+
+data class InspectionFormSectionUpdateRequest(
+    val sectionId: Long,
+    val note: String? = null,
+    val questions: List<InspectionFormQuestionUpdateRequest> = emptyList()
 )
 
 data class WebVerificationListItemResponse(
@@ -302,7 +347,8 @@ data class WebVerificationListItemResponse(
 )
 
 data class WebVerificationUpdateRequest(
-    val sections: Map<String, Map<String, String?>> = emptyMap()
+    val sections: Map<String, Map<String, String?>> = emptyMap(),
+    val formSections: List<InspectionFormSectionUpdateRequest> = emptyList()
 )
 
 data class FailureBucketResponse(
@@ -723,7 +769,8 @@ class AdminService(
     private val passwordEncoder: PasswordEncoder,
     private val auditService: AuditService,
     private val passwordGenerator: PasswordGenerator,
-    private val userCredentialMailer: UserCredentialMailer
+    private val userCredentialMailer: UserCredentialMailer,
+    private val merCompatibilityService: MerCompatibilityService
 ) {
     @Transactional(readOnly = true)
     fun listUsers(): List<UserResponse> = userRepository.findAllByArchivedFalseOrderByFullNameAsc().map { it.toResponse() }
@@ -1250,6 +1297,16 @@ class AdminService(
         val evaluacion = evaluacionRepository.findByVerificacionIdAndArchivedFalse(id)
             ?: throw NotFoundException("Evaluation for verification $id was not found")
 
+        if (request.formSections.isNotEmpty()) {
+            verificacion.inspection.applyFormSectionUpdates(request.formSections)
+            verificacion.inspection.overallResult = if (verificacion.inspection.answers.any { it.answerValue == AnswerValue.FAIL }) {
+                InspectionResult.FAIL
+            } else {
+                InspectionResult.PASS
+            }
+            merCompatibilityService.syncSubmittedInspection(verificacion.inspection)
+        }
+
         evaluacion.applySectionUpdates(request.sections)
 
         val verdict = if (evaluacion.failureCount() > 0) VerificacionVeredicto.REPROBADO else VerificacionVeredicto.APROBADO
@@ -1449,6 +1506,10 @@ class AdminService(
         overallResult = veredicto.name,
         overallComment = overallComment,
         evidenceCount = evaluacion?.evidenceCount ?: inspection.evidences.size,
+        evidences = inspection.evidences
+            .sortedByDescending { it.capturedAt }
+            .map { it.toEvaluationEvidenceResponse() },
+        formSections = inspection.toFormSections(),
         sections = evaluacion.toSectionMap()
     )
 
@@ -1466,6 +1527,10 @@ class AdminService(
         overallResult = overallResult?.name,
         overallComment = overallComment,
         evidenceCount = evidences.size,
+        evidences = evidences
+            .sortedByDescending { it.capturedAt }
+            .map { it.toEvaluationEvidenceResponse() },
+        formSections = toFormSections(),
         sections = template.sections
             .filter { !it.archived }
             .associate { section ->
@@ -1553,10 +1618,53 @@ class AdminService(
                 "comment" to comentarioOtros
             ),
             "general" to linkedMapOf(
-                "comentarios_generales" to comentariosGenerales,
-                "evidence_count" to evidenceCount
+                "comentarios_generales" to comentariosGenerales
             )
         )
+    }
+
+    private fun com.sivemor.platform.domain.InspectionEvidence.toEvaluationEvidenceResponse(): EvaluationEvidenceResponse =
+        EvaluationEvidenceResponse(
+            id = id ?: 0L,
+            sectionName = section?.title,
+            filename = filename,
+            mimeType = mimeType,
+            capturedAt = capturedAt,
+            comment = comment,
+            previewUrl = "data:$mimeType;base64,${Base64.getEncoder().encodeToString(content)}"
+        )
+
+    private fun Inspection.toFormSections(): List<InspectionFormSectionResponse> {
+        val answersByQuestionId = answers.associateBy { it.question.id ?: 0L }
+        val notesBySectionId = sectionNotes.associateBy { it.section.id ?: 0L }
+
+        return template.sections
+            .filter { !it.archived }
+            .sortedBy { it.displayOrder }
+            .map { section ->
+                InspectionFormSectionResponse(
+                    sectionId = section.id ?: 0L,
+                    title = section.title,
+                    description = section.description,
+                    displayOrder = section.displayOrder,
+                    note = notesBySectionId[section.id ?: 0L]?.comment,
+                    questions = section.questions
+                        .filter { !it.archived }
+                        .sortedBy { it.displayOrder }
+                        .map { question ->
+                            val answer = answersByQuestionId[question.id ?: 0L]
+                            InspectionFormQuestionResponse(
+                                questionId = question.id ?: 0L,
+                                code = question.code,
+                                prompt = question.prompt,
+                                required = question.required,
+                                displayOrder = question.displayOrder,
+                                answer = answer?.answerValue?.name,
+                                comment = answer?.comment
+                            )
+                        }
+                )
+            }
     }
 
     private fun com.sivemor.platform.domain.Evaluacion.failureCount(): Int = listOfNotNull(
@@ -1655,7 +1763,6 @@ class AdminService(
                     "otros_escape" -> otrosEscape = parseEnumValue(rawValue)
                     "comment" -> applySectionComment(sectionName, rawValue)
                     "comentarios_generales" -> comentariosGenerales = normalizeText(rawValue)
-                    "evidence_count" -> evidenceCount = parseIntValue(rawValue) ?: evidenceCount
                 }
             }
         }
@@ -1670,6 +1777,50 @@ class AdminService(
             "motor_emisiones" -> comentarioMotorEmisiones = normalizeText(value)
             "otros" -> comentarioOtros = normalizeText(value)
             "general" -> comentariosGenerales = normalizeText(value)
+        }
+    }
+
+    private fun Inspection.applyFormSectionUpdates(
+        updates: List<InspectionFormSectionUpdateRequest>
+    ) {
+        updates.forEach { sectionUpdate ->
+            val section = template.sections.firstOrNull { (it.id ?: 0L) == sectionUpdate.sectionId && !it.archived }
+                ?: return@forEach
+
+            val note = sectionNotes.firstOrNull { (it.section.id ?: 0L) == sectionUpdate.sectionId }
+            val normalizedNote = normalizeText(sectionUpdate.note)
+            when {
+                note != null -> note.comment = normalizedNote
+                normalizedNote != null -> sectionNotes += com.sivemor.platform.domain.InspectionSectionNote().apply {
+                    inspection = this@applyFormSectionUpdates
+                    this.section = section
+                    comment = normalizedNote
+                }
+            }
+
+            sectionUpdate.questions.forEach { questionUpdate ->
+                val question = section.questions.firstOrNull { (it.id ?: 0L) == questionUpdate.questionId && !it.archived }
+                    ?: return@forEach
+                val existingAnswer = answers.firstOrNull { (it.question.id ?: 0L) == questionUpdate.questionId }
+                val normalizedAnswer = questionUpdate.answer
+                    ?.trim()
+                    ?.takeIf { it.isNotEmpty() }
+                    ?.let { AnswerValue.valueOf(it.uppercase()) }
+                    ?: AnswerValue.NA
+                val normalizedComment = normalizeText(questionUpdate.comment)
+
+                if (existingAnswer != null) {
+                    existingAnswer.answerValue = normalizedAnswer
+                    existingAnswer.comment = normalizedComment
+                } else {
+                    answers += com.sivemor.platform.domain.InspectionAnswer().apply {
+                        inspection = this@applyFormSectionUpdates
+                        this.question = question
+                        answerValue = normalizedAnswer
+                        comment = normalizedComment
+                    }
+                }
+            }
         }
     }
 

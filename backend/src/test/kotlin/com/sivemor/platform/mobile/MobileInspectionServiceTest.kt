@@ -254,7 +254,7 @@ class MobileInspectionServiceTest {
     }
 
     @Test
-    fun `submitInspection requires all required answers and at least three evidences`() {
+    fun `submitInspection requires all required answers and allows submission without evidences`() {
         val technician = user(id = 2L, role = Role.TECHNICIAN)
         val template = templateWithSection()
         val order = verificationOrder(id = 4L, technician = technician)
@@ -277,10 +277,13 @@ class MobileInspectionServiceTest {
             )
         }
 
-        assertThatThrownBy {
-            mobileInspectionService.submitInspection(2L, 7L)
-        }.isInstanceOf(BadRequestException::class.java)
-            .hasMessage("At least three evidences are required before submission")
+        every { orderUnitRepository.countByVerificationOrderIdAndArchivedFalse(4L) } returns 1L
+        every { inspectionRepository.countByVerificationOrderIdAndStatusAndArchivedFalse(4L, InspectionStatus.SUBMITTED) } returns 1L
+
+        val response = mobileInspectionService.submitInspection(2L, 7L)
+
+        assertThat(response.inspectionId).isEqualTo(7L)
+        assertThat(response.status).isEqualTo(InspectionStatus.SUBMITTED)
     }
 
     @Test

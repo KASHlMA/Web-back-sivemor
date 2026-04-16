@@ -16,7 +16,13 @@ import com.sivemor.platform.domain.InspectionResult
 import com.sivemor.platform.domain.InspectionSectionNote
 import com.sivemor.platform.domain.InspectionStatus
 import com.sivemor.platform.domain.OrderUnitRepository
+import com.sivemor.platform.domain.ClientCompanyRepository
+import com.sivemor.platform.domain.RegionRepository
 import com.sivemor.platform.domain.UserRepository
+import com.sivemor.platform.domain.VehicleCategory
+import com.sivemor.platform.domain.VehicleUnit
+import com.sivemor.platform.domain.VehicleUnitRepository
+import com.sivemor.platform.domain.VerificationOrderRepository
 import com.sivemor.platform.domain.VerificationOrderStatus
 import com.sivemor.platform.security.AppUserPrincipal
 import com.sivemor.platform.service.AuditService
@@ -29,7 +35,9 @@ import io.swagger.v3.oas.annotations.security.SecurityRequirement
 import io.swagger.v3.oas.annotations.tags.Tag
 import jakarta.validation.Valid
 import jakarta.validation.constraints.Min
+import jakarta.validation.constraints.NotBlank
 import jakarta.validation.constraints.NotNull
+import jakarta.validation.constraints.Size
 import org.springframework.format.annotation.DateTimeFormat
 import org.springframework.http.HttpStatus
 import org.springframework.http.MediaType
@@ -55,6 +63,7 @@ data class AssignedOrderResponse(
     val orderUnitId: Long,
     val orderId: Long,
     val orderNumber: String,
+    val clientCompanyId: Long,
     val clientCompanyName: String,
     val regionName: String,
     val scheduledAt: Instant,
@@ -62,6 +71,38 @@ data class AssignedOrderResponse(
     val vehiclePlate: String,
     val vehicleCategory: String,
     val draftInspectionId: Long?
+)
+
+data class MobileClientResponse(
+    val id: Long,
+    val name: String,
+    val regionId: Long?
+)
+
+data class MobileRegionResponse(
+    val id: Long,
+    val name: String
+)
+
+data class CreateMobileVehicleRequest(
+    @field:NotNull val clientCompanyId: Long,
+    @field:NotNull val verificationOrderId: Long,
+    @field:NotBlank @field:Size(max = 20) val plate: String,
+    @field:NotBlank @field:Size(max = 30) val vin: String,
+    @field:NotNull val category: VehicleCategory = VehicleCategory.N2,
+    @field:NotBlank @field:Size(max = 80) val brand: String,
+    @field:NotBlank @field:Size(max = 80) val model: String = "Sin modelo"
+)
+
+data class MobileVehicleResponse(
+    val id: Long,
+    val clientCompanyId: Long,
+    val clientCompanyName: String,
+    val plate: String,
+    val vin: String,
+    val category: VehicleCategory,
+    val brand: String,
+    val model: String
 )
 
 data class ChecklistTemplateResponse(
@@ -172,6 +213,23 @@ class MobileInspectionController(
     ): List<AssignedOrderResponse> =
         mobileInspectionService.listAssignedOrders(principal.id)
 
+    @Operation(summary = "List clients available for mobile vehicle registration")
+    @GetMapping("/clients")
+    fun clients(): List<MobileClientResponse> = mobileInspectionService.listClients()
+
+    @Operation(summary = "List CEDIS available for mobile vehicle registration")
+    @GetMapping("/regions")
+    fun regions(): List<MobileRegionResponse> = mobileInspectionService.listRegions()
+
+    @Operation(summary = "Create a vehicle unit from the mobile app")
+    @PostMapping("/vehicles")
+    @ResponseStatus(HttpStatus.CREATED)
+    fun createVehicle(
+        @Parameter(hidden = true)
+        @AuthenticationPrincipal principal: AppUserPrincipal,
+        @Valid @RequestBody request: CreateMobileVehicleRequest
+    ): MobileVehicleResponse = mobileInspectionService.createVehicle(principal.id, request)
+
     @Operation(summary = "Return the active checklist template with sections and questions")
     @GetMapping("/checklists/current")
     fun currentChecklist(): ChecklistTemplateResponse = mobileInspectionService.getCurrentChecklist()
@@ -274,6 +332,10 @@ class MobileInspectionController(
 @org.springframework.stereotype.Service
 class MobileInspectionService(
     private val orderUnitRepository: OrderUnitRepository,
+    private val vehicleUnitRepository: VehicleUnitRepository,
+    private val clientCompanyRepository: ClientCompanyRepository,
+    private val regionRepository: RegionRepository,
+    private val verificationOrderRepository: VerificationOrderRepository,
     private val checklistTemplateRepository: ChecklistTemplateRepository,
     private val inspectionRepository: InspectionRepository,
     private val userRepository: UserRepository,
@@ -293,6 +355,7 @@ class MobileInspectionService(
                     orderUnitId = orderUnit.id ?: 0L,
                     orderId = orderUnit.verificationOrder.id ?: 0L,
                     orderNumber = orderUnit.verificationOrder.orderNumber,
+                    clientCompanyId = orderUnit.verificationOrder.clientCompany.id ?: 0L,
                     clientCompanyName = orderUnit.verificationOrder.clientCompany.name,
                     regionName = orderUnit.verificationOrder.region.name,
                     scheduledAt = orderUnit.verificationOrder.scheduledAt,
@@ -303,6 +366,75 @@ class MobileInspectionService(
                 )
             }
         }
+
+    @Transactional(readOnly = true)
+    fun listClients(): List<MobileClientResponse> = clientCompanyRepository.findAllByArchivedFalseOrderByNameAsc()
+        .map {
+            MobileClientResponse(
+                id = it.id ?: 0L,
+                name = it.name,
+                regionId = it.region?.id
+            )
+        }
+
+    @Transactional(readOnly = true)
+    fun listRegions(): List<MobileRegionResponse> = regionRepository.findAllByArchivedFalseOrderByNameAsc()
+        .map {
+            MobileRegionResponse(
+                id = it.id ?: 0L,
+                name = it.name
+            )
+        }
+
+    @Transactional
+    fun createVehicle(technicianId: Long, request: CreateMobileVehicleRequest): MobileVehicleResponse {
+        val technician = requireTechnician(technicianId)
+        val clientCompany = clientCompanyRepository.findById(request.clientCompanyId)
+            .orElseThrow { NotFoundException("Client company ${request.clientCompanyId} was not found") }
+        val verificationOrder = verificationOrderRepository.findById(request.verificationOrderId)
+            .orElseThrow { NotFoundException("Verification order ${request.verificationOrderId} was not found") }
+
+        if (verificationOrder.assignedTechnician.id != technicianId) {
+            throw ForbiddenException("Verification order is not assigned to this technician")
+        }
+
+        if (verificationOrder.clientCompany.id != clientCompany.id) {
+            throw BadRequestException("Vehicle client does not match the selected verification order")
+        }
+
+        val vehicle = vehicleUnitRepository.save(
+            VehicleUnit().apply {
+                this.clientCompany = clientCompany
+                plate = request.plate.trim().uppercase()
+                vin = request.vin.trim().uppercase()
+                category = request.category
+                brand = request.brand.trim()
+                model = request.model.trim()
+            }
+        )
+
+        orderUnitRepository.save(
+            com.sivemor.platform.domain.OrderUnit().apply {
+                this.verificationOrder = verificationOrder
+                this.vehicleUnit = vehicle
+            }
+        )
+
+        verificationOrder.status = VerificationOrderStatus.IN_PROGRESS
+
+        return vehicle.also { savedVehicle ->
+            auditService.log(
+                actor = technician,
+                action = "CREATE_MOBILE_VEHICLE",
+                entityName = "VEHICLE_UNIT",
+                entityId = savedVehicle.id.toString(),
+                details = mapOf(
+                    "plate" to savedVehicle.plate,
+                    "verificationOrderId" to verificationOrder.id
+                )
+            )
+        }.toMobileVehicleResponse()
+    }
 
     @Transactional(readOnly = true)
     fun getCurrentChecklist(): ChecklistTemplateResponse = requireCurrentTemplate().toChecklistResponse()
@@ -623,6 +755,17 @@ class MobileInspectionService(
         prompt = prompt,
         required = required,
         displayOrder = displayOrder
+    )
+
+    private fun VehicleUnit.toMobileVehicleResponse(): MobileVehicleResponse = MobileVehicleResponse(
+        id = id ?: 0L,
+        clientCompanyId = clientCompany.id ?: 0L,
+        clientCompanyName = clientCompany.name,
+        plate = plate,
+        vin = vin,
+        category = category,
+        brand = brand,
+        model = model
     )
 
     private fun Inspection.toDraftResponse(): InspectionDraftResponse {

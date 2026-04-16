@@ -4,14 +4,17 @@ import com.sivemor.platform.common.BadRequestException
 import com.sivemor.platform.common.ForbiddenException
 import com.sivemor.platform.domain.AnswerValue
 import com.sivemor.platform.domain.ChecklistTemplateRepository
+import com.sivemor.platform.domain.ClientCompanyRepository
 import com.sivemor.platform.domain.InspectionRepository
 import com.sivemor.platform.domain.InspectionResult
 import com.sivemor.platform.domain.InspectionStatus
 import com.sivemor.platform.domain.OrderUnitRepository
 import com.sivemor.platform.domain.Role
+import com.sivemor.platform.domain.RegionRepository
 import com.sivemor.platform.domain.UserRepository
 import com.sivemor.platform.domain.Verificacion
 import com.sivemor.platform.domain.VerificationOrderStatus
+import com.sivemor.platform.domain.VehicleUnitRepository
 import com.sivemor.platform.service.AuditService
 import com.sivemor.platform.service.MerCompatibilityService
 import com.sivemor.platform.support.TestEntityFactory.checklistQuestion
@@ -41,6 +44,9 @@ import java.time.ZoneOffset
 
 class MobileInspectionServiceTest {
     @MockK private lateinit var orderUnitRepository: OrderUnitRepository
+    @MockK private lateinit var vehicleUnitRepository: VehicleUnitRepository
+    @MockK private lateinit var clientCompanyRepository: ClientCompanyRepository
+    @MockK private lateinit var regionRepository: RegionRepository
     @MockK private lateinit var checklistTemplateRepository: ChecklistTemplateRepository
     @MockK private lateinit var inspectionRepository: InspectionRepository
     @MockK private lateinit var userRepository: UserRepository
@@ -55,6 +61,9 @@ class MobileInspectionServiceTest {
         MockKAnnotations.init(this)
         mobileInspectionService = MobileInspectionService(
             orderUnitRepository,
+            vehicleUnitRepository,
+            clientCompanyRepository,
+            regionRepository,
             checklistTemplateRepository,
             inspectionRepository,
             userRepository,

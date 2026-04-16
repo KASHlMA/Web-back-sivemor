@@ -1,6 +1,9 @@
+import logoColor from "../assets/sivemor-logo-color.svg";
+import logoWhite from "../assets/sivemor-logo-white.svg";
+
 export const brandAssets = {
-  logoDark: "https://www.figma.com/api/mcp/asset/b319e76d-4bd9-4c80-94ff-902925bea5c4",
-  logoLight: "https://www.figma.com/api/mcp/asset/66e736b2-56fe-4b94-b943-14d7a41fd162"
+  logoDark: logoColor,
+  logoLight: logoWhite
 };
 
 export const brandTokens = {

@@ -1,0 +1,13 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 520 140" role="img" aria-labelledby="title desc">
+  <title id="title">SIVEMOR logo white</title>
+  <desc id="desc">Logotipo de SIVEMOR en blanco para fondos oscuros.</desc>
+  <g transform="translate(8 10)">
+    <path d="M56 0 112 24v36c0 36-23 56-56 70C23 116 0 96 0 60V24L56 0Z" fill="#ffffff" />
+    <path d="M56 14 96 31v27c0 27-17 42-40 53-23-11-40-26-40-53V31l40-17Z" fill="none" stroke="rgba(86,127,111,0.24)" stroke-width="4" />
+    <path d="M31 68c9 8 17 17 25 29 12-23 22-37 40-57" fill="none" stroke="#ffffff" stroke-linecap="round" stroke-linejoin="round" stroke-width="12" />
+  </g>
+  <g fill="#ffffff">
+    <text x="146" y="72" font-family="Segoe UI, Helvetica Neue, Arial, sans-serif" font-size="44" font-weight="800" letter-spacing="4">SIVEMOR</text>
+    <text x="148" y="102" font-family="Segoe UI, Helvetica Neue, Arial, sans-serif" font-size="17" font-weight="600" letter-spacing="1.3">SISTEMA DE VERIFICACION DE MORELOS</text>
+  </g>
+</svg>

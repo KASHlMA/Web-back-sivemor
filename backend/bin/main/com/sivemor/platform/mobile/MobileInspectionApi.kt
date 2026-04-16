@@ -86,7 +86,7 @@ data class MobileRegionResponse(
 
 data class CreateMobileVehicleRequest(
     @field:NotNull val clientCompanyId: Long,
-    @field:NotNull val verificationOrderId: Long,
+    val verificationOrderId: Long? = null,
     @field:NotBlank @field:Size(max = 20) val plate: String,
     @field:NotBlank @field:Size(max = 30) val vin: String,
     @field:NotNull val category: VehicleCategory = VehicleCategory.N2,
@@ -391,15 +391,18 @@ class MobileInspectionService(
         val technician = requireTechnician(technicianId)
         val clientCompany = clientCompanyRepository.findById(request.clientCompanyId)
             .orElseThrow { NotFoundException("Client company ${request.clientCompanyId} was not found") }
-        val verificationOrder = verificationOrderRepository.findById(request.verificationOrderId)
-            .orElseThrow { NotFoundException("Verification order ${request.verificationOrderId} was not found") }
+        val verificationOrder = request.verificationOrderId?.let { verificationOrderId ->
+            verificationOrderRepository.findById(verificationOrderId)
+                .orElseThrow { NotFoundException("Verification order $verificationOrderId was not found") }
+                .also {
+                    if (it.assignedTechnician.id != technicianId) {
+                        throw ForbiddenException("Verification order is not assigned to this technician")
+                    }
 
-        if (verificationOrder.assignedTechnician.id != technicianId) {
-            throw ForbiddenException("Verification order is not assigned to this technician")
-        }
-
-        if (verificationOrder.clientCompany.id != clientCompany.id) {
-            throw BadRequestException("Vehicle client does not match the selected verification order")
+                    if (it.clientCompany.id != clientCompany.id) {
+                        throw BadRequestException("Vehicle client does not match the selected verification order")
+                    }
+                }
         }
 
         val vehicle = vehicleUnitRepository.save(
@@ -413,14 +416,15 @@ class MobileInspectionService(
             }
         )
 
-        orderUnitRepository.save(
-            com.sivemor.platform.domain.OrderUnit().apply {
-                this.verificationOrder = verificationOrder
-                this.vehicleUnit = vehicle
-            }
-        )
-
-        verificationOrder.status = VerificationOrderStatus.IN_PROGRESS
+        verificationOrder?.let { order ->
+            orderUnitRepository.save(
+                com.sivemor.platform.domain.OrderUnit().apply {
+                    this.verificationOrder = order
+                    this.vehicleUnit = vehicle
+                }
+            )
+            order.status = VerificationOrderStatus.IN_PROGRESS
+        }
 
         return vehicle.also { savedVehicle ->
             auditService.log(
@@ -430,7 +434,7 @@ class MobileInspectionService(
                 entityId = savedVehicle.id.toString(),
                 details = mapOf(
                     "plate" to savedVehicle.plate,
-                    "verificationOrderId" to verificationOrder.id
+                    "verificationOrderId" to verificationOrder?.id
                 )
             )
         }.toMobileVehicleResponse()

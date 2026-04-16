@@ -1,7 +1,6 @@
 import { Outlet, createRootRoute, createRoute, createRouter } from "@tanstack/react-router";
 import { ProtectedPage } from "./components/AppShell";
 import { LoginPage } from "./features/auth/LoginPage";
-import { DashboardPage } from "./features/dashboard/DashboardPage";
 import {
   CedisPage,
   ClientsPage,
@@ -23,10 +22,10 @@ import {
 } from "./features/resources/VerificationCenterPages";
 import { VehicleCreatePage, VehicleEditPage } from "./features/resources/VehicleCreatePage";
 import {
-  VehicleHistoryPage,
-  VerificationDetailPlaceholderPage
+  VehicleHistoryPage
 } from "./features/resources/VehicleHistoryPage";
 import {
+  ReportVerificationDetailPage,
   WebVerificationDetailPage,
   WebVerificationsPage
 } from "./features/resources/WebVerificationsPage";
@@ -50,7 +49,7 @@ const loginRoute = createRoute({
 const dashboardRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: "/",
-  component: withProtection(DashboardPage)
+  component: withProtection(VehiclesPage)
 });
 
 const usersRoute = createRoute({
@@ -116,7 +115,7 @@ const vehicleHistoryRoute = createRoute({
 const verificationDetailRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: "/verificaciones/$id",
-  component: withProtection(VerificationDetailPlaceholderPage)
+  component: withProtection(ReportVerificationDetailPage)
 });
 
 const notesRoute = createRoute({

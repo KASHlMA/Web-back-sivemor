@@ -5,7 +5,6 @@ import { useAuth } from "../lib/session";
 import { LogoutIcon, MenuIcon, cx } from "./AdminPrimitives";
 
 const navigationItems = [
-  { label: "Inicio", to: "/" },
   { label: "Vehiculos", to: "/vehicles" },
   { label: "Verificaciones web", to: "/web-verifications" },
   { label: "Notas", to: "/notes" },
@@ -49,14 +48,14 @@ function AppShell({ children }) {
   });
   const navigate = useNavigate();
   const { session, logout } = useAuth();
-  const vehiclesSelected = pathname === "/vehicles" || pathname.startsWith("/vehiculos");
+  const vehiclesSelected = pathname === "/" || pathname === "/vehicles" || pathname.startsWith("/vehiculos");
   const cedisSelected = pathname === "/cedis" || pathname.startsWith("/cedis/");
   const verificationCentersSelected = pathname === "/verification-centers" || pathname.startsWith("/verification-centers/");
   const transactionsSelected = pathname === "/transactions" || pathname.startsWith("/transactions/");
   const webVerificationsSelected = pathname === "/web-verifications" || pathname.startsWith("/web-verifications/");
 
   const title = useMemo(() => {
-    if (pathname.startsWith("/vehiculos")) {
+    if (pathname === "/" || pathname === "/vehicles" || pathname.startsWith("/vehiculos")) {
       return "Vehiculos";
     }
 

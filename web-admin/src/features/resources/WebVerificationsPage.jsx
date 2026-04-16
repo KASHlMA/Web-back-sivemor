@@ -3,6 +3,7 @@ import { useNavigate, useParams } from "@tanstack/react-router";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   AlertMessage,
+  ConfirmDialog,
   EmptyState,
   PagePanel,
   PageTitleBar,
@@ -18,11 +19,119 @@ const ENUM_OPTIONS = [
   { label: "No aplica", value: "NO_APLICA" }
 ];
 
+const FORM_SECTION_CONFIG = [
+  {
+    key: "luces",
+    title: "Luces",
+    questions: [
+      { code: "luces_galibo", prompt: "Luces galibo" },
+      { code: "luces_altas", prompt: "Luces altas" },
+      { code: "luces_bajas", prompt: "Luces bajas" },
+      { code: "luces_demarcadoras_delanteras", prompt: "Luces demarcadoras delanteras" },
+      { code: "luces_demarcadoras_traseras", prompt: "Luces demarcadoras traseras" },
+      { code: "luces_indicadoras", prompt: "Luces indicadoras" },
+      { code: "faro_izquierdo", prompt: "Faro izquierdo" },
+      { code: "faro_derecho", prompt: "Faro derecho" },
+      { code: "luces_direccionales_delanteras", prompt: "Luces direccionales delanteras" },
+      { code: "luces_direccionales_traseras", prompt: "Luces direccionales traseras" }
+    ]
+  },
+  {
+    key: "llantas",
+    title: "Llantas",
+    questions: [
+      { code: "llantas_rines_delanteros", prompt: "Llantas rines delanteros" },
+      { code: "llantas_rines_traseros", prompt: "Llantas rines traseros" },
+      { code: "llantas_masas_delanteras", prompt: "Llantas masas delanteras" },
+      { code: "llantas_masas_traseras", prompt: "Llantas masas traseras" },
+      { code: "llantas_presion_delantera_izquierda", prompt: "Llantas presion delantera izquierda", type: "number" },
+      { code: "llantas_presion_delantera_derecha", prompt: "Llantas presion delantera derecha", type: "number" },
+      { code: "llantas_presion_trasera_izquierda_1", prompt: "Llantas presion trasera izquierda 1", type: "number" },
+      { code: "llantas_presion_trasera_izquierda_2", prompt: "Llantas presion trasera izquierda 2", type: "number" },
+      { code: "llantas_presion_trasera_derecha_1", prompt: "Llantas presion trasera derecha 1", type: "number" },
+      { code: "llantas_presion_trasera_derecha_2", prompt: "Llantas presion trasera derecha 2", type: "number" },
+      { code: "llantas_profundidad_delantera_izquierda", prompt: "Llantas profundidad delantera izquierda", type: "number" },
+      { code: "llantas_profundidad_delantera_derecha", prompt: "Llantas profundidad delantera derecha", type: "number" },
+      { code: "llantas_profundidad_trasera_izquierda_1", prompt: "Llantas profundidad trasera izquierda 1", type: "number" },
+      { code: "llantas_profundidad_trasera_izquierda_2", prompt: "Llantas profundidad trasera izquierda 2", type: "number" },
+      { code: "llantas_profundidad_trasera_derecha_1", prompt: "Llantas profundidad trasera derecha 1", type: "number" },
+      { code: "llantas_profundidad_trasera_derecha_2", prompt: "Llantas profundidad trasera derecha 2", type: "number" },
+      { code: "llantas_tuercas_delantera_izquierda", prompt: "Llantas tuercas delantera izquierda" },
+      { code: "llantas_tuercas_delantera_izquierda_faltantes", prompt: "Tuercas faltantes delantera izquierda", type: "number" },
+      { code: "llantas_tuercas_delantera_izquierda_rotas", prompt: "Tuercas rotas delantera izquierda", type: "number" },
+      { code: "llantas_tuercas_delantera_derecha", prompt: "Llantas tuercas delantera derecha" },
+      { code: "llantas_tuercas_delantera_derecha_faltantes", prompt: "Tuercas faltantes delantera derecha", type: "number" },
+      { code: "llantas_tuercas_delantera_derecha_rotas", prompt: "Tuercas rotas delantera derecha", type: "number" },
+      { code: "llantas_tuercas_trasera_izquierda", prompt: "Llantas tuercas trasera izquierda" },
+      { code: "llantas_tuercas_trasera_izquierda_faltantes", prompt: "Tuercas faltantes trasera izquierda", type: "number" },
+      { code: "llantas_tuercas_trasera_izquierda_rotas", prompt: "Tuercas rotas trasera izquierda", type: "number" },
+      { code: "llantas_tuercas_trasera_derecha", prompt: "Llantas tuercas trasera derecha" },
+      { code: "llantas_tuercas_trasera_derecha_faltantes", prompt: "Tuercas faltantes trasera derecha", type: "number" },
+      { code: "llantas_tuercas_trasera_derecha_rotas", prompt: "Tuercas rotas trasera derecha", type: "number" }
+    ]
+  },
+  {
+    key: "direccion",
+    title: "Direccion, estructura y accesos",
+    questions: [
+      { code: "direccion_brazo_pitman", prompt: "Brazo pitman" },
+      { code: "direccion_manijas_puertas", prompt: "Manijas de puertas" },
+      { code: "direccion_chavetas", prompt: "Chavetas" },
+      { code: "direccion_chavetas_faltantes", prompt: "En caso de que hagan falta chavetas", type: "number" }
+    ]
+  },
+  {
+    key: "aire_frenos",
+    title: "Sistema de aire / frenos",
+    questions: [
+      { code: "aire_frenos_compresor", prompt: "Compresor" },
+      { code: "aire_frenos_tanques_aire", prompt: "Tanques de aire" },
+      { code: "aire_frenos_tiempo_carga_psi", prompt: "Tiempo de carga psi", type: "number" },
+      { code: "aire_frenos_tiempo_carga_tiempo", prompt: "Tiempo de carga tiempo", type: "number" }
+    ]
+  },
+  {
+    key: "motor_emisiones",
+    title: "Motor y emisiones",
+    questions: [
+      { code: "motor_emisiones_humo", prompt: "Humo" },
+      { code: "motor_emisiones_gobernado", prompt: "Gobernado" }
+    ]
+  },
+  {
+    key: "otros",
+    title: "Otros",
+    questions: [
+      { code: "otros_caja_direccion", prompt: "Caja direccion" },
+      { code: "otros_deposito_aceite", prompt: "Deposito aceite" },
+      { code: "otros_parabrisas", prompt: "Parabrisas" },
+      { code: "otros_limpiaparabrisas", prompt: "Limpiaparabrisas" },
+      { code: "otros_juego", prompt: "Huelgo" },
+      { code: "otros_escape", prompt: "Escape" }
+    ]
+  }
+];
+
 export function WebVerificationsPage() {
   const navigate = useNavigate();
+  const queryClient = useQueryClient();
+  const [pendingDelete, setPendingDelete] = useState(null);
+  const [feedbackMessage, setFeedbackMessage] = useState("");
   const query = useQuery({
     queryKey: ["web-verifications"],
     queryFn: () => api.get("/admin/web-verifications")
+  });
+  const deleteMutation = useMutation({
+    mutationFn: (id) => api.delete(`/admin/web-verifications/${id}`),
+    onSuccess: async () => {
+      setPendingDelete(null);
+      setFeedbackMessage("Verificacion eliminada correctamente.");
+      await queryClient.invalidateQueries({ queryKey: ["web-verifications"] });
+      await queryClient.invalidateQueries({ queryKey: ["vehicle-history"] });
+    },
+    onError: (error) => {
+      setFeedbackMessage(error instanceof Error ? error.message : "No fue posible eliminar la verificacion.");
+    }
   });
 
   return (
@@ -32,6 +141,10 @@ export function WebVerificationsPage() {
           title="Verificaciones web"
           subtitle="Consulta las ultimas verificaciones recibidas desde movil, visualizalas en lista y abre el detalle editable del formulario."
         />
+
+        <div className="px-5 pt-1">
+          <AlertMessage message={feedbackMessage} />
+        </div>
 
         {query.isLoading ? (
           <div className="px-5 py-5 text-sm font-medium text-[var(--shell-text)]">Cargando verificaciones...</div>
@@ -67,17 +180,28 @@ export function WebVerificationsPage() {
                     </td>
                     <td>{formatDateTime(item.submittedAt)}</td>
                     <td>
-                      <PrimaryActionButton
-                        type="button"
-                        onClick={() =>
-                          void navigate({
-                            to: "/web-verifications/$id",
-                            params: { id: String(item.verificacionId) }
-                          })
-                        }
-                      >
-                        Ver y editar
-                      </PrimaryActionButton>
+                      <div className="flex flex-wrap gap-2">
+                        <PrimaryActionButton
+                          type="button"
+                          onClick={() =>
+                            void navigate({
+                              to: "/web-verifications/$id",
+                              params: { id: String(item.verificacionId) }
+                            })
+                          }
+                        >
+                          Ver y editar
+                        </PrimaryActionButton>
+                        <SecondaryActionButton
+                          type="button"
+                          onClick={() => {
+                            setFeedbackMessage("");
+                            setPendingDelete(item);
+                          }}
+                        >
+                          Eliminar
+                        </SecondaryActionButton>
+                      </div>
                     </td>
                   </tr>
                 ))}
@@ -86,52 +210,93 @@ export function WebVerificationsPage() {
           </div>
         )}
       </PagePanel>
+
+      <ConfirmDialog
+        open={Boolean(pendingDelete)}
+        title="Eliminar verificacion web"
+        description="Deseas eliminar esta verificacion web? Esta accion la ocultara de los listados y del historial administrativo."
+        confirmLabel={deleteMutation.isPending ? "Eliminando..." : "Eliminar"}
+        onCancel={() => {
+          if (!deleteMutation.isPending) {
+            setPendingDelete(null);
+          }
+        }}
+        onConfirm={() => {
+          if (pendingDelete && !deleteMutation.isPending) {
+            void deleteMutation.mutateAsync(pendingDelete.verificacionId);
+          }
+        }}
+        danger
+      />
     </div>
   );
 }
 
 export function WebVerificationDetailPage() {
+  const params = useParams({ strict: false });
+  return (
+    <EvaluationDetailPage
+      detailKey="web-verification-detail"
+      detailId={String(params.id ?? "")}
+      loadDetail={(id) => api.get(`/admin/web-verifications/${id}`)}
+      backTo="/web-verifications"
+    />
+  );
+}
+
+export function ReportVerificationDetailPage() {
+  const params = useParams({ strict: false });
+  return (
+    <EvaluationDetailPage
+      detailKey="report-detail"
+      detailId={String(params.id ?? "")}
+      loadDetail={(id) => api.get(`/admin/reports/${id}`)}
+      backTo="/vehiculos"
+    />
+  );
+}
+
+function EvaluationDetailPage({ detailKey, detailId, loadDetail, backTo }) {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
-  const params = useParams({ strict: false });
-  const verificationId = String(params.id ?? "");
   const [draftFormSections, setDraftFormSections] = useState([]);
   const [overallComment, setOverallComment] = useState("");
   const [feedbackMessage, setFeedbackMessage] = useState("");
 
   const query = useQuery({
-    queryKey: ["web-verification-detail", verificationId],
-    queryFn: () => api.get(`/admin/web-verifications/${verificationId}`),
-    enabled: Boolean(verificationId)
+    queryKey: [detailKey, detailId],
+    queryFn: () => loadDetail(detailId),
+    enabled: Boolean(detailId)
   });
 
   useEffect(() => {
-    if (query.data?.formSections) {
-      setDraftFormSections(cloneFormSections(query.data.formSections));
+    if (query.data) {
+      setDraftFormSections(buildDraftSections(query.data.sections));
       setOverallComment(query.data.overallComment ?? "");
       setFeedbackMessage("");
     }
   }, [query.data]);
 
   const mutation = useMutation({
-    mutationFn: (payload) => api.put(`/admin/web-verifications/${verificationId}`, payload),
+    mutationFn: async (payload) => {
+      if (!query.data?.verificacionId) {
+        throw new Error("Esta verificacion no tiene una evaluacion editable disponible.");
+      }
+
+      return api.put(`/admin/web-verifications/${query.data.verificacionId}`, payload);
+    },
     onSuccess: async (response) => {
-      setDraftFormSections(cloneFormSections(response.formSections ?? []));
+      setDraftFormSections(buildDraftSections(response.sections));
       setOverallComment(response.overallComment ?? "");
       setFeedbackMessage("Cambios guardados correctamente.");
-      await queryClient.invalidateQueries({ queryKey: ["web-verification-detail", verificationId] });
+      await queryClient.invalidateQueries({ queryKey: [detailKey, detailId] });
       await queryClient.invalidateQueries({ queryKey: ["web-verifications"] });
+      await queryClient.invalidateQueries({ queryKey: ["vehicle-history"] });
     },
     onError: (error) => {
       setFeedbackMessage(error instanceof Error ? error.message : "No fue posible guardar los cambios.");
     }
   });
-
-  const handleSectionNoteChange = (sectionId, value) => {
-    setDraftFormSections((current) =>
-      current.map((section) => (section.sectionId === sectionId ? { ...section, note: value } : section))
-    );
-  };
 
   const handleQuestionChange = (sectionId, questionId, field, value) => {
     setDraftFormSections((current) =>
@@ -151,14 +316,17 @@ export function WebVerificationDetailPage() {
   const handleSave = () => {
     setFeedbackMessage("");
     mutation.mutate({
-      formSections: draftFormSections,
+      formSections: [],
       sections: {
+        ...toSectionsPayload(draftFormSections),
         general: {
           comentarios_generales: overallComment
         }
       }
     });
   };
+
+  const canEdit = Boolean(query.data?.verificacionId);
 
   return (
     <div className="space-y-6">
@@ -167,10 +335,10 @@ export function WebVerificationDetailPage() {
           title="Detalle de verificacion"
           actions={
             <div className="flex gap-3">
-              <SecondaryActionButton type="button" onClick={() => void navigate({ to: "/web-verifications" })}>
+              <SecondaryActionButton type="button" onClick={() => void navigate({ to: backTo })}>
                 Volver
               </SecondaryActionButton>
-              <PrimaryActionButton type="button" onClick={handleSave} disabled={mutation.isPending || !query.data}>
+              <PrimaryActionButton type="button" onClick={handleSave} disabled={mutation.isPending || !query.data || !canEdit}>
                 {mutation.isPending ? "Guardando..." : "Guardar cambios"}
               </PrimaryActionButton>
             </div>
@@ -189,74 +357,91 @@ export function WebVerificationDetailPage() {
             <AlertMessage message={feedbackMessage} />
 
             <section className="grid gap-4 rounded-2xl border border-[var(--border)] bg-[rgba(238,242,228,0.68)] p-5 md:grid-cols-3">
-              <SummaryField label="ID verificacion" value={query.data.verificacionId} />
+              <SummaryField label="ID verificacion" value={query.data.verificacionId ?? "-"} />
+              <SummaryField label="ID inspeccion" value={query.data.inspectionId ?? "-"} />
               <SummaryField label="Placa" value={query.data.vehiclePlate} />
               <SummaryField label="Empresa" value={query.data.clientCompanyName} />
               <SummaryField label="Resultado" value={query.data.overallResult ?? "-"} />
               <SummaryField label="Fecha" value={formatDateTime(query.data.submittedAt)} />
             </section>
 
-            {draftFormSections.map((section) => (
+            {draftFormSections.map((section, sectionIndex) => (
               <section key={section.sectionId} className="rounded-2xl border border-[var(--border)] bg-white p-5 shadow-[var(--shadow)]">
-                <h2 className="text-lg font-bold text-[var(--title)]">{section.title}</h2>
+                <div className="flex flex-col gap-2 border-b border-[var(--border)] pb-4 md:flex-row md:items-center md:justify-between">
+                  <h2 className="text-lg font-bold text-[var(--title)]">
+                    {sectionIndex + 1}. {section.title}
+                  </h2>
+                  <p className="text-sm font-medium text-[var(--shell-text)]/80">
+                    {section.questions?.length ?? 0} punto{(section.questions?.length ?? 0) === 1 ? "" : "s"}
+                  </p>
+                </div>
 
                 <div className="mt-5 space-y-4">
-                  {(section.questions ?? []).map((question) => (
+                  {(section.questions ?? []).map((question, questionIndex) => (
                     <article key={question.questionId} className="rounded-2xl border border-[var(--border)] bg-[var(--panel)] p-4">
-                      <p className="text-sm font-semibold text-[var(--title)]">{question.prompt}</p>
+                      <p className="text-sm font-semibold text-[var(--title)]">
+                        {questionIndex + 1}. {question.prompt}
+                      </p>
 
                       <div className="mt-4">
                         <label className="text-xs font-bold uppercase tracking-[0.06em] text-[var(--shell-text)]/75">
                           Resultado
                         </label>
-                        <select
-                          value={String(question.answer ?? "")}
-                          onChange={(event) => handleQuestionChange(section.sectionId, question.questionId, "answer", event.target.value)}
-                          className="field-base mt-2"
-                        >
-                          <option value="">Sin valor</option>
-                          {ENUM_OPTIONS.map((option) => (
-                            <option key={option.value} value={option.value}>
-                              {option.label}
-                            </option>
-                          ))}
-                        </select>
-                      </div>
-
-                      <div className="mt-4">
-                        <label className="text-xs font-bold uppercase tracking-[0.06em] text-[var(--shell-text)]/75">
-                          Comentario
-                        </label>
-                        <textarea
-                          value={question.comment ?? ""}
-                          onChange={(event) =>
-                            handleQuestionChange(section.sectionId, question.questionId, "comment", event.target.value)
-                          }
-                          rows={3}
-                          className="field-base mt-2 min-h-24"
-                        />
+                        {question.type === "number" ? (
+                          <input
+                            type="number"
+                            inputMode="decimal"
+                            value={String(question.answer ?? "")}
+                            onChange={(event) =>
+                              handleQuestionChange(section.sectionId, question.questionId, "answer", event.target.value)
+                            }
+                            className="field-base mt-2"
+                            disabled={!canEdit}
+                          />
+                        ) : (
+                          <select
+                            value={String(question.answer ?? "")}
+                            onChange={(event) =>
+                              handleQuestionChange(section.sectionId, question.questionId, "answer", event.target.value)
+                            }
+                            className="field-base mt-2"
+                            disabled={!canEdit}
+                          >
+                            <option value="">Sin valor</option>
+                            {ENUM_OPTIONS.map((option) => (
+                              <option key={option.value} value={option.value}>
+                                {option.label}
+                              </option>
+                            ))}
+                          </select>
+                        )}
                       </div>
                     </article>
                   ))}
-                </div>
-
-                <div className="mt-5">
-                  <label className="text-xs font-bold uppercase tracking-[0.06em] text-[var(--shell-text)]/75">
-                    Comentario de seccion
-                  </label>
-                  <textarea
-                    value={section.note ?? ""}
-                    onChange={(event) => handleSectionNoteChange(section.sectionId, event.target.value)}
-                    rows={3}
-                    className="field-base mt-2 min-h-24"
-                  />
                 </div>
               </section>
             ))}
 
             <section className="rounded-2xl border border-[var(--border)] bg-white p-5 shadow-[var(--shadow)]">
+              <h2 className="text-lg font-bold text-[var(--title)]">Comentarios</h2>
+
+              <div className="mt-4">
+                <label className="text-xs font-bold uppercase tracking-[0.06em] text-[var(--shell-text)]/75">
+                  General
+                </label>
+                <textarea
+                  value={overallComment}
+                  onChange={(event) => setOverallComment(event.target.value)}
+                  rows={4}
+                  className="field-base mt-2 min-h-28"
+                  disabled={!canEdit}
+                />
+              </div>
+            </section>
+
+            <section className="rounded-2xl border border-[var(--border)] bg-white p-5 shadow-[var(--shadow)]">
               <div className="flex items-center justify-between gap-3">
-                <h2 className="text-lg font-bold text-[var(--title)]">Evidencias</h2>
+                <h2 className="text-lg font-bold text-[var(--title)]">Evidencias fotograficas</h2>
                 <StatusChip
                   label={`${query.data.evidences?.length ?? 0} archivo${(query.data.evidences?.length ?? 0) === 1 ? "" : "s"}`}
                   tone="neutral"
@@ -292,7 +477,6 @@ export function WebVerificationDetailPage() {
                           {evidence.sectionName ? formatSectionName(evidence.sectionName) : "Sin seccion"}
                         </p>
                         <p className="text-sm text-[var(--shell-text)]/80">{formatDateTime(evidence.capturedAt)}</p>
-                        <p className="text-sm text-[var(--shell-text)]/80">{evidence.comment || "Sin comentario"}</p>
                       </div>
                     </article>
                   ))}
@@ -300,22 +484,6 @@ export function WebVerificationDetailPage() {
               ) : (
                 <p className="mt-4 text-sm text-[var(--shell-text)]/80">Sin evidencias adjuntas.</p>
               )}
-            </section>
-
-            <section className="rounded-2xl border border-[var(--border)] bg-white p-5 shadow-[var(--shadow)]">
-              <h2 className="text-lg font-bold text-[var(--title)]">Comentarios</h2>
-
-              <div className="mt-4">
-                <label className="text-xs font-bold uppercase tracking-[0.06em] text-[var(--shell-text)]/75">
-                  General
-                </label>
-                <textarea
-                  value={overallComment}
-                  onChange={(event) => setOverallComment(event.target.value)}
-                  rows={4}
-                  className="field-base mt-2 min-h-28"
-                />
-              </div>
             </section>
           </div>
         )}
@@ -333,16 +501,36 @@ function SummaryField({ label, value }) {
   );
 }
 
-function cloneFormSections(sections) {
-  return (sections ?? []).map((section) => ({
-    ...section,
-    note: section.note ?? "",
-    questions: (section.questions ?? []).map((question) => ({
-      ...question,
-      answer: question.answer ?? "",
-      comment: question.comment ?? ""
+function buildDraftSections(sectionsMap) {
+  return FORM_SECTION_CONFIG.map((section) => ({
+    sectionId: section.key,
+    title: section.title,
+    questions: section.questions.map((question) => ({
+      questionId: question.code,
+      code: question.code,
+      prompt: question.prompt,
+      answer: normalizeDraftValue(sectionsMap?.[section.key]?.[question.code])
     }))
   }));
+}
+
+function normalizeDraftValue(value) {
+  if (value === null || value === undefined) {
+    return "";
+  }
+
+  return String(value);
+}
+
+function toSectionsPayload(draftSections) {
+  return Object.fromEntries(
+    (draftSections ?? []).map((section) => [
+      section.sectionId,
+      Object.fromEntries(
+        (section.questions ?? []).map((question) => [question.code, question.answer === "" ? null : question.answer])
+      )
+    ])
+  );
 }
 
 function formatSectionName(value) {

@@ -749,6 +749,17 @@ class AdminController(
         @RequestBody request: WebVerificationUpdateRequest
     ): EvaluationDetailResponse = adminService.updateWebVerificationDetail(principal.id, id, request)
 
+    @Operation(summary = "Archive a web verification by verification id")
+    @DeleteMapping("/web-verifications/{id}")
+    fun deleteWebVerificationDetail(
+        @Parameter(hidden = true)
+        @AuthenticationPrincipal principal: AppUserPrincipal,
+        @PathVariable id: Long
+    ): ResponseEntity<Unit> {
+        adminService.archiveWebVerification(principal.id, id)
+        return ResponseEntity.noContent().build()
+    }
+
     @Operation(summary = "Return failure-focused dashboard metrics")
     @GetMapping("/dashboard/failures")
     fun dashboardFailures(): DashboardFailuresResponse = adminService.dashboardFailures()
@@ -1330,6 +1341,46 @@ class AdminService(
         )
 
         return verificacion.toEvaluationDetail(evaluacion)
+    }
+
+    @Transactional
+    fun archiveWebVerification(actorId: Long, id: Long) {
+        val verificacion = verificacionRepository.findById(id)
+            .orElseThrow { NotFoundException("Verification $id was not found") }
+            .also {
+                if (it.archived) {
+                    throw NotFoundException("Verification $id was not found")
+                }
+            }
+
+        evaluacionRepository.findByVerificacionIdAndArchivedFalse(id)?.archived = true
+        verificacion.archived = true
+        verificacion.inspection.archived = true
+
+        val verificationOrderId = verificacion.verificationOrder.id ?: 0L
+        val totalUnits = orderUnitRepository.countByVerificationOrderIdAndArchivedFalse(verificationOrderId)
+        val submittedForOrder = inspectionRepository.countByVerificationOrderIdAndStatusAndArchivedFalse(
+            verificationOrderId,
+            InspectionStatus.SUBMITTED
+        )
+        val activeInspections = inspectionRepository.countByVerificationOrderIdAndArchivedFalse(verificationOrderId)
+
+        verificacion.verificationOrder.status = when {
+            submittedForOrder >= totalUnits -> VerificationOrderStatus.COMPLETED
+            activeInspections > 0 -> VerificationOrderStatus.IN_PROGRESS
+            else -> VerificationOrderStatus.OPEN
+        }
+
+        logAction(
+            actorId,
+            "ARCHIVE_WEB_VERIFICATION",
+            "VERIFICACION",
+            verificacion.id.toString(),
+            mapOf(
+                "inspectionId" to (verificacion.inspection.id ?: 0L),
+                "orderNumber" to verificacion.verificationOrder.orderNumber
+            )
+        )
     }
 
     @Transactional(readOnly = true)

@@ -14,6 +14,7 @@ import com.sivemor.platform.support.uploadEvidence
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Test
 import org.springframework.http.MediaType
+import org.springframework.test.web.servlet.delete
 import org.springframework.test.web.servlet.get
 
 class MobileInspectionApiIntegrationTest : IntegrationTestSupport() {
@@ -113,6 +114,66 @@ class MobileInspectionApiIntegrationTest : IntegrationTestSupport() {
             jsonPath("$[?(@.inspectionId==${inspectionId.toInt()})].orderNumber") {
                 value(org.hamcrest.Matchers.hasItem(orderNumber))
             }
+        }
+    }
+
+    @Test
+    fun `admin can archive a web verification and it disappears from admin listings`() {
+        val adminToken = bearerTokenForUser("admin")
+        val technicianToken = bearerTokenForUser("tecnico1")
+        val suffix = System.currentTimeMillis()
+
+        val technicianId = findUserId("tecnico1", adminToken)
+        val regionId = createRegion("Delete MER Region $suffix", adminToken)
+        val clientId = createClient("Delete MER Client $suffix", "DMER$suffix", regionId, adminToken)
+        val vehicleId = createVehicle(clientId, "DEL-$suffix", "DEL-VIN-$suffix", adminToken)
+        val orderNumber = "DELETE-MER-$suffix"
+
+        createOrder(orderNumber, clientId, regionId, technicianId, listOf(vehicleId), adminToken)
+        val orderUnitId = fetchTechnicianOrderUnits(orderNumber, technicianToken).single()
+        val draft = createDraftInspection(orderUnitId, technicianToken)
+        val inspectionId = draft["id"].asLong()
+
+        updateDraftInspection(inspectionId, answerAllQuestions(draft), technicianToken)
+        val sectionId = draft["sections"][0]["sectionId"].asLong()
+        uploadEvidence(inspectionId, sectionId, technicianToken, "delete-mer-$suffix-1.jpg")
+        uploadEvidence(inspectionId, sectionId, technicianToken, "delete-mer-$suffix-2.jpg")
+        uploadEvidence(inspectionId, sectionId, technicianToken, "delete-mer-$suffix-3.jpg")
+        submitInspection(inspectionId, technicianToken)
+
+        val webVerificationId = mockMvc.get("/api/v1/admin/web-verifications") {
+            header("Authorization", adminToken)
+            accept = MediaType.APPLICATION_JSON
+        }.andExpect {
+            status { isOk() }
+            jsonPath("$[?(@.inspectionId==${inspectionId.toInt()})].noteNumber") {
+                value(org.hamcrest.Matchers.hasItem(orderNumber))
+            }
+        }.andReturn().response.contentAsString.let { body ->
+            objectMapper.readTree(body)
+                .first { it["inspectionId"].asLong() == inspectionId }["verificacionId"].asLong()
+        }
+
+        mockMvc.delete("/api/v1/admin/web-verifications/$webVerificationId") {
+            header("Authorization", adminToken)
+        }.andExpect {
+            status { isNoContent() }
+        }
+
+        mockMvc.get("/api/v1/admin/web-verifications") {
+            header("Authorization", adminToken)
+            accept = MediaType.APPLICATION_JSON
+        }.andExpect {
+            status { isOk() }
+            jsonPath("$[?(@.verificacionId==${webVerificationId.toInt()})]") { isEmpty() }
+        }
+
+        mockMvc.get("/api/v1/admin/reports?orderId=&onlyFailures=false") {
+            header("Authorization", adminToken)
+            accept = MediaType.APPLICATION_JSON
+        }.andExpect {
+            status { isOk() }
+            jsonPath("$[?(@.inspectionId==${inspectionId.toInt()})]") { isEmpty() }
         }
     }
 }

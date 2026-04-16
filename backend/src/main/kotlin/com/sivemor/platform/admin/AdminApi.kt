@@ -301,6 +301,10 @@ data class WebVerificationListItemResponse(
     val submittedAt: Instant
 )
 
+data class WebVerificationUpdateRequest(
+    val sections: Map<String, Map<String, String?>> = emptyMap()
+)
+
 data class FailureBucketResponse(
     val label: String,
     val count: Long
@@ -686,6 +690,15 @@ class AdminController(
     @GetMapping("/web-verifications/{id}")
     fun webVerificationDetail(@PathVariable id: Long): EvaluationDetailResponse =
         adminService.getWebVerificationDetail(id)
+
+    @Operation(summary = "Update a web verification detail by verification id")
+    @PutMapping("/web-verifications/{id}")
+    fun updateWebVerificationDetail(
+        @Parameter(hidden = true)
+        @AuthenticationPrincipal principal: AppUserPrincipal,
+        @PathVariable id: Long,
+        @RequestBody request: WebVerificationUpdateRequest
+    ): EvaluationDetailResponse = adminService.updateWebVerificationDetail(principal.id, id, request)
 
     @Operation(summary = "Return failure-focused dashboard metrics")
     @GetMapping("/dashboard/failures")
@@ -1211,6 +1224,41 @@ class AdminService(
         return verificacion.toEvaluationDetail(evaluacion)
     }
 
+    @Transactional
+    fun updateWebVerificationDetail(
+        actorId: Long,
+        id: Long,
+        request: WebVerificationUpdateRequest
+    ): EvaluationDetailResponse {
+        val verificacion = verificacionRepository.findById(id)
+            .orElseThrow { NotFoundException("Verification $id was not found") }
+            .also {
+                if (it.archived) {
+                    throw NotFoundException("Verification $id was not found")
+                }
+            }
+        val evaluacion = evaluacionRepository.findByVerificacionIdAndArchivedFalse(id)
+            ?: throw NotFoundException("Evaluation for verification $id was not found")
+
+        evaluacion.applySectionUpdates(request.sections)
+
+        val verdict = if (evaluacion.failureCount() > 0) VerificacionVeredicto.REPROBADO else VerificacionVeredicto.APROBADO
+        verificacion.veredicto = verdict
+        verificacion.overallComment = evaluacion.comentariosGenerales
+        verificacion.inspection.overallComment = evaluacion.comentariosGenerales
+        verificacion.inspection.overallResult = if (verdict == VerificacionVeredicto.APROBADO) InspectionResult.PASS else InspectionResult.FAIL
+
+        logAction(
+            actorId,
+            "UPDATE_WEB_VERIFICATION",
+            "VERIFICACION",
+            verificacion.id.toString(),
+            mapOf("inspectionId" to (verificacion.inspection.id ?: 0L))
+        )
+
+        return verificacion.toEvaluationDetail(evaluacion)
+    }
+
     @Transactional(readOnly = true)
     fun dashboardFailures(): DashboardFailuresResponse {
         val submitted = listReports(
@@ -1534,6 +1582,104 @@ class AdminService(
         otrosJuego,
         otrosEscape
     ).count { it == "REPROBADO" }
+
+    private fun com.sivemor.platform.domain.Evaluacion.applySectionUpdates(
+        updates: Map<String, Map<String, String?>>
+    ) {
+        updates.forEach { (sectionName, fields) ->
+            fields.forEach { (field, rawValue) ->
+                when (field) {
+                    "luces_galibo" -> lucesGalibo = parseEnumValue(rawValue)
+                    "luces_altas" -> lucesAltas = parseEnumValue(rawValue)
+                    "luces_bajas" -> lucesBajas = parseEnumValue(rawValue)
+                    "luces_demarcadoras_delanteras" -> lucesDemarcadorasDelanteras = parseEnumValue(rawValue)
+                    "luces_demarcadoras_traseras" -> lucesDemarcadorasTraseras = parseEnumValue(rawValue)
+                    "luces_indicadoras" -> lucesIndicadoras = parseEnumValue(rawValue)
+                    "faro_izquierdo" -> faroIzquierdo = parseEnumValue(rawValue)
+                    "faro_derecho" -> faroDerecho = parseEnumValue(rawValue)
+                    "luces_direccionales_delanteras" -> lucesDireccionalesDelanteras = parseEnumValue(rawValue)
+                    "luces_direccionales_traseras" -> lucesDireccionalesTraseras = parseEnumValue(rawValue)
+                    "llantas_rines_delanteros" -> llantasRinesDelanteros = parseEnumValue(rawValue)
+                    "llantas_rines_traseros" -> llantasRinesTraseros = parseEnumValue(rawValue)
+                    "llantas_masas_delanteras" -> llantasMasasDelanteras = parseEnumValue(rawValue)
+                    "llantas_masas_traseras" -> llantasMasasTraseras = parseEnumValue(rawValue)
+                    "llantas_presion_delantera_izquierda" -> llantasPresionDelanteraIzquierda = parseDoubleValue(rawValue)
+                    "llantas_presion_delantera_derecha" -> llantasPresionDelanteraDerecha = parseDoubleValue(rawValue)
+                    "llantas_presion_trasera_izquierda_1" -> llantasPresionTraseraIzquierda1 = parseDoubleValue(rawValue)
+                    "llantas_presion_trasera_izquierda_2" -> llantasPresionTraseraIzquierda2 = parseDoubleValue(rawValue)
+                    "llantas_presion_trasera_derecha_1" -> llantasPresionTraseraDerecha1 = parseDoubleValue(rawValue)
+                    "llantas_presion_trasera_derecha_2" -> llantasPresionTraseraDerecha2 = parseDoubleValue(rawValue)
+                    "llantas_profundidad_delantera_izquierda" -> llantasProfundidadDelanteraIzquierda = parseDoubleValue(rawValue)
+                    "llantas_profundidad_delantera_derecha" -> llantasProfundidadDelanteraDerecha = parseDoubleValue(rawValue)
+                    "llantas_profundidad_trasera_izquierda_1" -> llantasProfundidadTraseraIzquierda1 = parseDoubleValue(rawValue)
+                    "llantas_profundidad_trasera_izquierda_2" -> llantasProfundidadTraseraIzquierda2 = parseDoubleValue(rawValue)
+                    "llantas_profundidad_trasera_derecha_1" -> llantasProfundidadTraseraDerecha1 = parseDoubleValue(rawValue)
+                    "llantas_profundidad_trasera_derecha_2" -> llantasProfundidadTraseraDerecha2 = parseDoubleValue(rawValue)
+                    "llantas_tuercas_delantera_izquierda" -> llantasTuercasDelanteraIzquierda = parseEnumValue(rawValue)
+                    "llantas_tuercas_delantera_izquierda_faltantes" -> llantasTuercasDelanteraIzquierdaFaltantes = parseIntValue(rawValue)
+                    "llantas_tuercas_delantera_izquierda_rotas" -> llantasTuercasDelanteraIzquierdaRotas = parseIntValue(rawValue)
+                    "llantas_tuercas_delantera_derecha" -> llantasTuercasDelanteraDerecha = parseEnumValue(rawValue)
+                    "llantas_tuercas_delantera_derecha_faltantes" -> llantasTuercasDelanteraDerechaFaltantes = parseIntValue(rawValue)
+                    "llantas_tuercas_delantera_derecha_rotas" -> llantasTuercasDelanteraDerechaRotas = parseIntValue(rawValue)
+                    "llantas_tuercas_trasera_izquierda" -> llantasTuercasTraseraIzquierda = parseEnumValue(rawValue)
+                    "llantas_tuercas_trasera_izquierda_faltantes" -> llantasTuercasTraseraIzquierdaFaltantes = parseIntValue(rawValue)
+                    "llantas_tuercas_trasera_izquierda_rotas" -> llantasTuercasTraseraIzquierdaRotas = parseIntValue(rawValue)
+                    "llantas_tuercas_trasera_derecha" -> llantasTuercasTraseraDerecha = parseEnumValue(rawValue)
+                    "llantas_tuercas_trasera_derecha_faltantes" -> llantasTuercasTraseraDerechaFaltantes = parseIntValue(rawValue)
+                    "llantas_tuercas_trasera_derecha_rotas" -> llantasTuercasTraseraDerechaRotas = parseIntValue(rawValue)
+                    "direccion_brazo_pitman" -> direccionBrazoPitman = parseEnumValue(rawValue)
+                    "direccion_manijas_puertas" -> direccionManijasPuertas = parseEnumValue(rawValue)
+                    "direccion_chavetas" -> direccionChavetas = parseEnumValue(rawValue)
+                    "direccion_chavetas_faltantes" -> direccionChavetasFaltantes = parseIntValue(rawValue)
+                    "aire_frenos_compresor" -> aireFrenosCompresor = parseEnumValue(rawValue)
+                    "aire_frenos_tanques_aire" -> aireFrenosTanquesAire = parseEnumValue(rawValue)
+                    "aire_frenos_tiempo_carga_psi" -> aireFrenosTiempoCargaPsi = parseDoubleValue(rawValue)
+                    "aire_frenos_tiempo_carga_tiempo" -> aireFrenosTiempoCargaTiempo = parseDoubleValue(rawValue)
+                    "motor_emisiones_humo" -> motorEmisionesHumo = parseEnumValue(rawValue)
+                    "motor_emisiones_gobernado" -> motorEmisionesGobernado = parseEnumValue(rawValue)
+                    "otros_caja_direccion" -> otrosCajaDireccion = parseEnumValue(rawValue)
+                    "otros_deposito_aceite" -> otrosDepositoAceite = parseEnumValue(rawValue)
+                    "otros_parabrisas" -> otrosParabrisas = parseEnumValue(rawValue)
+                    "otros_limpiaparabrisas" -> otrosLimpiaparabrisas = parseEnumValue(rawValue)
+                    "otros_juego" -> otrosJuego = parseEnumValue(rawValue)
+                    "otros_escape" -> otrosEscape = parseEnumValue(rawValue)
+                    "comment" -> applySectionComment(sectionName, rawValue)
+                    "comentarios_generales" -> comentariosGenerales = normalizeText(rawValue)
+                    "evidence_count" -> evidenceCount = parseIntValue(rawValue) ?: evidenceCount
+                }
+            }
+        }
+    }
+
+    private fun com.sivemor.platform.domain.Evaluacion.applySectionComment(sectionName: String, value: String?) {
+        when (sectionName) {
+            "luces" -> comentarioLuces = normalizeText(value)
+            "llantas" -> comentarioLlantas = normalizeText(value)
+            "direccion" -> comentarioDireccion = normalizeText(value)
+            "aire_frenos" -> comentarioAireFrenos = normalizeText(value)
+            "motor_emisiones" -> comentarioMotorEmisiones = normalizeText(value)
+            "otros" -> comentarioOtros = normalizeText(value)
+            "general" -> comentariosGenerales = normalizeText(value)
+        }
+    }
+
+    private fun parseEnumValue(value: String?): String? =
+        normalizeText(value)?.uppercase()?.let {
+            when (it) {
+                "APROBADO", "REPROBADO", "NO_APLICA" -> it
+                else -> throw BadRequestException("Invalid enum value: $it")
+            }
+        }
+
+    private fun parseDoubleValue(value: String?): Double? {
+        val normalized = normalizeText(value) ?: return null
+        return normalized.replace(",", ".").toDoubleOrNull()
+            ?: throw BadRequestException("Invalid numeric value: $normalized")
+    }
+
+    private fun parseIntValue(value: String?): Int? = parseDoubleValue(value)?.toInt()
+
+    private fun normalizeText(value: String?): String? = value?.trim()?.takeIf { it.isNotEmpty() }
 
     private fun requireUser(id: Long): User =
         userRepository.findById(id).orElseThrow { NotFoundException("User $id was not found") }

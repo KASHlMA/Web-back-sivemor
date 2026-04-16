@@ -339,11 +339,14 @@ data class WebVerificationListItemResponse(
     val verificacionId: Long,
     val inspectionId: Long,
     val vehiclePlate: String,
+    val vehicleVin: String,
     val clientCompanyName: String,
     val noteNumber: String,
     val approved: Boolean,
     val statusLabel: String,
-    val submittedAt: Instant
+    val submittedAt: Instant,
+    val overallResult: String?,
+    val formSections: List<InspectionFormSectionResponse>
 )
 
 data class WebVerificationUpdateRequest(
@@ -1260,11 +1263,14 @@ class AdminService(
                 verificacionId = verificacion.id ?: 0L,
                 inspectionId = verificacion.inspection.id ?: 0L,
                 vehiclePlate = verificacion.vehicleUnit.plate,
+                vehicleVin = verificacion.vehicleUnit.vin,
                 clientCompanyName = verificacion.verificationOrder.clientCompany.name,
                 noteNumber = verificacion.verificationOrder.orderNumber,
                 approved = verificacion.veredicto == VerificacionVeredicto.APROBADO,
                 statusLabel = if (verificacion.veredicto == VerificacionVeredicto.APROBADO) "Aprobado" else "Reprobado",
-                submittedAt = verificacion.fechaVerificacion
+                submittedAt = verificacion.fechaVerificacion,
+                overallResult = verificacion.inspection.overallResult?.name,
+                formSections = verificacion.inspection.toFormSections()
             )
         }
 

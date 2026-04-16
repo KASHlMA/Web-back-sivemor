@@ -50,9 +50,8 @@ export function WebVerificationsPage() {
             <table className="table-grid">
               <thead>
                 <tr>
-                  <th>ID verificacion</th>
                   <th>Placa</th>
-                  <th>Empresa</th>
+                  <th>Serie</th>
                   <th>Estado</th>
                   <th>Fecha</th>
                   <th>Acciones</th>
@@ -61,9 +60,8 @@ export function WebVerificationsPage() {
               <tbody>
                 {(query.data ?? []).map((item) => (
                   <tr key={item.verificacionId}>
-                    <td>{item.verificacionId}</td>
                     <td>{item.vehiclePlate}</td>
-                    <td>{item.clientCompanyName}</td>
+                    <td>{item.vehicleVin ?? "-"}</td>
                     <td>
                       <StatusChip label={item.statusLabel} tone={item.approved ? "success" : "danger"} />
                     </td>
@@ -167,11 +165,6 @@ export function WebVerificationDetailPage() {
       <PagePanel>
         <PageTitleBar
           title="Detalle de verificacion"
-          subtitle={
-            query.data
-              ? `Verificacion ${query.data.verificacionId} capturada desde el formulario movil.`
-              : "Consulta y edita la informacion capturada desde el formulario movil."
-          }
           actions={
             <div className="flex gap-3">
               <SecondaryActionButton type="button" onClick={() => void navigate({ to: "/web-verifications" })}>
@@ -203,26 +196,67 @@ export function WebVerificationDetailPage() {
               <SummaryField label="Fecha" value={formatDateTime(query.data.submittedAt)} />
             </section>
 
-            <section className="rounded-2xl border border-[var(--border)] bg-white p-5 shadow-[var(--shadow)]">
-              <h2 className="text-lg font-bold text-[var(--title)]">Comentarios generales</h2>
-              <textarea
-                value={overallComment}
-                onChange={(event) => setOverallComment(event.target.value)}
-                rows={4}
-                className="field-base mt-4 min-h-28"
-              />
-            </section>
+            {draftFormSections.map((section) => (
+              <section key={section.sectionId} className="rounded-2xl border border-[var(--border)] bg-white p-5 shadow-[var(--shadow)]">
+                <h2 className="text-lg font-bold text-[var(--title)]">{section.title}</h2>
+
+                <div className="mt-5 space-y-4">
+                  {(section.questions ?? []).map((question) => (
+                    <article key={question.questionId} className="rounded-2xl border border-[var(--border)] bg-[var(--panel)] p-4">
+                      <p className="text-sm font-semibold text-[var(--title)]">{question.prompt}</p>
+
+                      <div className="mt-4">
+                        <label className="text-xs font-bold uppercase tracking-[0.06em] text-[var(--shell-text)]/75">
+                          Resultado
+                        </label>
+                        <select
+                          value={String(question.answer ?? "")}
+                          onChange={(event) => handleQuestionChange(section.sectionId, question.questionId, "answer", event.target.value)}
+                          className="field-base mt-2"
+                        >
+                          <option value="">Sin valor</option>
+                          {ENUM_OPTIONS.map((option) => (
+                            <option key={option.value} value={option.value}>
+                              {option.label}
+                            </option>
+                          ))}
+                        </select>
+                      </div>
+
+                      <div className="mt-4">
+                        <label className="text-xs font-bold uppercase tracking-[0.06em] text-[var(--shell-text)]/75">
+                          Comentario
+                        </label>
+                        <textarea
+                          value={question.comment ?? ""}
+                          onChange={(event) =>
+                            handleQuestionChange(section.sectionId, question.questionId, "comment", event.target.value)
+                          }
+                          rows={3}
+                          className="field-base mt-2 min-h-24"
+                        />
+                      </div>
+                    </article>
+                  ))}
+                </div>
+
+                <div className="mt-5">
+                  <label className="text-xs font-bold uppercase tracking-[0.06em] text-[var(--shell-text)]/75">
+                    Comentario de seccion
+                  </label>
+                  <textarea
+                    value={section.note ?? ""}
+                    onChange={(event) => handleSectionNoteChange(section.sectionId, event.target.value)}
+                    rows={3}
+                    className="field-base mt-2 min-h-24"
+                  />
+                </div>
+              </section>
+            ))}
 
             <section className="rounded-2xl border border-[var(--border)] bg-white p-5 shadow-[var(--shadow)]">
               <div className="flex items-center justify-between gap-3">
-                <div>
-                  <h2 className="text-lg font-bold text-[var(--title)]">Evidencias</h2>
-                  <p className="mt-1 text-sm text-[var(--shell-text)]/80">
-                    {query.data.evidences?.length
-                      ? "Archivos capturados desde la inspeccion movil."
-                      : "Esta verificacion no tiene evidencias adjuntas."}
-                  </p>
-                </div>
+                <h2 className="text-lg font-bold text-[var(--title)]">Evidencias</h2>
                 <StatusChip
                   label={`${query.data.evidences?.length ?? 0} archivo${(query.data.evidences?.length ?? 0) === 1 ? "" : "s"}`}
                   tone="neutral"
@@ -263,74 +297,26 @@ export function WebVerificationDetailPage() {
                     </article>
                   ))}
                 </div>
-              ) : null}
+              ) : (
+                <p className="mt-4 text-sm text-[var(--shell-text)]/80">Sin evidencias adjuntas.</p>
+              )}
             </section>
 
-            {draftFormSections.map((section) => (
-              <section key={section.sectionId} className="rounded-2xl border border-[var(--border)] bg-white p-5 shadow-[var(--shadow)]">
-                <div className="flex flex-col gap-2">
-                  <h2 className="text-lg font-bold text-[var(--title)]">{section.title}</h2>
-                  {section.description ? <p className="text-sm text-[var(--shell-text)]/80">{section.description}</p> : null}
-                </div>
+            <section className="rounded-2xl border border-[var(--border)] bg-white p-5 shadow-[var(--shadow)]">
+              <h2 className="text-lg font-bold text-[var(--title)]">Comentarios</h2>
 
-                <div className="mt-4">
-                  <label className="text-xs font-bold uppercase tracking-[0.06em] text-[var(--shell-text)]/75">
-                    Comentario de seccion
-                  </label>
-                  <textarea
-                    value={section.note ?? ""}
-                    onChange={(event) => handleSectionNoteChange(section.sectionId, event.target.value)}
-                    rows={3}
-                    className="field-base mt-2 min-h-24"
-                  />
-                </div>
-
-                <div className="mt-5 space-y-4">
-                  {(section.questions ?? []).map((question) => (
-                    <article key={question.questionId} className="rounded-2xl border border-[var(--border)] bg-[var(--panel)] p-4">
-                      <div>
-                        <p className="text-sm font-semibold text-[var(--title)]">{question.prompt}</p>
-                        <p className="mt-1 text-xs uppercase tracking-[0.05em] text-[var(--shell-text)]/70">
-                          {question.code} {question.required ? "| Obligatoria" : "| Opcional"}
-                        </p>
-                      </div>
-
-                      <div className="mt-4 grid gap-3 md:grid-cols-2">
-                        <div>
-                          <label className="text-xs font-bold uppercase tracking-[0.06em] text-[var(--shell-text)]/75">
-                            Respuesta
-                          </label>
-                          <select
-                            value={String(question.answer ?? "")}
-                            onChange={(event) => handleQuestionChange(section.sectionId, question.questionId, "answer", event.target.value)}
-                            className="field-base mt-2"
-                          >
-                            <option value="">Sin valor</option>
-                            {ENUM_OPTIONS.map((option) => (
-                              <option key={option.value} value={option.value}>
-                                {option.label}
-                              </option>
-                            ))}
-                          </select>
-                        </div>
-
-                        <div className="md:col-span-2">
-                          <label className="text-xs font-bold uppercase tracking-[0.06em] text-[var(--shell-text)]/75">
-                            Comentario
-                          </label>
-                          <textarea
-                            value={question.comment ?? ""}
-                            onChange={(event) => handleQuestionChange(section.sectionId, question.questionId, "comment", event.target.value)}
-                            rows={3}
-                            className="field-base mt-2 min-h-24"
-                          />
-                        </div>
-                      </div>
-                    </article>
-                  ))}
-                </div>
-              </section>
-            ))}
+              <div className="mt-4">
+                <label className="text-xs font-bold uppercase tracking-[0.06em] text-[var(--shell-text)]/75">
+                  General
+                </label>
+                <textarea
+                  value={overallComment}
+                  onChange={(event) => setOverallComment(event.target.value)}
+                  rows={4}
+                  className="field-base mt-2 min-h-28"
+                />
+              </div>
+            </section>
           </div>
         )}
       </PagePanel>
@@ -361,6 +347,15 @@ function cloneFormSections(sections) {
 
 function formatSectionName(value) {
   return value.replaceAll("_", " ");
+}
+
+function formatAnswerValue(value) {
+  if (!value) {
+    return "Sin valor";
+  }
+
+  const option = ENUM_OPTIONS.find((item) => item.value === value);
+  return option?.label ?? String(value).replaceAll("_", " ");
 }
 
 function formatDateTime(value) {

@@ -129,7 +129,8 @@ data class ChecklistQuestionResponse(
 )
 
 data class CreateInspectionRequest(
-    @field:NotNull val orderUnitId: Long
+    val orderUnitId: Long? = null,
+    val vehicleUnitId: Long? = null
 )
 
 data class QuestionUpdateRequest(
@@ -251,7 +252,7 @@ class MobileInspectionController(
     @GetMapping("/checklists/current")
     fun currentChecklist(): ChecklistTemplateResponse = mobileInspectionService.getCurrentChecklist()
 
-    @Operation(summary = "Create a technician draft inspection for an assigned order unit")
+    @Operation(summary = "Create a technician draft inspection for an assigned order unit or registered vehicle")
     @PostMapping("/inspections")
     @ResponseStatus(HttpStatus.CREATED)
     fun createInspection(
@@ -486,11 +487,23 @@ class MobileInspectionService(
 
     @Transactional
     fun createInspection(technicianId: Long, request: CreateInspectionRequest): InspectionDraftResponse {
-        val orderUnit = orderUnitRepository.findByIdAndArchivedFalse(request.orderUnitId)
-            ?: throw NotFoundException("Order unit ${request.orderUnitId} was not found")
+        if (request.orderUnitId == null && request.vehicleUnitId == null) {
+            throw BadRequestException("Either orderUnitId or vehicleUnitId must be provided")
+        }
 
-        if (orderUnit.verificationOrder.assignedTechnician.id != technicianId) {
-            throw ForbiddenException("Inspection is not assigned to this technician")
+        val technician = requireTechnician(technicianId)
+        val orderUnit = when {
+            request.orderUnitId != null -> {
+                val unit = orderUnitRepository.findByIdAndArchivedFalse(request.orderUnitId)
+                    ?: throw NotFoundException("Order unit ${request.orderUnitId} was not found")
+
+                if (unit.verificationOrder.assignedTechnician.id != technicianId) {
+                    throw ForbiddenException("Inspection is not assigned to this technician")
+                }
+                unit
+            }
+
+            else -> requireOrCreateMobileOrderUnit(technician, request.vehicleUnitId!!)
         }
 
         val existingInspection = inspectionRepository.findByOrderUnitIdAndArchivedFalse(orderUnit.id ?: 0L)
@@ -501,7 +514,6 @@ class MobileInspectionService(
             return existingInspection.toDraftResponse()
         }
 
-        val technician = requireTechnician(technicianId)
         val inspection = Inspection().apply {
             verificationOrder = orderUnit.verificationOrder
             this.orderUnit = orderUnit
@@ -518,7 +530,11 @@ class MobileInspectionService(
             action = "CREATE_INSPECTION_DRAFT",
             entityName = "INSPECTION",
             entityId = saved.id.toString(),
-            details = mapOf("orderUnitId" to request.orderUnitId)
+            details = mapOf(
+                "orderUnitId" to (orderUnit.id ?: 0L),
+                "vehicleUnitId" to (orderUnit.vehicleUnit.id ?: 0L),
+                "source" to if (request.orderUnitId != null) "ASSIGNED_ORDER" else "DIRECT_VEHICLE"
+            )
         )
         return saved.toDraftResponse()
     }
@@ -797,6 +813,43 @@ class MobileInspectionService(
         }
 
         return vehicle
+    }
+
+    private fun requireOrCreateMobileOrderUnit(technician: com.sivemor.platform.domain.User, vehicleUnitId: Long): com.sivemor.platform.domain.OrderUnit {
+        val existingOrderUnit = orderUnitRepository
+            .findAllAssignedToTechnicianByVehicleUnitId(technician.id ?: 0L, vehicleUnitId)
+            .firstOrNull()
+        if (existingOrderUnit != null) {
+            return existingOrderUnit
+        }
+
+        val vehicle = vehicleUnitRepository.findById(vehicleUnitId)
+            .orElseThrow { NotFoundException("Vehicle $vehicleUnitId was not found") }
+        if (vehicle.archived) {
+            throw NotFoundException("Vehicle $vehicleUnitId was not found")
+        }
+
+        val region = vehicle.clientCompany.region
+            ?: throw BadRequestException("El cliente del vehiculo no tiene una region configurada")
+
+        val verificationOrder = verificationOrderRepository.save(
+            com.sivemor.platform.domain.VerificationOrder().apply {
+                orderNumber = "MOV-${vehicle.id ?: vehicleUnitId}-${Instant.now(clock).epochSecond}"
+                clientCompany = vehicle.clientCompany
+                this.region = region
+                assignedTechnician = technician
+                status = VerificationOrderStatus.IN_PROGRESS
+                scheduledAt = Instant.now(clock)
+                notes = "AUTO_GENERATED_MOBILE"
+            }
+        )
+
+        return orderUnitRepository.save(
+            com.sivemor.platform.domain.OrderUnit().apply {
+                this.verificationOrder = verificationOrder
+                this.vehicleUnit = vehicle
+            }
+        )
     }
 
     private fun validateVehicleUniqueness(

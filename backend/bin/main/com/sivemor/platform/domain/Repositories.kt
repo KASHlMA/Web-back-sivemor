@@ -67,6 +67,20 @@ interface OrderUnitRepository : JpaRepository<OrderUnit, Long> {
         """
     )
     fun findAllAssignedToTechnician(technicianId: Long): List<OrderUnit>
+
+    @EntityGraph(attributePaths = ["verificationOrder", "verificationOrder.clientCompany", "verificationOrder.region", "vehicleUnit"])
+    @Query(
+        """
+        select orderUnit from OrderUnit orderUnit
+        join orderUnit.verificationOrder ord
+        where ord.assignedTechnician.id = :technicianId
+          and orderUnit.vehicleUnit.id = :vehicleUnitId
+          and orderUnit.archived = false
+          and ord.archived = false
+        order by ord.createdAt desc
+        """
+    )
+    fun findAllAssignedToTechnicianByVehicleUnitId(technicianId: Long, vehicleUnitId: Long): List<OrderUnit>
 }
 
 interface ChecklistTemplateRepository : JpaRepository<ChecklistTemplate, Long> {

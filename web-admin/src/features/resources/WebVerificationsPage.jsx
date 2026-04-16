@@ -54,7 +54,6 @@ export function WebVerificationsPage() {
                   <th>ID verificacion</th>
                   <th>Placa</th>
                   <th>Empresa</th>
-                  <th>Numero de nota</th>
                   <th>Estado</th>
                   <th>Fecha</th>
                   <th>Acciones</th>
@@ -66,7 +65,6 @@ export function WebVerificationsPage() {
                     <td>{item.verificacionId}</td>
                     <td>{item.vehiclePlate}</td>
                     <td>{item.clientCompanyName}</td>
-                    <td>{item.noteNumber}</td>
                     <td>
                       <StatusChip label={item.statusLabel} tone={item.approved ? "success" : "danger"} />
                     </td>
@@ -156,7 +154,7 @@ export function WebVerificationDetailPage() {
           title="Detalle de verificacion"
           subtitle={
             query.data
-              ? `Verificacion ${query.data.verificacionId} para la nota ${query.data.orderNumber}.`
+              ? `Verificacion ${query.data.verificacionId} capturada desde el formulario movil.`
               : "Consulta y edita la informacion capturada desde el formulario movil."
           }
           actions={
@@ -186,7 +184,6 @@ export function WebVerificationDetailPage() {
               <SummaryField label="ID verificacion" value={query.data.verificacionId} />
               <SummaryField label="Placa" value={query.data.vehiclePlate} />
               <SummaryField label="Empresa" value={query.data.clientCompanyName} />
-              <SummaryField label="Numero de nota" value={query.data.orderNumber} />
               <SummaryField label="Resultado" value={query.data.overallResult ?? "-"} />
               <SummaryField label="Fecha" value={formatDateTime(query.data.submittedAt)} />
             </section>

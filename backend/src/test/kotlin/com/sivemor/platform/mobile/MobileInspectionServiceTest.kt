@@ -13,6 +13,7 @@ import com.sivemor.platform.domain.Role
 import com.sivemor.platform.domain.RegionRepository
 import com.sivemor.platform.domain.UserRepository
 import com.sivemor.platform.domain.Verificacion
+import com.sivemor.platform.domain.VerificationOrderRepository
 import com.sivemor.platform.domain.VerificationOrderStatus
 import com.sivemor.platform.domain.VehicleUnitRepository
 import com.sivemor.platform.service.AuditService
@@ -47,6 +48,7 @@ class MobileInspectionServiceTest {
     @MockK private lateinit var vehicleUnitRepository: VehicleUnitRepository
     @MockK private lateinit var clientCompanyRepository: ClientCompanyRepository
     @MockK private lateinit var regionRepository: RegionRepository
+    @MockK private lateinit var verificationOrderRepository: VerificationOrderRepository
     @MockK private lateinit var checklistTemplateRepository: ChecklistTemplateRepository
     @MockK private lateinit var inspectionRepository: InspectionRepository
     @MockK private lateinit var userRepository: UserRepository
@@ -64,6 +66,7 @@ class MobileInspectionServiceTest {
             vehicleUnitRepository,
             clientCompanyRepository,
             regionRepository,
+            verificationOrderRepository,
             checklistTemplateRepository,
             inspectionRepository,
             userRepository,
@@ -107,6 +110,7 @@ class MobileInspectionServiceTest {
             template = templateWithSection()
         )
 
+        every { userRepository.findById(2L) } returns java.util.Optional.of(technician)
         every { orderUnitRepository.findByIdAndArchivedFalse(5L) } returns orderUnit
         every { inspectionRepository.findByOrderUnitIdAndArchivedFalse(5L) } returns existingDraft
 
@@ -122,6 +126,7 @@ class MobileInspectionServiceTest {
         val order = verificationOrder(id = 4L, technician = assignedTechnician)
         val orderUnit = orderUnit(id = 5L, order = order, vehicle = vehicle(id = 6L, client = order.clientCompany))
 
+        every { userRepository.findById(99L) } returns java.util.Optional.of(user(id = 99L, role = Role.TECHNICIAN))
         every { orderUnitRepository.findByIdAndArchivedFalse(5L) } returns orderUnit
         every { inspectionRepository.findByOrderUnitIdAndArchivedFalse(5L) } returns null
 

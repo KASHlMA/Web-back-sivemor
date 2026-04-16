@@ -230,6 +230,23 @@ class MobileInspectionController(
         @Valid @RequestBody request: CreateMobileVehicleRequest
     ): MobileVehicleResponse = mobileInspectionService.createVehicle(principal.id, request)
 
+    @Operation(summary = "Load a vehicle unit from the mobile app")
+    @GetMapping("/vehicles/{id}")
+    fun getVehicle(
+        @Parameter(hidden = true)
+        @AuthenticationPrincipal principal: AppUserPrincipal,
+        @PathVariable id: Long
+    ): MobileVehicleResponse = mobileInspectionService.getVehicle(principal.id, id)
+
+    @Operation(summary = "Update a vehicle unit from the mobile app")
+    @PutMapping("/vehicles/{id}")
+    fun updateVehicle(
+        @Parameter(hidden = true)
+        @AuthenticationPrincipal principal: AppUserPrincipal,
+        @PathVariable id: Long,
+        @Valid @RequestBody request: CreateMobileVehicleRequest
+    ): MobileVehicleResponse = mobileInspectionService.updateVehicle(principal.id, id, request)
+
     @Operation(summary = "Return the active checklist template with sections and questions")
     @GetMapping("/checklists/current")
     fun currentChecklist(): ChecklistTemplateResponse = mobileInspectionService.getCurrentChecklist()
@@ -389,27 +406,17 @@ class MobileInspectionService(
     @Transactional
     fun createVehicle(technicianId: Long, request: CreateMobileVehicleRequest): MobileVehicleResponse {
         val technician = requireTechnician(technicianId)
-        val clientCompany = clientCompanyRepository.findById(request.clientCompanyId)
-            .orElseThrow { NotFoundException("Client company ${request.clientCompanyId} was not found") }
-        val verificationOrder = request.verificationOrderId?.let { verificationOrderId ->
-            verificationOrderRepository.findById(verificationOrderId)
-                .orElseThrow { NotFoundException("Verification order $verificationOrderId was not found") }
-                .also {
-                    if (it.assignedTechnician.id != technicianId) {
-                        throw ForbiddenException("Verification order is not assigned to this technician")
-                    }
-
-                    if (it.clientCompany.id != clientCompany.id) {
-                        throw BadRequestException("Vehicle client does not match the selected verification order")
-                    }
-                }
-        }
+        val normalizedPlate = request.plate.trim().uppercase()
+        val normalizedVin = request.vin.trim().uppercase()
+        validateVehicleUniqueness(normalizedPlate, normalizedVin)
+        val clientCompany = requireClientCompany(request.clientCompanyId)
+        val verificationOrder = requireMobileVerificationOrder(technicianId, request.verificationOrderId, clientCompany.id ?: 0L)
 
         val vehicle = vehicleUnitRepository.save(
             VehicleUnit().apply {
                 this.clientCompany = clientCompany
-                plate = request.plate.trim().uppercase()
-                vin = request.vin.trim().uppercase()
+                plate = normalizedPlate
+                vin = normalizedVin
                 category = request.category
                 brand = request.brand.trim()
                 model = request.model.trim()
@@ -438,6 +445,40 @@ class MobileInspectionService(
                 )
             )
         }.toMobileVehicleResponse()
+    }
+
+    @Transactional(readOnly = true)
+    fun getVehicle(technicianId: Long, vehicleId: Long): MobileVehicleResponse =
+        requireMobileVehicle(technicianId, vehicleId).toMobileVehicleResponse()
+
+    @Transactional
+    fun updateVehicle(technicianId: Long, vehicleId: Long, request: CreateMobileVehicleRequest): MobileVehicleResponse {
+        val technician = requireTechnician(technicianId)
+        val normalizedPlate = request.plate.trim().uppercase()
+        val normalizedVin = request.vin.trim().uppercase()
+        validateVehicleUniqueness(normalizedPlate, normalizedVin, currentVehicleId = vehicleId)
+
+        val vehicle = requireMobileVehicle(technicianId, vehicleId).apply {
+            clientCompany = requireClientCompany(request.clientCompanyId)
+            plate = normalizedPlate
+            vin = normalizedVin
+            category = request.category
+            brand = request.brand.trim()
+            model = request.model.trim()
+        }
+
+        auditService.log(
+            actor = technician,
+            action = "UPDATE_MOBILE_VEHICLE",
+            entityName = "VEHICLE_UNIT",
+            entityId = vehicle.id.toString(),
+            details = mapOf(
+                "plate" to vehicle.plate,
+                "verificationOrderId" to request.verificationOrderId
+            )
+        )
+
+        return vehicle.toMobileVehicleResponse()
     }
 
     @Transactional(readOnly = true)
@@ -718,6 +759,61 @@ class MobileInspectionService(
 
     private fun requireTechnician(id: Long) =
         userRepository.findById(id).orElseThrow { NotFoundException("Technician $id was not found") }
+
+    private fun requireClientCompany(id: Long) =
+        clientCompanyRepository.findById(id)
+            .orElseThrow { NotFoundException("Client company $id was not found") }
+
+    private fun requireMobileVerificationOrder(
+        technicianId: Long,
+        verificationOrderId: Long?,
+        clientCompanyId: Long
+    ) = verificationOrderId?.let { id ->
+        verificationOrderRepository.findById(id)
+            .orElseThrow { NotFoundException("Verification order $id was not found") }
+            .also {
+                if (it.assignedTechnician.id != technicianId) {
+                    throw ForbiddenException("Verification order is not assigned to this technician")
+                }
+
+                if (it.clientCompany.id != clientCompanyId) {
+                    throw BadRequestException("Vehicle client does not match the selected verification order")
+                }
+            }
+    }
+
+    private fun requireMobileVehicle(technicianId: Long, vehicleId: Long): VehicleUnit {
+        val vehicle = vehicleUnitRepository.findById(vehicleId)
+            .orElseThrow { NotFoundException("Vehicle $vehicleId was not found") }
+
+        if (vehicle.archived) {
+            throw NotFoundException("Vehicle $vehicleId was not found")
+        }
+
+        val assignedToTechnician = orderUnitRepository.findAllAssignedToTechnician(technicianId)
+            .any { orderUnit -> orderUnit.vehicleUnit.id == vehicleId }
+        if (!assignedToTechnician) {
+            throw ForbiddenException("Vehicle is not assigned to this technician")
+        }
+
+        return vehicle
+    }
+
+    private fun validateVehicleUniqueness(
+        plate: String,
+        vin: String,
+        currentVehicleId: Long? = null
+    ) {
+        val plateOwner = vehicleUnitRepository.findByPlateIgnoreCaseAndArchivedFalse(plate)
+        if (plateOwner != null && plateOwner.id != currentVehicleId) {
+            throw BadRequestException("Ya existe un vehiculo con esa placa")
+        }
+
+        val vinOwner = vehicleUnitRepository.findByVinIgnoreCaseAndArchivedFalse(vin)
+        if (vinOwner != null && vinOwner.id != currentVehicleId) {
+            throw BadRequestException("Ya existe un vehiculo con ese VIN")
+        }
+    }
 
     private fun requireAvailableInspection(technicianId: Long, inspectionId: Long): Inspection {
         val inspection = inspectionRepository.findDetailedById(inspectionId)

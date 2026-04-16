@@ -966,28 +966,38 @@ class AdminService(
     fun listVehicles(): List<VehicleResponse> = vehicleUnitRepository.findAllByArchivedFalseOrderByPlateAsc().map { it.toResponse() }
 
     @Transactional
-    fun createVehicle(actorId: Long, request: VehicleUpsertRequest): VehicleResponse =
-        vehicleUnitRepository.save(
+    fun createVehicle(actorId: Long, request: VehicleUpsertRequest): VehicleResponse {
+        val normalizedPlate = request.plate.trim().uppercase()
+        val normalizedVin = request.vin.trim().uppercase()
+        validateVehicleUniqueness(normalizedPlate, normalizedVin)
+
+        return vehicleUnitRepository.save(
             VehicleUnit().apply {
                 clientCompany = requireClient(request.clientCompanyId)
-                plate = request.plate.trim().uppercase()
-                vin = request.vin.trim().uppercase()
+                plate = normalizedPlate
+                vin = normalizedVin
                 category = request.category
                 brand = request.brand.trim()
                 model = request.model.trim()
             }
-        ).alsoSaved(actorId, "CREATE_VEHICLE", request.plate).toResponse()
+        ).alsoSaved(actorId, "CREATE_VEHICLE", normalizedPlate).toResponse()
+    }
 
     @Transactional
-    fun updateVehicle(actorId: Long, id: Long, request: VehicleUpsertRequest): VehicleResponse =
-        requireVehicle(id).apply {
+    fun updateVehicle(actorId: Long, id: Long, request: VehicleUpsertRequest): VehicleResponse {
+        val normalizedPlate = request.plate.trim().uppercase()
+        val normalizedVin = request.vin.trim().uppercase()
+        validateVehicleUniqueness(normalizedPlate, normalizedVin, currentVehicleId = id)
+
+        return requireVehicle(id).apply {
             clientCompany = requireClient(request.clientCompanyId)
-            plate = request.plate.trim().uppercase()
-            vin = request.vin.trim().uppercase()
+            plate = normalizedPlate
+            vin = normalizedVin
             category = request.category
             brand = request.brand.trim()
             model = request.model.trim()
-        }.alsoSaved(actorId, "UPDATE_VEHICLE", request.plate).toResponse()
+        }.alsoSaved(actorId, "UPDATE_VEHICLE", normalizedPlate).toResponse()
+    }
 
     @Transactional
     fun archiveVehicle(actorId: Long, id: Long) {
@@ -1741,6 +1751,22 @@ class AdminService(
                 throw BadRequestException("Vehicle $id does not belong to client $clientId")
             }
         }
+
+    private fun validateVehicleUniqueness(
+        plate: String,
+        vin: String,
+        currentVehicleId: Long? = null
+    ) {
+        val plateOwner = vehicleUnitRepository.findByPlateIgnoreCaseAndArchivedFalse(plate)
+        if (plateOwner != null && plateOwner.id != currentVehicleId) {
+            throw BadRequestException("Ya existe un vehiculo con esa placa")
+        }
+
+        val vinOwner = vehicleUnitRepository.findByVinIgnoreCaseAndArchivedFalse(vin)
+        if (vinOwner != null && vinOwner.id != currentVehicleId) {
+            throw BadRequestException("Ya existe un vehiculo con ese VIN")
+        }
+    }
 
     private fun digitsOnly(value: String): String = value.filter(Char::isDigit)
 

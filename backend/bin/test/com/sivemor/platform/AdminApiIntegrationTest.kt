@@ -1,5 +1,7 @@
 package com.sivemor.platform
 
+import com.sivemor.platform.support.createClient
+import com.sivemor.platform.support.createVehicle
 import com.sivemor.platform.support.createRegion
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Test
@@ -67,6 +69,34 @@ class AdminApiIntegrationTest : IntegrationTestSupport() {
             header("Authorization", technicianToken)
         }.andExpect {
             status { isForbidden() }
+        }
+    }
+
+    @Test
+    fun `updating a vehicle with duplicate plate returns bad request instead of server error`() {
+        val adminToken = bearerTokenForUser("admin")
+        val suffix = System.currentTimeMillis()
+        val regionId = createRegion("Region Vehicle $suffix", adminToken)
+        val clientId = createClient("Cliente Vehicle $suffix", "RFC$suffix", regionId, adminToken)
+        val vehicleOneId = createVehicle(clientId, "VEH-$suffix-A", "VIN-$suffix-A", adminToken)
+        createVehicle(clientId, "VEH-$suffix-B", "VIN-$suffix-B", adminToken)
+
+        mockMvc.put("/api/v1/admin/vehicles/$vehicleOneId") {
+            header("Authorization", adminToken)
+            contentType = MediaType.APPLICATION_JSON
+            content = """
+                {
+                  "clientCompanyId": $clientId,
+                  "plate": "VEH-$suffix-B",
+                  "vin": "VIN-$suffix-A",
+                  "category": "N2",
+                  "brand": "Freightliner",
+                  "model": "M2 106"
+                }
+            """.trimIndent()
+        }.andExpect {
+            status { isBadRequest() }
+            jsonPath("$.message") { value("Ya existe un vehiculo con esa placa") }
         }
     }
 }

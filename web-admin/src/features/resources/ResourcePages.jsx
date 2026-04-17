@@ -552,7 +552,7 @@ export function OrdersPage() {
               clientCompanyId: Number(row.clientCompanyId),
               regionId: Number(row.regionId),
               assignedTechnicianId: Number(row.assignedTechnicianId),
-              unitIds: (row.units ?? []).map((item) => Number(item.vehicleUnitId)),
+              unitIds: [],
               scheduledAt: row.scheduledAt,
               notes: row.notes ?? null,
               status: "COMPLETED"

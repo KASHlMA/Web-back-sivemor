@@ -199,7 +199,7 @@ data class OrderUpsertRequest(
     @field:NotNull val clientCompanyId: Long,
     @field:NotNull val regionId: Long,
     @field:NotNull val assignedTechnicianId: Long,
-    @field:NotNull @field:NotEmpty val unitIds: List<Long>,
+    val unitIds: List<Long> = emptyList(),
     @field:NotNull val scheduledAt: Instant,
     val notes: String? = null,
     val status: VerificationOrderStatus? = null
@@ -1097,6 +1097,9 @@ class AdminService(
 
     @Transactional
     fun createOrder(actorId: Long, request: OrderUpsertRequest): OrderResponse {
+        if (request.unitIds.isEmpty()) {
+            throw BadRequestException("Debes seleccionar al menos una unidad")
+        }
         val technician = requireTechnician(request.assignedTechnicianId)
         val order = VerificationOrder().apply {
             orderNumber = request.orderNumber.trim().uppercase()
@@ -1128,11 +1131,13 @@ class AdminService(
         order.scheduledAt = request.scheduledAt
         order.notes = request.notes?.trim()
         order.status = request.status ?: order.status
-        order.units.clear()
-        order.units += request.unitIds.distinct().map { unitId ->
-            OrderUnit().apply {
-                verificationOrder = order
-                vehicleUnit = requireVehicleForClient(unitId, order.clientCompany.id ?: 0L)
+        if (request.unitIds.isNotEmpty()) {
+            order.units.clear()
+            order.units += request.unitIds.distinct().map { unitId ->
+                OrderUnit().apply {
+                    verificationOrder = order
+                    vehicleUnit = requireVehicleForClient(unitId, order.clientCompany.id ?: 0L)
+                }
             }
         }
         return order.alsoSaved(actorId, "UPDATE_ORDER", order.orderNumber).toResponse()
@@ -1821,6 +1826,18 @@ class AdminService(
                 "llantas_tuercas_trasera_derecha" to llantasTuercasTraseraDerecha,
                 "llantas_tuercas_trasera_derecha_faltantes" to llantasTuercasTraseraDerechaFaltantes,
                 "llantas_tuercas_trasera_derecha_rotas" to llantasTuercasTraseraDerechaRotas,
+                "llantas_birlos_delantera_izquierda_count" to llantasBirlosDelanteraIzquierdaCount,
+                "llantas_birlos_delantera_izquierda_selected" to llantasBirlosDelanteraIzquierdaSelected,
+                "llantas_birlos_delantera_derecha_count" to llantasBirlosDelanteraDerechaCount,
+                "llantas_birlos_delantera_derecha_selected" to llantasBirlosDelanteraDerechaSelected,
+                "llantas_birlos_trasera_izquierda_count" to llantasBirlosTraseraIzquierdaCount,
+                "llantas_birlos_trasera_izquierda_selected" to llantasBirlosTraseraIzquierdaSelected,
+                "llantas_birlos_trasera_derecha_count" to llantasBirlosTraseraDerechaCount,
+                "llantas_birlos_trasera_derecha_selected" to llantasBirlosTraseraDerechaSelected,
+                "llantas_birlos_media_izquierda_count" to llantasBirlosMediaIzquierdaCount,
+                "llantas_birlos_media_izquierda_selected" to llantasBirlosMediaIzquierdaSelected,
+                "llantas_birlos_media_derecha_count" to llantasBirlosMediaDerechaCount,
+                "llantas_birlos_media_derecha_selected" to llantasBirlosMediaDerechaSelected,
                 "comment" to comentarioLlantas
             ),
             "direccion" to linkedMapOf(
@@ -1901,39 +1918,82 @@ class AdminService(
             }
     }
 
-    private fun com.sivemor.platform.domain.Evaluacion.failureCount(): Int = listOfNotNull(
-        lucesGalibo,
-        lucesAltas,
-        lucesBajas,
-        lucesDemarcadorasDelanteras,
-        lucesDemarcadorasTraseras,
-        lucesIndicadoras,
-        faroIzquierdo,
-        faroDerecho,
-        lucesDireccionalesDelanteras,
-        lucesDireccionalesTraseras,
-        llantasRinesDelanteros,
-        llantasRinesTraseros,
-        llantasMasasDelanteras,
-        llantasMasasTraseras,
-        llantasTuercasDelanteraIzquierda,
-        llantasTuercasDelanteraDerecha,
-        llantasTuercasTraseraIzquierda,
-        llantasTuercasTraseraDerecha,
-        direccionBrazoPitman,
-        direccionManijasPuertas,
-        direccionChavetas,
-        aireFrenosCompresor,
-        aireFrenosTanquesAire,
-        motorEmisionesHumo,
-        motorEmisionesGobernado,
-        otrosCajaDireccion,
-        otrosDepositoAceite,
-        otrosParabrisas,
-        otrosLimpiaparabrisas,
-        otrosJuego,
-        otrosEscape
-    ).count { it == "REPROBADO" }
+    private fun com.sivemor.platform.domain.Evaluacion.failureCount(): Int {
+        var failures = listOfNotNull(
+            lucesGalibo,
+            lucesAltas,
+            lucesBajas,
+            lucesDemarcadorasDelanteras,
+            lucesDemarcadorasTraseras,
+            lucesIndicadoras,
+            faroIzquierdo,
+            faroDerecho,
+            lucesDireccionalesDelanteras,
+            lucesDireccionalesTraseras,
+            llantasRinesDelanteros,
+            llantasRinesTraseros,
+            llantasMasasDelanteras,
+            llantasMasasTraseras,
+            llantasTuercasDelanteraIzquierda,
+            llantasTuercasDelanteraDerecha,
+            llantasTuercasTraseraIzquierda,
+            llantasTuercasTraseraDerecha,
+            direccionBrazoPitman,
+            direccionManijasPuertas,
+            direccionChavetas,
+            aireFrenosCompresor,
+            aireFrenosTanquesAire,
+            motorEmisionesHumo,
+            motorEmisionesGobernado,
+            otrosCajaDireccion,
+            otrosDepositoAceite,
+            otrosParabrisas,
+            otrosLimpiaparabrisas,
+            otrosJuego,
+            otrosEscape
+        ).count { it == "REPROBADO" }
+
+        failures += listOf(
+            llantasPresionDelanteraIzquierda,
+            llantasPresionDelanteraDerecha,
+            llantasPresionTraseraIzquierda1,
+            llantasPresionTraseraIzquierda2,
+            llantasPresionTraseraDerecha1,
+            llantasPresionTraseraDerecha2
+        ).count { it != null && it < 80.0 }
+
+        failures += listOf(
+            llantasProfundidadDelanteraIzquierda,
+            llantasProfundidadDelanteraDerecha
+        ).count { it != null && it < 3.2 }
+
+        failures += listOf(
+            llantasProfundidadTraseraIzquierda1,
+            llantasProfundidadTraseraIzquierda2,
+            llantasProfundidadTraseraDerecha1,
+            llantasProfundidadTraseraDerecha2
+        ).count { it != null && it < 1.6 }
+
+        failures += listOf(
+            birlosMissingFailure(llantasBirlosDelanteraIzquierdaCount, llantasBirlosDelanteraIzquierdaSelected),
+            birlosMissingFailure(llantasBirlosDelanteraDerechaCount, llantasBirlosDelanteraDerechaSelected),
+            birlosMissingFailure(llantasBirlosMediaIzquierdaCount, llantasBirlosMediaIzquierdaSelected),
+            birlosMissingFailure(llantasBirlosMediaDerechaCount, llantasBirlosMediaDerechaSelected),
+            birlosMissingFailure(llantasBirlosTraseraIzquierdaCount, llantasBirlosTraseraIzquierdaSelected),
+            birlosMissingFailure(llantasBirlosTraseraDerechaCount, llantasBirlosTraseraDerechaSelected)
+        ).count { it }
+
+        val tiempoCargaPsi = aireFrenosTiempoCargaPsi
+        if (tiempoCargaPsi != null && tiempoCargaPsi !in 70.0..120.0) {
+            failures += 1
+        }
+        val tiempoCarga = aireFrenosTiempoCargaTiempo
+        if (tiempoCarga != null && tiempoCarga >= 120.0) {
+            failures += 1
+        }
+
+        return failures
+    }
 
     private fun com.sivemor.platform.domain.Evaluacion.applySectionUpdates(
         updates: Map<String, Map<String, String?>>
@@ -1979,6 +2039,18 @@ class AdminService(
                     "llantas_tuercas_trasera_derecha" -> llantasTuercasTraseraDerecha = parseEnumValue(rawValue)
                     "llantas_tuercas_trasera_derecha_faltantes" -> llantasTuercasTraseraDerechaFaltantes = parseIntValue(rawValue)
                     "llantas_tuercas_trasera_derecha_rotas" -> llantasTuercasTraseraDerechaRotas = parseIntValue(rawValue)
+                    "llantas_birlos_delantera_izquierda_count" -> llantasBirlosDelanteraIzquierdaCount = parseBirlosCountValue(rawValue)
+                    "llantas_birlos_delantera_izquierda_selected" -> llantasBirlosDelanteraIzquierdaSelected = parseBirlosSelectionValue(rawValue)
+                    "llantas_birlos_delantera_derecha_count" -> llantasBirlosDelanteraDerechaCount = parseBirlosCountValue(rawValue)
+                    "llantas_birlos_delantera_derecha_selected" -> llantasBirlosDelanteraDerechaSelected = parseBirlosSelectionValue(rawValue)
+                    "llantas_birlos_trasera_izquierda_count" -> llantasBirlosTraseraIzquierdaCount = parseBirlosCountValue(rawValue)
+                    "llantas_birlos_trasera_izquierda_selected" -> llantasBirlosTraseraIzquierdaSelected = parseBirlosSelectionValue(rawValue)
+                    "llantas_birlos_trasera_derecha_count" -> llantasBirlosTraseraDerechaCount = parseBirlosCountValue(rawValue)
+                    "llantas_birlos_trasera_derecha_selected" -> llantasBirlosTraseraDerechaSelected = parseBirlosSelectionValue(rawValue)
+                    "llantas_birlos_media_izquierda_count" -> llantasBirlosMediaIzquierdaCount = parseBirlosCountValue(rawValue)
+                    "llantas_birlos_media_izquierda_selected" -> llantasBirlosMediaIzquierdaSelected = parseBirlosSelectionValue(rawValue)
+                    "llantas_birlos_media_derecha_count" -> llantasBirlosMediaDerechaCount = parseBirlosCountValue(rawValue)
+                    "llantas_birlos_media_derecha_selected" -> llantasBirlosMediaDerechaSelected = parseBirlosSelectionValue(rawValue)
                     "direccion_brazo_pitman" -> direccionBrazoPitman = parseEnumValue(rawValue)
                     "direccion_manijas_puertas" -> direccionManijasPuertas = parseEnumValue(rawValue)
                     "direccion_chavetas" -> direccionChavetas = parseEnumValue(rawValue)
@@ -2073,6 +2145,42 @@ class AdminService(
     }
 
     private fun parseIntValue(value: String?): Int? = parseDoubleValue(value)?.toInt()
+
+    private fun parseBirlosCountValue(value: String?): Int? {
+        val parsed = parseIntValue(value) ?: return null
+        if (parsed !in 0..6) {
+            throw BadRequestException("La cantidad de birlos debe estar entre 0 y 8")
+        }
+        return parsed
+    }
+
+    private fun parseBirlosSelectionValue(value: String?): String? {
+        val normalized = normalizeText(value) ?: return null
+        if (normalized.isBlank()) {
+            return null
+        }
+        val cleaned = normalized.split(",")
+            .mapNotNull { token -> token.trim().toIntOrNull() }
+            .onEach {
+                if (it !in 1..8) {
+                    throw BadRequestException("Cada birlo seleccionado debe estar entre 1 y 8")
+                }
+            }
+            .distinct()
+            .sorted()
+        return if (cleaned.isEmpty()) null else cleaned.joinToString(",")
+    }
+
+    private fun birlosMissingFailure(expectedCount: Int?, selected: String?): Boolean {
+        val count = expectedCount ?: return false
+        val selectedCount = selected
+            ?.split(",")
+            ?.mapNotNull { it.trim().toIntOrNull() }
+            ?.distinct()
+            ?.count()
+            ?: 0
+        return (count - selectedCount) > 2
+    }
 
     private fun normalizeText(value: String?): String? = value?.trim()?.takeIf { it.isNotEmpty() }
 

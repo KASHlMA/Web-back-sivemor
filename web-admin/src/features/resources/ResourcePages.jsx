@@ -537,6 +537,39 @@ export function OrdersPage() {
       title="Notas"
       endpoint="orders"
       queryKey={["orders"]}
+      bulkActions={[
+        {
+          key: "complete",
+          label: "Marcar como completadas",
+          confirmTitle: "Completar notas seleccionadas",
+          confirmDescription: (rows) =>
+            `Se marcaran como completadas ${rows.length} nota${rows.length === 1 ? "" : "s"} seleccionada${rows.length === 1 ? "" : "s"}.`,
+          confirmLabel: "Completar",
+          successMessage: "Notas actualizadas correctamente",
+          action: (row) =>
+            api.put(`/admin/orders/${row.id}`, {
+              orderNumber: row.orderNumber,
+              clientCompanyId: Number(row.clientCompanyId),
+              regionId: Number(row.regionId),
+              assignedTechnicianId: Number(row.assignedTechnicianId),
+              unitIds: (row.units ?? []).map((item) => Number(item.vehicleUnitId)),
+              scheduledAt: row.scheduledAt,
+              notes: row.notes ?? null,
+              status: "COMPLETED"
+            })
+        },
+        {
+          key: "delete",
+          label: "Eliminar seleccionadas",
+          confirmTitle: "Eliminar notas seleccionadas",
+          confirmDescription: (rows) =>
+            `Se eliminaran ${rows.length} nota${rows.length === 1 ? "" : "s"} seleccionada${rows.length === 1 ? "" : "s"}. Esta accion no se puede deshacer.`,
+          confirmLabel: "Eliminar",
+          successMessage: "Notas eliminadas correctamente",
+          danger: true,
+          action: (row) => api.delete(`/admin/orders/${row.id}`)
+        }
+      ]}
       columns={[
         { header: "Nota", render: (row) => renderLinkedText(row.orderNumber), searchableText: (row) => row.orderNumber },
         { header: "Empresa", render: (row) => row.clientCompanyName, searchableText: (row) => row.clientCompanyName },
@@ -649,6 +682,38 @@ export function PaymentsPage() {
       deleteDialogTitle="Eliminar transaccion"
       deleteDialogDescription="Deseas eliminar esta transaccion?"
       deleteSuccessMessage="Transaccion eliminada correctamente"
+      bulkActions={[
+        {
+          key: "approve",
+          label: "Marcar como aprobadas",
+          confirmTitle: "Aprobar transacciones seleccionadas",
+          confirmDescription: (rows) =>
+            `Se marcaran como aprobadas ${rows.length} transaccion${rows.length === 1 ? "" : "es"} seleccionada${rows.length === 1 ? "" : "s"}.`,
+          confirmLabel: "Aprobar",
+          successMessage: "Transacciones actualizadas correctamente",
+          action: (row) =>
+            api.put(`/admin/payments/${row.id}`, {
+              verificationOrderId: Number(row.verificationOrderId),
+              paymentType: row.paymentType,
+              amount: Number(row.amount),
+              status: "APPROVED",
+              depositAccount: row.depositAccount ?? null,
+              invoiceNumber: row.invoiceNumber ?? null,
+              paidAt: row.paidAt ?? null
+            })
+        },
+        {
+          key: "delete",
+          label: "Eliminar seleccionadas",
+          confirmTitle: "Eliminar transacciones seleccionadas",
+          confirmDescription: (rows) =>
+            `Se eliminaran ${rows.length} transaccion${rows.length === 1 ? "" : "es"} seleccionada${rows.length === 1 ? "" : "s"}. Esta accion no se puede deshacer.`,
+          confirmLabel: "Eliminar",
+          successMessage: "Transacciones eliminadas correctamente",
+          danger: true,
+          action: (row) => api.delete(`/admin/payments/${row.id}`)
+        }
+      ]}
       columns={[
         {
           header: "Id nota",
@@ -763,6 +828,38 @@ export function PhysicalDocumentOrdersPage() {
       deleteDialogTitle="Eliminar pedido"
       deleteDialogDescription="Deseas eliminar este pedido?"
       deleteSuccessMessage="Pedido eliminado correctamente"
+      bulkActions={[
+        {
+          key: "deliver",
+          label: "Marcar como entregados",
+          confirmTitle: "Completar pedidos seleccionados",
+          confirmDescription: (rows) =>
+            `Se marcaran como entregados ${rows.length} pedido${rows.length === 1 ? "" : "s"} seleccionada${rows.length === 1 ? "" : "s"}.`,
+          confirmLabel: "Entregar",
+          successMessage: "Pedidos actualizados correctamente",
+          action: (row) =>
+            api.put(`/admin/physical-document-orders/${row.id}`, {
+              verificationOrderId: Number(row.verificationOrderId),
+              shippedAt: row.shippedAt,
+              trackingNumber: row.trackingNumber ?? null,
+              status: "DELIVERED",
+              receivedBy: row.receivedBy ?? null,
+              photoData: row.photoData ?? null,
+              comment: row.comment ?? null
+            })
+        },
+        {
+          key: "delete",
+          label: "Eliminar seleccionados",
+          confirmTitle: "Eliminar pedidos seleccionados",
+          confirmDescription: (rows) =>
+            `Se eliminaran ${rows.length} pedido${rows.length === 1 ? "" : "s"} seleccionada${rows.length === 1 ? "" : "s"}. Esta accion no se puede deshacer.`,
+          confirmLabel: "Eliminar",
+          successMessage: "Pedidos eliminados correctamente",
+          danger: true,
+          action: (row) => api.delete(`/admin/physical-document-orders/${row.id}`)
+        }
+      ]}
       columns={[
         { header: "Folio de nota", render: (row) => renderLinkedText(row.noteNumber), searchableText: (row) => row.noteNumber },
         { header: "Fecha de envio", render: (row) => formatDateTime(row.shippedAt), searchableText: (row) => row.shippedAt },

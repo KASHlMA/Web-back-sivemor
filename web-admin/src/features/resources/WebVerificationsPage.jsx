@@ -39,6 +39,44 @@ const FORM_SECTION_CONFIG = [
   {
     key: "llantas",
     title: "Llantas",
+    birlosEvaluators: [
+      {
+        key: "delantera_izquierda",
+        title: "Delantera izquierda",
+        countCode: "llantas_birlos_delantera_izquierda_count",
+        selectedCode: "llantas_birlos_delantera_izquierda_selected"
+      },
+      {
+        key: "delantera_derecha",
+        title: "Delantera derecha",
+        countCode: "llantas_birlos_delantera_derecha_count",
+        selectedCode: "llantas_birlos_delantera_derecha_selected"
+      },
+      {
+        key: "trasera_izquierda",
+        title: "Trasera izquierda",
+        countCode: "llantas_birlos_trasera_izquierda_count",
+        selectedCode: "llantas_birlos_trasera_izquierda_selected"
+      },
+      {
+        key: "trasera_derecha",
+        title: "Trasera derecha",
+        countCode: "llantas_birlos_trasera_derecha_count",
+        selectedCode: "llantas_birlos_trasera_derecha_selected"
+      },
+      {
+        key: "media_izquierda",
+        title: "Media izquierda",
+        countCode: "llantas_birlos_media_izquierda_count",
+        selectedCode: "llantas_birlos_media_izquierda_selected"
+      },
+      {
+        key: "media_derecha",
+        title: "Media derecha",
+        countCode: "llantas_birlos_media_derecha_count",
+        selectedCode: "llantas_birlos_media_derecha_selected"
+      }
+    ],
     questions: [
       { code: "llantas_rines_delanteros", prompt: "Llantas rines delanteros" },
       { code: "llantas_rines_traseros", prompt: "Llantas rines traseros" },
@@ -343,6 +381,64 @@ function EvaluationDetailPage({ detailKey, detailId, loadDetail, backTo }) {
     );
   };
 
+  const handleBirlosCountChange = (sectionId, evaluatorKey, value) => {
+    const nextCount = Number.parseInt(value, 10);
+    setDraftFormSections((current) =>
+      current.map((section) => {
+        if (section.sectionId !== sectionId) {
+          return section;
+        }
+
+        return {
+          ...section,
+          birlosEvaluators: (section.birlosEvaluators ?? []).map((evaluator) => {
+            if (evaluator.key !== evaluatorKey) {
+              return evaluator;
+            }
+
+            const normalizedCount = Number.isNaN(nextCount) ? 0 : Math.min(Math.max(nextCount, 0), 8);
+            return {
+              ...evaluator,
+              count: normalizedCount,
+              selected: evaluator.selected.filter((index) => index <= normalizedCount)
+            };
+          })
+        };
+      })
+    );
+  };
+
+  const handleBirloToggle = (sectionId, evaluatorKey, birloIndex) => {
+    setDraftFormSections((current) =>
+      current.map((section) => {
+        if (section.sectionId !== sectionId) {
+          return section;
+        }
+
+        return {
+          ...section,
+          birlosEvaluators: (section.birlosEvaluators ?? []).map((evaluator) => {
+            if (evaluator.key !== evaluatorKey || birloIndex > evaluator.count) {
+              return evaluator;
+            }
+
+            const selectedSet = new Set(evaluator.selected);
+            if (selectedSet.has(birloIndex)) {
+              selectedSet.delete(birloIndex);
+            } else {
+              selectedSet.add(birloIndex);
+            }
+
+            return {
+              ...evaluator,
+              selected: Array.from(selectedSet).sort((left, right) => left - right)
+            };
+          })
+        };
+      })
+    );
+  };
+
   const handleSave = () => {
     setFeedbackMessage("");
     mutation.mutate({
@@ -401,17 +497,38 @@ function EvaluationDetailPage({ detailKey, detailId, loadDetail, backTo }) {
                   <h2 className="text-lg font-bold text-[var(--title)]">
                     {sectionIndex + 1}. {section.title}
                   </h2>
-                  <p className="text-sm font-medium text-[var(--shell-text)]/80">
-                    {section.questions?.length ?? 0} punto{(section.questions?.length ?? 0) === 1 ? "" : "s"}
-                  </p>
+                  <StatusChip
+                    label={buildSectionSummaryLabel(section)}
+                    tone={getSectionTone(section)}
+                  />
                 </div>
 
                 <div className="mt-5 space-y-4">
+                  {(section.birlosEvaluators?.length ?? 0) > 0 ? (
+                    <div className="grid gap-4 xl:grid-cols-2">
+                      {section.birlosEvaluators.map((evaluator) => (
+                        <BirlosEvaluatorCard
+                          key={evaluator.key}
+                          evaluator={evaluator}
+                          disabled={!canEdit}
+                          onCountChange={(value) => handleBirlosCountChange(section.sectionId, evaluator.key, value)}
+                          onToggleBirlo={(birloIndex) => handleBirloToggle(section.sectionId, evaluator.key, birloIndex)}
+                        />
+                      ))}
+                    </div>
+                  ) : null}
+
                   {(section.questions ?? []).map((question, questionIndex) => (
                     <article key={question.questionId} className="rounded-2xl border border-[var(--border)] bg-[var(--panel)] p-4">
-                      <p className="text-sm font-semibold text-[var(--title)]">
-                        {questionIndex + 1}. {question.prompt}
-                      </p>
+                      <div className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
+                        <p className="text-sm font-semibold text-[var(--title)]">
+                          {questionIndex + 1}. {question.prompt}
+                        </p>
+                        <StatusChip
+                          label={getQuestionRuleStatus(question).label}
+                          tone={getQuestionRuleStatus(question).tone}
+                        />
+                      </div>
 
                       <div className="mt-4">
                         <label className="text-xs font-bold uppercase tracking-[0.06em] text-[var(--shell-text)]/75">
@@ -483,13 +600,7 @@ function EvaluationDetailPage({ detailKey, detailId, loadDetail, backTo }) {
                   {query.data.evidences.map((evidence) => (
                     <article key={evidence.id} className="overflow-hidden rounded-2xl border border-[var(--border)] bg-[var(--panel)]">
                       {evidence.mimeType?.startsWith("image/") ? (
-                        <a href={evidence.previewUrl} target="_blank" rel="noreferrer" className="block">
-                          <img
-                            src={evidence.previewUrl}
-                            alt={evidence.filename}
-                            className="h-52 w-full bg-slate-100 object-cover"
-                          />
-                        </a>
+                        <EvidencePreview evidence={evidence} />
                       ) : (
                         <a
                           href={evidence.previewUrl}
@@ -531,59 +642,301 @@ function SummaryField({ label, value }) {
   );
 }
 
+function BirlosEvaluatorCard({ evaluator, disabled, onCountChange, onToggleBirlo }) {
+  const wheelPoints = buildWheelPoints(Math.max(evaluator.count, 1));
+  const birlosStatus = getBirlosRuleStatus(evaluator);
+
+  return (
+    <article className="rounded-2xl border border-[var(--border)] bg-[var(--panel)] p-4">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
+        <div>
+          <p className="text-sm font-semibold text-[var(--title)]">{evaluator.title}</p>
+          <p className="mt-1 text-xs text-[var(--shell-text)]/75">
+            Marca cada birlo presente haciendo clic sobre el dibujo de la llanta.
+          </p>
+          <div className="mt-3">
+            <StatusChip label={birlosStatus.label} tone={birlosStatus.tone} />
+          </div>
+        </div>
+
+        <div className="sm:w-40">
+          <label className="text-xs font-bold uppercase tracking-[0.06em] text-[var(--shell-text)]/75">
+            Cantidad de birlos
+          </label>
+          <input
+            type="number"
+            min="0"
+            max="8"
+            value={String(evaluator.count ?? 0)}
+            onChange={(event) => onCountChange(event.target.value)}
+            className="field-base mt-2"
+            disabled={disabled}
+          />
+        </div>
+      </div>
+
+      <div className="mt-4 flex flex-col items-center gap-4 rounded-2xl bg-white px-4 py-5">
+        <div className="birlos-wheel">
+          <div className="birlos-wheel__tire" />
+          <div className="birlos-wheel__rim" />
+          <div className="birlos-wheel__hub" />
+          {wheelPoints.map((point) => {
+            const isSelected = evaluator.selected.includes(point.index);
+            return (
+              <button
+                key={point.index}
+                type="button"
+                className={`birlos-wheel__bolt ${isSelected ? "is-selected" : ""}`}
+                style={{ left: `${point.left}%`, top: `${point.top}%` }}
+                onClick={() => onToggleBirlo(point.index)}
+                disabled={disabled || evaluator.count === 0}
+                aria-pressed={isSelected}
+                aria-label={`Birlo ${point.index}`}
+              >
+                {point.index}
+              </button>
+            );
+          })}
+        </div>
+
+        <div className="w-full rounded-xl border border-[var(--border)] bg-[var(--panel)] px-3 py-2 text-sm text-[var(--shell-text)]">
+          {evaluator.selected.length > 0 ? (
+            <>Birlos marcados: {evaluator.selected.join(", ")}</>
+          ) : (
+            "Sin birlos marcados."
+          )}
+        </div>
+      </div>
+    </article>
+  );
+}
+
+function EvidencePreview({ evidence }) {
+  const [failed, setFailed] = useState(false);
+  const isImage = evidence.mimeType?.startsWith("image/");
+  const canRenderInline = isImage && !/heic|heif/i.test(String(evidence.mimeType ?? ""));
+
+  if (!canRenderInline || failed) {
+    return (
+      <a
+        href={evidence.previewUrl}
+        target="_blank"
+        rel="noreferrer"
+        className="flex h-52 items-center justify-center bg-slate-100 px-4 text-center text-sm font-semibold text-[var(--title)]"
+      >
+        Abrir imagen
+      </a>
+    );
+  }
+
+  return (
+    <a href={evidence.previewUrl} target="_blank" rel="noreferrer" className="block">
+      <img
+        src={evidence.previewUrl}
+        alt={evidence.filename}
+        className="h-52 w-full bg-slate-100 object-cover"
+        loading="lazy"
+        onError={() => setFailed(true)}
+      />
+    </a>
+  );
+}
+
 function buildDraftSections(detail) {
   const sectionsMap = detail?.sections ?? {};
   const formAnswersByCode = Object.fromEntries(
     (detail?.formSections ?? []).flatMap((section) =>
-      (section.questions ?? []).map((question) => [question.code, question.answer])
+      (section.questions ?? []).flatMap((question) => {
+        const aliases = QUESTION_CODE_ALIASES[question.code] ?? [];
+        return [[question.code, question], ...aliases.map((alias) => [alias, question])];
+      })
     )
   );
 
   return FORM_SECTION_CONFIG.map((section) => ({
     sectionId: section.key,
     title: section.title,
+    birlosEvaluators: (section.birlosEvaluators ?? []).map((evaluator) => ({
+      key: evaluator.key,
+      title: evaluator.title,
+      countCode: evaluator.countCode,
+      selectedCode: evaluator.selectedCode,
+      count: parseBirlosCount(sectionsMap?.[section.key]?.[evaluator.countCode]),
+      selected: parseBirlosSelection(sectionsMap?.[section.key]?.[evaluator.selectedCode])
+    })),
     questions: section.questions.map((question) => ({
       questionId: question.code,
       code: question.code,
       prompt: question.prompt,
       type: question.type,
-      answer: normalizeDraftValue(
-        sectionsMap?.[section.key]?.[question.code] ?? formAnswersByCode?.[question.code]
-      )
+      answer: normalizeDraftValue({
+        value: sectionsMap?.[section.key]?.[question.code],
+        fallbackQuestion: formAnswersByCode?.[question.code],
+        type: question.type
+      })
     }))
   }));
 }
 
-function normalizeDraftValue(value) {
-  if (value === null || value === undefined) {
+const QUESTION_CODE_ALIASES = {
+  llantas_tuercas_delantera_izquierda_faltantes: ["llantas_tuercas_faltantes_delantera_izquierda"],
+  llantas_tuercas_delantera_izquierda_rotas: ["llantas_tuercas_rotas_delantera_izquierda"],
+  llantas_tuercas_delantera_derecha_faltantes: ["llantas_tuercas_faltantes_delantera_derecha"],
+  llantas_tuercas_delantera_derecha_rotas: ["llantas_tuercas_rotas_delantera_derecha"],
+  llantas_tuercas_trasera_izquierda_faltantes: ["llantas_tuercas_faltantes_trasera_izquierda"],
+  llantas_tuercas_trasera_izquierda_rotas: ["llantas_tuercas_rotas_trasera_izquierda"],
+  llantas_tuercas_trasera_derecha_faltantes: ["llantas_tuercas_faltantes_trasera_derecha"],
+  llantas_tuercas_trasera_derecha_rotas: ["llantas_tuercas_rotas_trasera_derecha"]
+};
+
+function normalizeDraftValue({ value, fallbackQuestion, type }) {
+  if (value !== null && value !== undefined && value !== "") {
+    return String(value);
+  }
+
+  if (!fallbackQuestion) {
     return "";
   }
 
-  return String(value);
+  if (type === "number") {
+    return fallbackQuestion.comment ?? "";
+  }
+
+  return normalizeMobileEnumValue(fallbackQuestion.answer);
+}
+
+function normalizeMobileEnumValue(value) {
+  switch (String(value ?? "").toUpperCase()) {
+    case "PASS":
+      return "APROBADO";
+    case "FAIL":
+      return "REPROBADO";
+    case "NA":
+      return "NO_APLICA";
+    default:
+      return value ? String(value) : "";
+  }
 }
 
 function toSectionsPayload(draftSections) {
   return Object.fromEntries(
     (draftSections ?? []).map((section) => [
       section.sectionId,
-      Object.fromEntries(
-        (section.questions ?? []).map((question) => [question.code, question.answer === "" ? null : question.answer])
-      )
+      {
+        ...Object.fromEntries(
+          (section.questions ?? []).map((question) => [question.code, question.answer === "" ? null : question.answer])
+        ),
+        ...Object.fromEntries(
+          (section.birlosEvaluators ?? []).flatMap((evaluator) => [
+            [evaluator.countCode, evaluator.count > 0 ? String(evaluator.count) : null],
+            [evaluator.selectedCode, evaluator.selected.length > 0 ? evaluator.selected.join(",") : null]
+          ])
+        )
+      }
     ])
   );
 }
 
-function formatSectionName(value) {
-  return value.replaceAll("_", " ");
+function parseBirlosCount(value) {
+  const numericValue = Number.parseInt(String(value ?? ""), 10);
+  return Number.isNaN(numericValue) ? 0 : Math.min(Math.max(numericValue, 0), 8);
 }
 
-function formatAnswerValue(value) {
-  if (!value) {
-    return "Sin valor";
+function parseBirlosSelection(value) {
+  return String(value ?? "")
+    .split(",")
+    .map((item) => Number.parseInt(item.trim(), 10))
+    .filter((item) => !Number.isNaN(item) && item >= 1 && item <= 8)
+    .sort((left, right) => left - right);
+}
+
+function getQuestionRuleStatus(question) {
+  const value = Number.parseFloat(String(question.answer ?? "").replace(",", "."));
+  const hasNumericValue = question.type === "number" && !Number.isNaN(value);
+
+  if (question.type !== "number" || !question.answer) {
+    return { label: "Pendiente", tone: "neutral" };
   }
 
-  const option = ENUM_OPTIONS.find((item) => item.value === value);
-  return option?.label ?? String(value).replaceAll("_", " ");
+  if (!hasNumericValue) {
+    return { label: "Pendiente", tone: "neutral" };
+  }
+
+  if (question.code.startsWith("llantas_presion_")) {
+    return value >= 80 ? { label: "Cumple PSI", tone: "success" } : { label: "No cumple PSI", tone: "danger" };
+  }
+
+  if (
+    question.code === "llantas_profundidad_delantera_izquierda" ||
+    question.code === "llantas_profundidad_delantera_derecha"
+  ) {
+    return value >= 3.2 ? { label: "Cumple profundidad", tone: "success" } : { label: "No cumple profundidad", tone: "danger" };
+  }
+
+  if (question.code.startsWith("llantas_profundidad_trasera_")) {
+    return value >= 1.6 ? { label: "Cumple profundidad", tone: "success" } : { label: "No cumple profundidad", tone: "danger" };
+  }
+
+  if (question.code === "aire_frenos_tiempo_carga_psi") {
+    return value >= 70 && value <= 120
+      ? { label: "Cumple rango PSI", tone: "success" }
+      : { label: "Fuera de rango PSI", tone: "danger" };
+  }
+
+  if (question.code === "aire_frenos_tiempo_carga_tiempo") {
+    return value < 120 ? { label: "Cumple tiempo", tone: "success" } : { label: "Excede tiempo", tone: "danger" };
+  }
+
+  return { label: "Capturado", tone: "neutral" };
+}
+
+function getBirlosRuleStatus(evaluator) {
+  if (!evaluator.count) {
+    return { label: "Pendiente", tone: "neutral" };
+  }
+
+  const missing = Math.max(evaluator.count - evaluator.selected.length, 0);
+  return missing > 2
+    ? { label: `Reprueba: faltan ${missing} birlos`, tone: "danger" }
+    : { label: `Cumple: faltan ${missing} birlos`, tone: "success" };
+}
+
+function getSectionTone(section) {
+  const failingQuestion = (section.questions ?? []).some((question) => getQuestionRuleStatus(question).tone === "danger");
+  const failingBirlos = (section.birlosEvaluators ?? []).some((evaluator) => getBirlosRuleStatus(evaluator).tone === "danger");
+  if (failingQuestion || failingBirlos) {
+    return "danger";
+  }
+  const pendingQuestion = (section.questions ?? []).some((question) => getQuestionRuleStatus(question).tone === "neutral");
+  const pendingBirlos = (section.birlosEvaluators ?? []).some((evaluator) => getBirlosRuleStatus(evaluator).tone === "neutral");
+  return pendingQuestion || pendingBirlos ? "neutral" : "success";
+}
+
+function buildSectionSummaryLabel(section) {
+  const totalChecks = (section.questions?.length ?? 0) + (section.birlosEvaluators?.length ?? 0);
+  const failedChecks =
+    (section.questions ?? []).filter((question) => getQuestionRuleStatus(question).tone === "danger").length +
+    (section.birlosEvaluators ?? []).filter((evaluator) => getBirlosRuleStatus(evaluator).tone === "danger").length;
+  if (failedChecks > 0) {
+    return `${failedChecks} de ${totalChecks} fuera de criterio`;
+  }
+  return `${totalChecks} criterio${totalChecks === 1 ? "" : "s"} en revision`;
+}
+
+function buildWheelPoints(count) {
+  return Array.from({ length: count }, (_, index) => {
+    const angle = (Math.PI * 2 * index) / count - Math.PI / 2;
+    const radius = 34;
+    return {
+      index: index + 1,
+      left: 50 + Math.cos(angle) * radius,
+      top: 50 + Math.sin(angle) * radius
+    };
+  });
+}
+
+function formatSectionName(value) {
+  return value.replaceAll("_", " ");
 }
 
 function formatDateTime(value) {

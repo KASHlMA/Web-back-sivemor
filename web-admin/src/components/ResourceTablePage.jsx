@@ -46,7 +46,8 @@ export function ResourceTablePage({
   deleteDialogDescription,
   deleteSuccessMessage,
   extraInvalidateQueryKeys = [],
-  pageSize = 10
+  pageSize = 10,
+  bulkActions = []
 }) {
   const queryClient = useQueryClient();
   const [editingRow, setEditingRow] = useState(null);
@@ -55,7 +56,9 @@ export function ResourceTablePage({
   const [localFeedbackMessage, setLocalFeedbackMessage] = useState(null);
   const [search, setSearch] = useState("");
   const [pendingDelete, setPendingDelete] = useState(null);
+  const [pendingBulkAction, setPendingBulkAction] = useState(null);
   const [page, setPage] = useState(1);
+  const [selectedRowIds, setSelectedRowIds] = useState([]);
 
   const query = useQuery({
     queryKey,
@@ -172,6 +175,63 @@ export function ResourceTablePage({
   const resolvedDeleteDialogDescription =
     deleteDialogDescription ?? `Estas seguro de eliminar este registro de ${title.toLowerCase()}?`;
   const hasRows = filteredRows.length > 0;
+  const selectedRows = useMemo(() => {
+    const selectedSet = new Set(selectedRowIds);
+    return filteredRows.filter((row) => selectedSet.has(String(row.id)));
+  }, [filteredRows, selectedRowIds]);
+  const hasSelectedRows = selectedRows.length > 0;
+  const allVisibleRowsSelected = paginatedRows.length > 0 && paginatedRows.every((row) => selectedRowIds.includes(String(row.id)));
+
+  useEffect(() => {
+    const availableIds = new Set(filteredRows.map((row) => String(row.id)));
+    setSelectedRowIds((current) => current.filter((id) => availableIds.has(id)));
+  }, [filteredRows]);
+
+  const invalidateRelatedQueries = async () => {
+    await queryClient.invalidateQueries({ queryKey });
+    await Promise.all(extraInvalidateQueryKeys.map((key) => queryClient.invalidateQueries({ queryKey: key })));
+  };
+
+  const toggleRowSelection = (rowId) => {
+    const normalizedId = String(rowId);
+    setSelectedRowIds((current) =>
+      current.includes(normalizedId) ? current.filter((id) => id !== normalizedId) : [...current, normalizedId]
+    );
+  };
+
+  const toggleVisibleSelection = () => {
+    const visibleIds = paginatedRows.map((row) => String(row.id));
+    setSelectedRowIds((current) => {
+      if (visibleIds.every((id) => current.includes(id))) {
+        return current.filter((id) => !visibleIds.includes(id));
+      }
+
+      return [...new Set([...current, ...visibleIds])];
+    });
+  };
+
+  const runBulkAction = async () => {
+    if (!pendingBulkAction || selectedRows.length === 0) {
+      setPendingBulkAction(null);
+      return;
+    }
+
+    setFeedbackError(null);
+
+    try {
+      for (const row of selectedRows) {
+        // Ejecutamos cada cambio con el mismo contrato que usa la fila individual.
+        await pendingBulkAction.action(row);
+      }
+
+      await invalidateRelatedQueries();
+      setSelectedRowIds([]);
+      setPendingBulkAction(null);
+      setLocalFeedbackMessage(pendingBulkAction.successMessage ?? null);
+    } catch (error) {
+      setFeedbackError(error instanceof Error ? error.message : pendingBulkAction.errorMessage ?? "No se pudo completar la accion");
+    }
+  };
 
   return (
     <div className="space-y-6">
@@ -193,9 +253,44 @@ export function ResourceTablePage({
         />
 
         <div className="table-shell px-3 py-3 md:px-5">
+          {bulkActions.length > 0 ? (
+            <div className="mb-4 flex flex-col gap-3 rounded-xl border border-[var(--border)] bg-[#f6faef] p-3 md:flex-row md:items-center md:justify-between">
+              <p className="text-sm font-semibold text-[var(--shell-text)]">
+                {hasSelectedRows
+                  ? `${selectedRows.length} registro${selectedRows.length === 1 ? "" : "s"} seleccionado${selectedRows.length === 1 ? "" : "s"}`
+                  : "Selecciona uno o varios registros para aplicar acciones en lote."}
+              </p>
+              <div className="action-group">
+                <SecondaryActionButton type="button" onClick={() => setSelectedRowIds([])} disabled={!hasSelectedRows}>
+                  Limpiar seleccion
+                </SecondaryActionButton>
+                {bulkActions.map((action) => (
+                  <button
+                    key={action.key}
+                    type="button"
+                    onClick={() => setPendingBulkAction(action)}
+                    disabled={!hasSelectedRows}
+                    className={action.danger ? "btn-danger" : "btn-primary"}
+                  >
+                    {action.label}
+                  </button>
+                ))}
+              </div>
+            </div>
+          ) : null}
           <table className="table-grid">
             <thead>
               <tr>
+                {bulkActions.length > 0 ? (
+                  <th className="w-[52px]">
+                    <input
+                      type="checkbox"
+                      checked={allVisibleRowsSelected}
+                      onChange={toggleVisibleSelection}
+                      aria-label="Seleccionar registros visibles"
+                    />
+                  </th>
+                ) : null}
                 {columns.map((column) => (
                   <th key={column.header}>{column.header}</th>
                 ))}
@@ -205,14 +300,14 @@ export function ResourceTablePage({
             <tbody>
               {query.isLoading ? (
                 <tr>
-                  <td colSpan={columns.length + (shouldRenderActions ? 1 : 0)} className="px-4 py-6 text-sm font-medium text-[var(--shell-text)]">
+                  <td colSpan={columns.length + (shouldRenderActions ? 1 : 0) + (bulkActions.length > 0 ? 1 : 0)} className="px-4 py-6 text-sm font-medium text-[var(--shell-text)]">
                     {loadingMessage}
                   </td>
                 </tr>
               ) : null}
               {!query.isLoading && query.isError ? (
                 <tr>
-                  <td colSpan={columns.length + (shouldRenderActions ? 1 : 0)} className="!p-0">
+                  <td colSpan={columns.length + (shouldRenderActions ? 1 : 0) + (bulkActions.length > 0 ? 1 : 0)} className="!p-0">
                     <EmptyState title={errorMessage} description="Intenta nuevamente en unos momentos." />
                   </td>
                 </tr>
@@ -220,6 +315,16 @@ export function ResourceTablePage({
               {!query.isLoading && !query.isError
                 ? paginatedRows.map((row) => (
                     <tr key={row.id}>
+                      {bulkActions.length > 0 ? (
+                        <td>
+                          <input
+                            type="checkbox"
+                            checked={selectedRowIds.includes(String(row.id))}
+                            onChange={() => toggleRowSelection(row.id)}
+                            aria-label={`Seleccionar registro ${row.id}`}
+                          />
+                        </td>
+                      ) : null}
                       {columns.map((column) => (
                         <td key={column.header}>{column.render(row)}</td>
                       ))}
@@ -246,7 +351,7 @@ export function ResourceTablePage({
                 : null}
               {!query.isLoading && !query.isError && filteredRows.length === 0 ? (
                 <tr>
-                  <td colSpan={columns.length + (shouldRenderActions ? 1 : 0)} className="!p-0">
+                  <td colSpan={columns.length + (shouldRenderActions ? 1 : 0) + (bulkActions.length > 0 ? 1 : 0)} className="!p-0">
                     <EmptyState
                       title={search ? "No hay coincidencias" : emptyTitle}
                       description={
@@ -310,35 +415,33 @@ export function ResourceTablePage({
         </div>
       </Modal>
 
-      {renderRowActions ? (
-        pendingDelete ? (
-          <ConfirmDialog
-            open={Boolean(pendingDelete)}
-            title={resolvedDeleteDialogTitle}
-            description={resolvedDeleteDialogDescription}
-            confirmLabel="Eliminar"
-            onCancel={() => setPendingDelete(null)}
-            onConfirm={async () => {
-              await deleteMutation.mutateAsync(pendingDelete.id);
-            }}
-            danger
-          />
-        ) : null
-      ) : (
-        <ConfirmDialog
-          open={Boolean(pendingDelete)}
-          title={resolvedDeleteDialogTitle}
-          description={resolvedDeleteDialogDescription}
-          confirmLabel="Eliminar"
-          onCancel={() => setPendingDelete(null)}
-          onConfirm={async () => {
-            if (pendingDelete) {
-              await deleteMutation.mutateAsync(pendingDelete.id);
-            }
-          }}
-          danger
-        />
-      )}
+      <ConfirmDialog
+        open={Boolean(pendingDelete)}
+        title={resolvedDeleteDialogTitle}
+        description={resolvedDeleteDialogDescription}
+        confirmLabel="Eliminar"
+        onCancel={() => setPendingDelete(null)}
+        onConfirm={async () => {
+          if (pendingDelete) {
+            await deleteMutation.mutateAsync(pendingDelete.id);
+          }
+        }}
+        danger
+      />
+
+      <ConfirmDialog
+        open={Boolean(pendingBulkAction)}
+        title={pendingBulkAction?.confirmTitle ?? "Confirmar accion"}
+        description={
+          pendingBulkAction?.confirmDescription?.(selectedRows) ??
+          `Se aplicara esta accion a ${selectedRows.length} registro${selectedRows.length === 1 ? "" : "s"}.`
+        }
+        confirmLabel={pendingBulkAction?.confirmLabel ?? "Confirmar"}
+        cancelLabel="Cancelar"
+        onConfirm={() => void runBulkAction()}
+        onCancel={() => setPendingBulkAction(null)}
+        danger={Boolean(pendingBulkAction?.danger)}
+      />
     </div>
   );
 }

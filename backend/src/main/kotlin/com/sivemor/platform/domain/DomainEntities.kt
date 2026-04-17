@@ -719,6 +719,42 @@ class Evaluacion : BaseEntity() {
     @Column(name = "llantas_tuercas_trasera_derecha_rotas")
     var llantasTuercasTraseraDerechaRotas: Int? = null
 
+    @Column(name = "llantas_birlos_delantera_izquierda_count")
+    var llantasBirlosDelanteraIzquierdaCount: Int? = null
+
+    @Column(name = "llantas_birlos_delantera_izquierda_selected", length = 120)
+    var llantasBirlosDelanteraIzquierdaSelected: String? = null
+
+    @Column(name = "llantas_birlos_delantera_derecha_count")
+    var llantasBirlosDelanteraDerechaCount: Int? = null
+
+    @Column(name = "llantas_birlos_delantera_derecha_selected", length = 120)
+    var llantasBirlosDelanteraDerechaSelected: String? = null
+
+    @Column(name = "llantas_birlos_trasera_izquierda_count")
+    var llantasBirlosTraseraIzquierdaCount: Int? = null
+
+    @Column(name = "llantas_birlos_trasera_izquierda_selected", length = 120)
+    var llantasBirlosTraseraIzquierdaSelected: String? = null
+
+    @Column(name = "llantas_birlos_trasera_derecha_count")
+    var llantasBirlosTraseraDerechaCount: Int? = null
+
+    @Column(name = "llantas_birlos_trasera_derecha_selected", length = 120)
+    var llantasBirlosTraseraDerechaSelected: String? = null
+
+    @Column(name = "llantas_birlos_media_izquierda_count")
+    var llantasBirlosMediaIzquierdaCount: Int? = null
+
+    @Column(name = "llantas_birlos_media_izquierda_selected", length = 120)
+    var llantasBirlosMediaIzquierdaSelected: String? = null
+
+    @Column(name = "llantas_birlos_media_derecha_count")
+    var llantasBirlosMediaDerechaCount: Int? = null
+
+    @Column(name = "llantas_birlos_media_derecha_selected", length = 120)
+    var llantasBirlosMediaDerechaSelected: String? = null
+
     @Column(name = "direccion_brazo_pitman", length = 40)
     var direccionBrazoPitman: String? = null
 

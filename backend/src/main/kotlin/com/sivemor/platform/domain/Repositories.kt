@@ -7,6 +7,7 @@ import java.time.Instant
 
 interface UserRepository : JpaRepository<User, Long> {
     fun findByUsernameIgnoreCaseAndArchivedFalse(username: String): User?
+    fun findByEmailIgnoreCaseAndArchivedFalse(email: String): User?
     fun findAllByArchivedFalseOrderByFullNameAsc(): List<User>
 }
 

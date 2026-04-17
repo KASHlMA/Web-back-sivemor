@@ -24,7 +24,7 @@ export function ReportsPage() {
     orderId: "",
     technicianId: "",
     vehicleId: "",
-    onlyFailures: "true"
+    onlyFailures: "false"
   });
 
   const clients = useLookup("clients-lookup", "/admin/clients");
@@ -62,7 +62,7 @@ export function ReportsPage() {
       orderId: "",
       technicianId: "",
       vehicleId: "",
-      onlyFailures: "true"
+      onlyFailures: "false"
     });
 
   return (

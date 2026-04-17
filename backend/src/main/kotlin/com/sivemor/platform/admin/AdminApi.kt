@@ -8,6 +8,7 @@ import com.sivemor.platform.domain.CedisRepository
 import com.sivemor.platform.domain.ClientCompany
 import com.sivemor.platform.domain.ClientCompanyRepository
 import com.sivemor.platform.domain.Inspection
+import com.sivemor.platform.domain.ChecklistSection
 import com.sivemor.platform.domain.InspectionRepository
 import com.sivemor.platform.domain.InspectionResult
 import com.sivemor.platform.domain.InspectionStatus
@@ -1419,6 +1420,13 @@ class AdminService(
             }
         }
 
+        fun formatMobileAnswer(value: String?): String? = when (value?.trim()?.uppercase()) {
+            "PASS", "APROBADO" -> "Aprobado"
+            "FAIL", "REPROBADO" -> "Reprobado"
+            "NA", "NO_APLICA" -> "No aplica"
+            else -> value
+        }
+
         writeLine("Reporte de verificacion web", 16f, true)
         y -= 4f
         writeParagraph("ID verificacion: ", detail.verificacionId?.toString())
@@ -1432,25 +1440,31 @@ class AdminService(
         writeParagraph("Evidencias: ", "${detail.evidences.size}")
         y -= 6f
 
-        detail.sections.entries.forEach { (sectionName, answers) ->
-            writeLine(sectionName.replace("_", " ").replaceFirstChar { it.uppercase() }, 13f, true)
-            answers.forEach { (field, value) ->
-                writeParagraph("  ${field.replace("_", " ")}: ", value?.toString(), boldLabel = false)
-            }
-            y -= 4f
-        }
-
         if (detail.formSections.isNotEmpty()) {
-            writeLine("Formulario original", 13f, true)
+            writeLine("Formulario movil", 13f, true)
             detail.formSections.forEach { section ->
                 writeLine(section.title, 12f, true)
                 section.questions.forEach { question ->
-                    writeParagraph("  ${question.prompt}: ", question.answer ?: "Sin valor", boldLabel = false)
+                    val questionValue = listOfNotNull(
+                        formatMobileAnswer(question.answer)?.takeIf { it.isNotBlank() }?.let { "Valor: $it" },
+                        question.comment?.takeIf { it.isNotBlank() }?.let { "Comentario: $it" }
+                    ).ifEmpty { listOf("Sin valor") }.joinToString(" | ")
+                    writeParagraph("  ${question.prompt}: ", questionValue, boldLabel = false)
                 }
                 section.note?.takeIf { it.isNotBlank() }?.let {
                     writeParagraph("  Nota: ", it, boldLabel = false)
                 }
                 y -= 4f
+            }
+        }
+
+        if (detail.evidences.isNotEmpty()) {
+            writeLine("Evidencias", 13f, true)
+            detail.evidences.forEachIndexed { index, evidence ->
+                writeParagraph("${index + 1}. Archivo: ", evidence.filename, boldLabel = false)
+                writeParagraph("   Seccion: ", evidence.sectionName ?: "Sin seccion", boldLabel = false)
+                writeParagraph("   Fecha: ", evidence.capturedAt.toString(), boldLabel = false)
+                writeParagraph("   Comentario: ", evidence.comment ?: "-", boldLabel = false)
             }
         }
 
@@ -1749,7 +1763,7 @@ class AdminService(
             .sortedByDescending { it.capturedAt }
             .map { it.toEvaluationEvidenceResponse() },
         formSections = inspection.toFormSections(),
-        sections = evaluacion.toSectionMap()
+        sections = evaluacion.toSectionMap().ifEmpty { inspection.toMobileSectionsMap() }
     )
 
     private fun Inspection.toLegacyEvaluationDetail(): EvaluationDetailResponse = EvaluationDetailResponse(
@@ -1770,15 +1784,7 @@ class AdminService(
             .sortedByDescending { it.capturedAt }
             .map { it.toEvaluationEvidenceResponse() },
         formSections = toFormSections(),
-        sections = template.sections
-            .filter { !it.archived }
-            .associate { section ->
-                section.title to section.questions
-                    .filter { !it.archived }
-                    .associate { question ->
-                        question.code to (answers.firstOrNull { it.question.id == question.id }?.answerValue?.name)
-                    } + mapOf("comment" to sectionNotes.firstOrNull { it.section.id == section.id }?.comment)
-            }
+        sections = toMobileSectionsMap()
     )
 
     private fun com.sivemor.platform.domain.Evaluacion?.toSectionMap(): Map<String, Map<String, Any?>> {
@@ -1884,6 +1890,40 @@ class AdminService(
             comment = comment,
             previewUrl = "data:$mimeType;base64,${Base64.getEncoder().encodeToString(content)}"
         )
+
+    private fun Inspection.toMobileSectionsMap(): Map<String, Map<String, Any?>> =
+        linkedMapOf<String, Map<String, Any?>>().apply {
+            val answersByQuestionId = answers.associateBy { it.question.id ?: 0L }
+            val notesBySectionId = sectionNotes.associateBy { it.section.id ?: 0L }
+
+            template.sections
+                .filter { !it.archived }
+                .sortedBy { it.displayOrder }
+                .forEach { section ->
+                    val sectionMap = linkedMapOf<String, Any?>()
+
+                    section.questions
+                        .filter { !it.archived }
+                        .sortedBy { it.displayOrder }
+                        .forEach { question ->
+                            val answer = answersByQuestionId[question.id ?: 0L]
+                            sectionMap[question.code] = answer?.comment ?: answer?.answerValue?.name
+                        }
+
+                    sectionMap["comment"] = notesBySectionId[section.id ?: 0L]?.comment
+                    put(section.codeOrFallback(), sectionMap)
+                }
+
+            put("general", linkedMapOf("comentarios_generales" to overallComment))
+        }
+
+    private fun ChecklistSection.codeOrFallback(): String =
+        title
+            .trim()
+            .lowercase()
+            .replace("/", " ")
+            .replace(Regex("[^a-z0-9]+"), "_")
+            .trim('_')
 
     private fun Inspection.toFormSections(): List<InspectionFormSectionResponse> {
         val answersByQuestionId = answers.associateBy { it.question.id ?: 0L }

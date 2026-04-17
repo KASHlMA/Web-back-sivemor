@@ -1267,23 +1267,30 @@ class AdminService(
             .toLegacyEvaluationDetail()
     }
 
-    @Transactional(readOnly = true)
-    fun listWebVerifications(): List<WebVerificationListItemResponse> =
-        verificacionRepository.findAllByArchivedFalseOrderByFechaVerificacionDesc().map { verificacion ->
-            WebVerificationListItemResponse(
-                verificacionId = verificacion.id ?: 0L,
-                inspectionId = verificacion.inspection.id ?: 0L,
-                vehiclePlate = verificacion.vehicleUnit.plate,
-                vehicleVin = verificacion.vehicleUnit.vin,
-                clientCompanyName = verificacion.verificationOrder.clientCompany.name,
-                noteNumber = verificacion.verificationOrder.orderNumber,
-                approved = verificacion.veredicto == VerificacionVeredicto.APROBADO,
-                statusLabel = if (verificacion.veredicto == VerificacionVeredicto.APROBADO) "Aprobado" else "Reprobado",
-                submittedAt = verificacion.fechaVerificacion,
-                overallResult = verificacion.inspection.overallResult?.name,
-                formSections = verificacion.inspection.toFormSections()
-            )
-        }
+    @Transactional
+    fun listWebVerifications(): List<WebVerificationListItemResponse> {
+        val verificationsByInspectionId = linkedMapOf<Long, com.sivemor.platform.domain.Verificacion>()
+
+        verificacionRepository.findAllByArchivedFalseOrderByFechaVerificacionDesc()
+            .forEach { verificacion ->
+                verificationsByInspectionId[verificacion.inspection.id ?: 0L] = verificacion
+            }
+
+        inspectionRepository.findAllByStatusAndArchivedFalseOrderBySubmittedAtDesc(InspectionStatus.SUBMITTED)
+            .forEach { inspection ->
+                val inspectionId = inspection.id ?: 0L
+                if (!verificationsByInspectionId.containsKey(inspectionId)) {
+                    val syncedVerification = merCompatibilityService.syncSubmittedInspection(
+                        inspectionRepository.findDetailedById(inspectionId) ?: inspection
+                    )
+                    verificationsByInspectionId[inspectionId] = syncedVerification
+                }
+            }
+
+        return verificationsByInspectionId.values
+            .sortedByDescending { it.fechaVerificacion }
+            .map { it.toWebVerificationListItem() }
+    }
 
     @Transactional(readOnly = true)
     fun getWebVerificationDetail(id: Long): EvaluationDetailResponse {
@@ -1297,6 +1304,21 @@ class AdminService(
         val evaluacion = evaluacionRepository.findByVerificacionIdAndArchivedFalse(id)
         return verificacion.toEvaluationDetail(evaluacion)
     }
+
+    private fun com.sivemor.platform.domain.Verificacion.toWebVerificationListItem(): WebVerificationListItemResponse =
+        WebVerificationListItemResponse(
+            verificacionId = id ?: 0L,
+            inspectionId = inspection.id ?: 0L,
+            vehiclePlate = vehicleUnit.plate,
+            vehicleVin = vehicleUnit.vin,
+            clientCompanyName = verificationOrder.clientCompany.name,
+            noteNumber = verificationOrder.orderNumber,
+            approved = veredicto == VerificacionVeredicto.APROBADO,
+            statusLabel = if (veredicto == VerificacionVeredicto.APROBADO) "Aprobado" else "Reprobado",
+            submittedAt = fechaVerificacion,
+            overallResult = inspection.overallResult?.name,
+            formSections = inspection.toFormSections()
+        )
 
     @Transactional
     fun updateWebVerificationDetail(

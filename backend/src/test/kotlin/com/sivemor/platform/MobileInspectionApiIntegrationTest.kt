@@ -13,11 +13,18 @@ import com.sivemor.platform.support.updateDraftInspection
 import com.sivemor.platform.support.uploadEvidence
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Test
+import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.http.MediaType
 import org.springframework.test.web.servlet.delete
 import org.springframework.test.web.servlet.get
 
 class MobileInspectionApiIntegrationTest : IntegrationTestSupport() {
+    @Autowired
+    lateinit var verificacionRepository: com.sivemor.platform.domain.VerificacionRepository
+
+    @Autowired
+    lateinit var evaluacionRepository: com.sivemor.platform.domain.EvaluacionRepository
+
     @Test
     fun `technician can move from draft to submission and complete the order after both units are submitted`() {
         val adminToken = bearerTokenForUser("admin")
@@ -115,6 +122,47 @@ class MobileInspectionApiIntegrationTest : IntegrationTestSupport() {
                 value(org.hamcrest.Matchers.hasItem(orderNumber))
             }
         }
+    }
+
+    @Test
+    fun `web verifications recreate MER rows for submitted inspections already stored in base`() {
+        val adminToken = bearerTokenForUser("admin")
+        val technicianToken = bearerTokenForUser("tecnico1")
+        val suffix = System.currentTimeMillis()
+
+        val technicianId = findUserId("tecnico1", adminToken)
+        val regionId = createRegion("MER Sync Region $suffix", adminToken)
+        val clientId = createClient("MER Sync Client $suffix", "MSR$suffix", regionId, adminToken)
+        val vehicleId = createVehicle(clientId, "SYNC-$suffix", "SYNC-VIN-$suffix", adminToken)
+        val orderNumber = "SYNC-MER-$suffix"
+
+        createOrder(orderNumber, clientId, regionId, technicianId, listOf(vehicleId), adminToken)
+        val orderUnitId = fetchTechnicianOrderUnits(orderNumber, technicianToken).single()
+        val draft = createDraftInspection(orderUnitId, technicianToken)
+        val inspectionId = draft["id"].asLong()
+
+        updateDraftInspection(inspectionId, answerAllQuestions(draft), technicianToken)
+        val sectionId = draft["sections"][0]["sectionId"].asLong()
+        uploadEvidence(inspectionId, sectionId, technicianToken, "sync-mer-$suffix-1.jpg")
+        uploadEvidence(inspectionId, sectionId, technicianToken, "sync-mer-$suffix-2.jpg")
+        uploadEvidence(inspectionId, sectionId, technicianToken, "sync-mer-$suffix-3.jpg")
+        submitInspection(inspectionId, technicianToken)
+
+        val existingVerification = requireNotNull(verificacionRepository.findByInspectionIdAndArchivedFalse(inspectionId))
+        evaluacionRepository.findByVerificacionIdAndArchivedFalse(existingVerification.id ?: 0L)?.let { evaluacionRepository.delete(it) }
+        verificacionRepository.delete(existingVerification)
+
+        mockMvc.get("/api/v1/admin/web-verifications") {
+            header("Authorization", adminToken)
+            accept = MediaType.APPLICATION_JSON
+        }.andExpect {
+            status { isOk() }
+            jsonPath("$[?(@.inspectionId==${inspectionId.toInt()})].noteNumber") {
+                value(org.hamcrest.Matchers.hasItem(orderNumber))
+            }
+        }
+
+        assertThat(verificacionRepository.findByInspectionIdAndArchivedFalse(inspectionId)).isNotNull()
     }
 
     @Test

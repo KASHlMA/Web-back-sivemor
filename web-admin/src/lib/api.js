@@ -87,6 +87,14 @@ async function rawRequest(path, { body, headers, skipAuth, ...rest } = {}, retry
     throw new Error(message);
   }
 
+  const responseType = rest.responseType ?? "json";
+  if (responseType === "blob") {
+    return {
+      data: await response.blob(),
+      headers: response.headers
+    };
+  }
+
   return response.json();
 }
 
@@ -114,5 +122,6 @@ export const api = {
   get: (path) => rawRequest(path),
   post: (path, body) => rawRequest(path, { method: "POST", body }),
   put: (path, body) => rawRequest(path, { method: "PUT", body }),
-  delete: (path) => rawRequest(path, { method: "DELETE" })
+  delete: (path) => rawRequest(path, { method: "DELETE" }),
+  download: (path) => rawRequest(path, { method: "GET", responseType: "blob" })
 };

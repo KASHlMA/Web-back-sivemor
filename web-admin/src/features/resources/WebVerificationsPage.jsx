@@ -117,6 +117,7 @@ export function WebVerificationsPage() {
   const queryClient = useQueryClient();
   const [pendingDelete, setPendingDelete] = useState(null);
   const [feedbackMessage, setFeedbackMessage] = useState("");
+  const [downloadingId, setDownloadingId] = useState(null);
   const query = useQuery({
     queryKey: ["web-verifications"],
     queryFn: () => api.get("/admin/web-verifications")
@@ -133,6 +134,28 @@ export function WebVerificationsPage() {
       setFeedbackMessage(error instanceof Error ? error.message : "No fue posible eliminar la verificacion.");
     }
   });
+
+  const handleDownloadReport = async (verification) => {
+    try {
+      setFeedbackMessage("");
+      setDownloadingId(verification.verificacionId);
+      const response = await api.download(`/admin/web-verifications/${verification.verificacionId}/report`);
+      const blobUrl = window.URL.createObjectURL(response.data);
+      const link = document.createElement("a");
+      const filename = getFilenameFromDisposition(response.headers.get("content-disposition")) ??
+        `reporte-verificacion-${verification.vehiclePlate ?? verification.verificacionId}.pdf`;
+      link.href = blobUrl;
+      link.download = filename;
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      window.URL.revokeObjectURL(blobUrl);
+    } catch (error) {
+      setFeedbackMessage(error instanceof Error ? error.message : "No fue posible generar el reporte.");
+    } finally {
+      setDownloadingId(null);
+    }
+  };
 
   return (
     <div className="space-y-6">
@@ -192,6 +215,13 @@ export function WebVerificationsPage() {
                         >
                           Ver y editar
                         </PrimaryActionButton>
+                        <SecondaryActionButton
+                          type="button"
+                          onClick={() => void handleDownloadReport(item)}
+                          disabled={downloadingId === item.verificacionId}
+                        >
+                          {downloadingId === item.verificacionId ? "Generando..." : "Generar reporte"}
+                        </SecondaryActionButton>
                         <SecondaryActionButton
                           type="button"
                           onClick={() => {
@@ -573,4 +603,18 @@ function formatDateTime(value) {
     hour: "2-digit",
     minute: "2-digit"
   }).format(date);
+}
+
+function getFilenameFromDisposition(disposition) {
+  if (!disposition) {
+    return null;
+  }
+
+  const utfMatch = disposition.match(/filename\*=UTF-8''([^;]+)/i);
+  if (utfMatch?.[1]) {
+    return decodeURIComponent(utfMatch[1]);
+  }
+
+  const plainMatch = disposition.match(/filename="?([^"]+)"?/i);
+  return plainMatch?.[1] ?? null;
 }

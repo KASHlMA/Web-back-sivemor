@@ -52,9 +52,17 @@ import jakarta.validation.constraints.NotBlank
 import jakarta.validation.constraints.NotEmpty
 import jakarta.validation.constraints.NotNull
 import jakarta.validation.constraints.Size
+import org.apache.pdfbox.pdmodel.PDDocument
+import org.apache.pdfbox.pdmodel.PDPage
+import org.apache.pdfbox.pdmodel.PDPageContentStream
+import org.apache.pdfbox.pdmodel.common.PDRectangle
+import org.apache.pdfbox.pdmodel.font.PDType1Font
+import org.apache.pdfbox.pdmodel.font.Standard14Fonts
 import org.hibernate.Hibernate
 import org.springframework.format.annotation.DateTimeFormat
+import org.springframework.http.HttpHeaders
 import org.springframework.http.HttpStatus
+import org.springframework.http.MediaType
 import org.springframework.http.ResponseEntity
 import org.springframework.security.core.annotation.AuthenticationPrincipal
 import org.springframework.security.crypto.password.PasswordEncoder
@@ -70,6 +78,7 @@ import org.springframework.web.bind.annotation.RequestParam
 import org.springframework.web.bind.annotation.ResponseStatus
 import org.springframework.web.bind.annotation.RestController
 import java.math.BigDecimal
+import java.io.ByteArrayOutputStream
 import java.time.Instant
 import java.util.Base64
 
@@ -366,6 +375,11 @@ data class DashboardFailuresResponse(
     val unitsWithProblems: Long,
     val failuresByRegion: List<FailureBucketResponse>,
     val recentFailures: List<ReportSummaryResponse>
+)
+
+data class GeneratedPdfReport(
+    val filename: String,
+    val content: ByteArray
 )
 
 @RestController
@@ -740,6 +754,16 @@ class AdminController(
     @GetMapping("/web-verifications/{id}")
     fun webVerificationDetail(@PathVariable id: Long): EvaluationDetailResponse =
         adminService.getWebVerificationDetail(id)
+
+    @Operation(summary = "Generate a PDF report for a web verification")
+    @GetMapping("/web-verifications/{id}/report")
+    fun downloadWebVerificationReport(@PathVariable id: Long): ResponseEntity<ByteArray> {
+        val report = adminService.generateWebVerificationPdfReport(id)
+        return ResponseEntity.ok()
+            .contentType(MediaType.APPLICATION_PDF)
+            .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"${report.filename}\"")
+            .body(report.content)
+    }
 
     @Operation(summary = "Update a web verification detail by verification id")
     @PutMapping("/web-verifications/{id}")
@@ -1318,6 +1342,122 @@ class AdminService(
         val syncedVerification = merCompatibilityService.syncSubmittedInspection(detailedInspection)
         val evaluacion = evaluacionRepository.findByVerificacionIdAndArchivedFalse(syncedVerification.id ?: 0L)
         return syncedVerification.toEvaluationDetail(evaluacion)
+    }
+
+    @Transactional(readOnly = true)
+    fun generateWebVerificationPdfReport(id: Long): GeneratedPdfReport {
+        val detail = getWebVerificationDetail(id)
+        val document = PDDocument()
+        val font = PDType1Font(Standard14Fonts.FontName.HELVETICA)
+        val boldFont = PDType1Font(Standard14Fonts.FontName.HELVETICA_BOLD)
+        val page = PDPage(PDRectangle.LETTER)
+        document.addPage(page)
+
+        var currentPage = page
+        var stream = PDPageContentStream(document, currentPage)
+        var y = page.mediaBox.height - 48f
+        val left = 48f
+        val lineHeight = 15f
+        val maxWidth = page.mediaBox.width - (left * 2)
+
+        fun newPage() {
+            stream.close()
+            currentPage = PDPage(PDRectangle.LETTER)
+            document.addPage(currentPage)
+            stream = PDPageContentStream(document, currentPage)
+            y = currentPage.mediaBox.height - 48f
+        }
+
+        fun ensureSpace(lines: Int = 1) {
+            if (y - (lines * lineHeight) < 48f) {
+                newPage()
+            }
+        }
+
+        fun writeLine(text: String, fontSize: Float = 11f, bold: Boolean = false) {
+            ensureSpace()
+            stream.beginText()
+            stream.setFont(if (bold) boldFont else font, fontSize)
+            stream.newLineAtOffset(left, y)
+            stream.showText(text)
+            stream.endText()
+            y -= lineHeight
+        }
+
+        fun wrap(text: String, fontSize: Float): List<String> {
+            val words = text.split(Regex("\\s+")).filter { it.isNotBlank() }
+            if (words.isEmpty()) return listOf("")
+            val lines = mutableListOf<String>()
+            var current = ""
+            for (word in words) {
+                val candidate = if (current.isEmpty()) word else "$current $word"
+                val width = (if (current.isEmpty()) word else candidate).length * fontSize * 0.5f
+                if (width > maxWidth && current.isNotEmpty()) {
+                    lines += current
+                    current = word
+                } else {
+                    current = candidate
+                }
+            }
+            if (current.isNotEmpty()) {
+                lines += current
+            }
+            return lines
+        }
+
+        fun writeParagraph(label: String, value: String?, boldLabel: Boolean = true) {
+            val content = "$label${value?.takeIf { it.isNotBlank() } ?: "-"}"
+            val lines = wrap(content, 11f)
+            ensureSpace(lines.size)
+            lines.forEachIndexed { index, line ->
+                writeLine(line, 11f, boldLabel && index == 0)
+            }
+        }
+
+        writeLine("Reporte de verificacion web", 16f, true)
+        y -= 4f
+        writeParagraph("ID verificacion: ", detail.verificacionId?.toString())
+        writeParagraph("ID inspeccion: ", detail.inspectionId.toString())
+        writeParagraph("Placa: ", detail.vehiclePlate)
+        writeParagraph("Empresa: ", detail.clientCompanyName)
+        writeParagraph("Tecnico: ", detail.technicianName)
+        writeParagraph("Resultado general: ", detail.overallResult)
+        writeParagraph("Fecha: ", detail.submittedAt?.toString())
+        writeParagraph("Comentario general: ", detail.overallComment)
+        writeParagraph("Evidencias: ", "${detail.evidences.size}")
+        y -= 6f
+
+        detail.sections.entries.forEach { (sectionName, answers) ->
+            writeLine(sectionName.replace("_", " ").replaceFirstChar { it.uppercase() }, 13f, true)
+            answers.forEach { (field, value) ->
+                writeParagraph("  ${field.replace("_", " ")}: ", value?.toString(), boldLabel = false)
+            }
+            y -= 4f
+        }
+
+        if (detail.formSections.isNotEmpty()) {
+            writeLine("Formulario original", 13f, true)
+            detail.formSections.forEach { section ->
+                writeLine(section.title, 12f, true)
+                section.questions.forEach { question ->
+                    writeParagraph("  ${question.prompt}: ", question.answer ?: "Sin valor", boldLabel = false)
+                }
+                section.note?.takeIf { it.isNotBlank() }?.let {
+                    writeParagraph("  Nota: ", it, boldLabel = false)
+                }
+                y -= 4f
+            }
+        }
+
+        stream.close()
+        val output = ByteArrayOutputStream()
+        document.use { it.save(output) }
+        val safePlate = detail.vehiclePlate.ifBlank { "sin-placa" }
+            .replace(Regex("[^A-Za-z0-9_-]"), "_")
+        return GeneratedPdfReport(
+            filename = "reporte-verificacion-$safePlate-${detail.verificacionId ?: id}.pdf",
+            content = output.toByteArray()
+        )
     }
 
     private fun com.sivemor.platform.domain.Verificacion.toWebVerificationListItem(): WebVerificationListItemResponse =

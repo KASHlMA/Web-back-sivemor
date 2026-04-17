@@ -17,6 +17,7 @@ import com.sivemor.platform.domain.UserRepository
 import com.sivemor.platform.domain.VehicleUnitRepository
 import com.sivemor.platform.domain.EvaluacionRepository
 import com.sivemor.platform.domain.VerificacionRepository
+import com.sivemor.platform.domain.VerificacionVeredicto
 import com.sivemor.platform.domain.VerificationOrderRepository
 import com.sivemor.platform.service.AuditService
 import com.sivemor.platform.service.MerCompatibilityService
@@ -495,6 +496,52 @@ class AdminServiceTest {
             .containsExactlyInAnyOrder(org.assertj.core.groups.Tuple.tuple("South", 1L), org.assertj.core.groups.Tuple.tuple("North", 1L))
         assertThat(dashboard.recentFailures.map { it.inspectionId })
             .containsExactly(110L, 100L)
+    }
+
+    @Test
+    fun `generateWebVerificationPdfReport returns a non empty pdf for synced verification`() {
+        val template = templateWithSection()
+        val section = template.sections.first()
+        val question = section.questions.first()
+        val region = region(id = 10L, name = "Centro")
+        val client = client(id = 20L, region = region, name = "Cliente Demo")
+        val technician = user(id = 30L, role = Role.TECHNICIAN).apply { fullName = "Tecnico Demo" }
+        val order = verificationOrder(id = 40L, client = client, region = region, technician = technician)
+        val unit = orderUnit(id = 50L, order = order, vehicle = vehicle(id = 60L, client = client, plate = "ABC123"))
+        val inspection = inspection(
+            id = 70L,
+            order = order,
+            orderUnit = unit,
+            technician = technician,
+            template = template,
+            status = InspectionStatus.SUBMITTED,
+            overallResult = InspectionResult.FAIL
+        ).apply {
+            submittedAt = Instant.parse("2030-01-05T00:00:00Z")
+            answers += inspectionAnswer(id = 71L, inspection = this, question = question, answerValue = AnswerValue.FAIL)
+            evidences += inspectionEvidence(id = 72L, inspection = this, section = section)
+        }
+        val verification = com.sivemor.platform.domain.Verificacion().apply {
+            id = 80L
+            this.inspection = inspection
+            vehicleUnit = unit.vehicleUnit
+            verificationOrder = order
+            folioVerificacion = "FOLIO-80"
+            fechaVerificacion = Instant.parse("2030-01-05T00:00:00Z")
+            veredicto = VerificacionVeredicto.REPROBADO
+            overallComment = "Comentario de prueba"
+        }
+
+        every { verificacionRepository.findById(80L) } returns Optional.of(verification)
+        every { inspectionRepository.findDetailedById(70L) } returns inspection
+        every { merCompatibilityService.syncSubmittedInspection(inspection) } returns verification
+        every { evaluacionRepository.findByVerificacionIdAndArchivedFalse(80L) } returns null
+
+        val pdf = adminService.generateWebVerificationPdfReport(80L)
+
+        assertThat(pdf.filename).contains("ABC123")
+        assertThat(pdf.content).isNotEmpty
+        assertThat(String(pdf.content.copyOfRange(0, 4))).isEqualTo("%PDF")
     }
 
     @Test

@@ -563,6 +563,7 @@ function EvaluationDetailPage({ detailKey, detailId, loadDetail, backTo }) {
                           </select>
                         )}
                       </div>
+
                     </article>
                   ))}
                 </div>

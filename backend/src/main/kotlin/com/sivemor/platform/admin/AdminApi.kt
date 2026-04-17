@@ -1411,13 +1411,15 @@ class AdminService(
             return lines
         }
 
-        fun writeParagraph(label: String, value: String?, boldLabel: Boolean = true) {
-            val content = "$label${value?.takeIf { it.isNotBlank() } ?: "-"}"
-            val lines = wrap(content, 11f)
-            ensureSpace(lines.size)
-            lines.forEachIndexed { index, line ->
-                writeLine(line, 11f, boldLabel && index == 0)
-            }
+        fun writeQuestionBlock(index: Int, prompt: String, value: String?) {
+            val safeValue = value?.takeIf { it.isNotBlank() } ?: "-"
+            val promptLines = wrap("$index. $prompt", 11f)
+            val resultLines = wrap(safeValue, 11f)
+            ensureSpace(promptLines.size + resultLines.size + 2)
+            promptLines.forEach { line -> writeLine(line, 11f, false) }
+            writeLine("Resultado", 11f, true)
+            resultLines.forEach { line -> writeLine(line, 11f, false) }
+            y -= 4f
         }
 
         fun formatMobileAnswer(value: String?): String? = when (value?.trim()?.uppercase()) {
@@ -1427,44 +1429,23 @@ class AdminService(
             else -> value
         }
 
+        fun formatFieldLabel(value: String): String =
+            value
+                .replace("_", " ")
+                .replaceFirstChar { it.uppercase() }
+
         writeLine("Reporte de verificacion web", 16f, true)
         y -= 4f
-        writeParagraph("ID verificacion: ", detail.verificacionId?.toString())
-        writeParagraph("ID inspeccion: ", detail.inspectionId.toString())
-        writeParagraph("Placa: ", detail.vehiclePlate)
-        writeParagraph("Empresa: ", detail.clientCompanyName)
-        writeParagraph("Tecnico: ", detail.technicianName)
-        writeParagraph("Resultado general: ", detail.overallResult)
-        writeParagraph("Fecha: ", detail.submittedAt?.toString())
-        writeParagraph("Comentario general: ", detail.overallComment)
-        writeParagraph("Evidencias: ", "${detail.evidences.size}")
-        y -= 6f
-
         if (detail.formSections.isNotEmpty()) {
-            writeLine("Formulario movil", 13f, true)
             detail.formSections.forEach { section ->
                 writeLine(section.title, 12f, true)
-                section.questions.forEach { question ->
-                    val questionValue = listOfNotNull(
-                        formatMobileAnswer(question.answer)?.takeIf { it.isNotBlank() }?.let { "Valor: $it" },
-                        question.comment?.takeIf { it.isNotBlank() }?.let { "Comentario: $it" }
-                    ).ifEmpty { listOf("Sin valor") }.joinToString(" | ")
-                    writeParagraph("  ${question.prompt}: ", questionValue, boldLabel = false)
-                }
-                section.note?.takeIf { it.isNotBlank() }?.let {
-                    writeParagraph("  Nota: ", it, boldLabel = false)
+                section.questions.forEachIndexed { index, question ->
+                    val questionValue = question.comment?.takeIf { it.isNotBlank() }
+                        ?: formatMobileAnswer(question.answer)?.takeIf { it.isNotBlank() }
+                        ?: "Sin valor"
+                    writeQuestionBlock(index + 1, question.prompt, questionValue)
                 }
                 y -= 4f
-            }
-        }
-
-        if (detail.evidences.isNotEmpty()) {
-            writeLine("Evidencias", 13f, true)
-            detail.evidences.forEachIndexed { index, evidence ->
-                writeParagraph("${index + 1}. Archivo: ", evidence.filename, boldLabel = false)
-                writeParagraph("   Seccion: ", evidence.sectionName ?: "Sin seccion", boldLabel = false)
-                writeParagraph("   Fecha: ", evidence.capturedAt.toString(), boldLabel = false)
-                writeParagraph("   Comentario: ", evidence.comment ?: "-", boldLabel = false)
             }
         }
 

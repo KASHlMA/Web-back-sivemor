@@ -8,6 +8,7 @@ import com.sivemor.platform.domain.CedisRepository
 import com.sivemor.platform.domain.ClientCompany
 import com.sivemor.platform.domain.ClientCompanyRepository
 import com.sivemor.platform.domain.Inspection
+import com.sivemor.platform.domain.ChecklistSection
 import com.sivemor.platform.domain.InspectionRepository
 import com.sivemor.platform.domain.InspectionResult
 import com.sivemor.platform.domain.InspectionStatus
@@ -1410,45 +1411,39 @@ class AdminService(
             return lines
         }
 
-        fun writeParagraph(label: String, value: String?, boldLabel: Boolean = true) {
-            val content = "$label${value?.takeIf { it.isNotBlank() } ?: "-"}"
-            val lines = wrap(content, 11f)
-            ensureSpace(lines.size)
-            lines.forEachIndexed { index, line ->
-                writeLine(line, 11f, boldLabel && index == 0)
-            }
-        }
-
-        writeLine("Reporte de verificacion web", 16f, true)
-        y -= 4f
-        writeParagraph("ID verificacion: ", detail.verificacionId?.toString())
-        writeParagraph("ID inspeccion: ", detail.inspectionId.toString())
-        writeParagraph("Placa: ", detail.vehiclePlate)
-        writeParagraph("Empresa: ", detail.clientCompanyName)
-        writeParagraph("Tecnico: ", detail.technicianName)
-        writeParagraph("Resultado general: ", detail.overallResult)
-        writeParagraph("Fecha: ", detail.submittedAt?.toString())
-        writeParagraph("Comentario general: ", detail.overallComment)
-        writeParagraph("Evidencias: ", "${detail.evidences.size}")
-        y -= 6f
-
-        detail.sections.entries.forEach { (sectionName, answers) ->
-            writeLine(sectionName.replace("_", " ").replaceFirstChar { it.uppercase() }, 13f, true)
-            answers.forEach { (field, value) ->
-                writeParagraph("  ${field.replace("_", " ")}: ", value?.toString(), boldLabel = false)
-            }
+        fun writeQuestionBlock(index: Int, prompt: String, value: String?) {
+            val safeValue = value?.takeIf { it.isNotBlank() } ?: "-"
+            val promptLines = wrap("$index. $prompt", 11f)
+            val resultLines = wrap(safeValue, 11f)
+            ensureSpace(promptLines.size + resultLines.size + 2)
+            promptLines.forEach { line -> writeLine(line, 11f, false) }
+            writeLine("Resultado", 11f, true)
+            resultLines.forEach { line -> writeLine(line, 11f, false) }
             y -= 4f
         }
 
+        fun formatMobileAnswer(value: String?): String? = when (value?.trim()?.uppercase()) {
+            "PASS", "APROBADO" -> "Aprobado"
+            "FAIL", "REPROBADO" -> "Reprobado"
+            "NA", "NO_APLICA" -> "No aplica"
+            else -> value
+        }
+
+        fun formatFieldLabel(value: String): String =
+            value
+                .replace("_", " ")
+                .replaceFirstChar { it.uppercase() }
+
+        writeLine("Reporte de verificacion web", 16f, true)
+        y -= 4f
         if (detail.formSections.isNotEmpty()) {
-            writeLine("Formulario original", 13f, true)
             detail.formSections.forEach { section ->
                 writeLine(section.title, 12f, true)
-                section.questions.forEach { question ->
-                    writeParagraph("  ${question.prompt}: ", question.answer ?: "Sin valor", boldLabel = false)
-                }
-                section.note?.takeIf { it.isNotBlank() }?.let {
-                    writeParagraph("  Nota: ", it, boldLabel = false)
+                section.questions.forEachIndexed { index, question ->
+                    val questionValue = question.comment?.takeIf { it.isNotBlank() }
+                        ?: formatMobileAnswer(question.answer)?.takeIf { it.isNotBlank() }
+                        ?: "Sin valor"
+                    writeQuestionBlock(index + 1, question.prompt, questionValue)
                 }
                 y -= 4f
             }
@@ -1749,7 +1744,7 @@ class AdminService(
             .sortedByDescending { it.capturedAt }
             .map { it.toEvaluationEvidenceResponse() },
         formSections = inspection.toFormSections(),
-        sections = evaluacion.toSectionMap()
+        sections = evaluacion.toSectionMap().ifEmpty { inspection.toMobileSectionsMap() }
     )
 
     private fun Inspection.toLegacyEvaluationDetail(): EvaluationDetailResponse = EvaluationDetailResponse(
@@ -1770,15 +1765,7 @@ class AdminService(
             .sortedByDescending { it.capturedAt }
             .map { it.toEvaluationEvidenceResponse() },
         formSections = toFormSections(),
-        sections = template.sections
-            .filter { !it.archived }
-            .associate { section ->
-                section.title to section.questions
-                    .filter { !it.archived }
-                    .associate { question ->
-                        question.code to (answers.firstOrNull { it.question.id == question.id }?.answerValue?.name)
-                    } + mapOf("comment" to sectionNotes.firstOrNull { it.section.id == section.id }?.comment)
-            }
+        sections = toMobileSectionsMap()
     )
 
     private fun com.sivemor.platform.domain.Evaluacion?.toSectionMap(): Map<String, Map<String, Any?>> {
@@ -1884,6 +1871,40 @@ class AdminService(
             comment = comment,
             previewUrl = "data:$mimeType;base64,${Base64.getEncoder().encodeToString(content)}"
         )
+
+    private fun Inspection.toMobileSectionsMap(): Map<String, Map<String, Any?>> =
+        linkedMapOf<String, Map<String, Any?>>().apply {
+            val answersByQuestionId = answers.associateBy { it.question.id ?: 0L }
+            val notesBySectionId = sectionNotes.associateBy { it.section.id ?: 0L }
+
+            template.sections
+                .filter { !it.archived }
+                .sortedBy { it.displayOrder }
+                .forEach { section ->
+                    val sectionMap = linkedMapOf<String, Any?>()
+
+                    section.questions
+                        .filter { !it.archived }
+                        .sortedBy { it.displayOrder }
+                        .forEach { question ->
+                            val answer = answersByQuestionId[question.id ?: 0L]
+                            sectionMap[question.code] = answer?.comment ?: answer?.answerValue?.name
+                        }
+
+                    sectionMap["comment"] = notesBySectionId[section.id ?: 0L]?.comment
+                    put(section.codeOrFallback(), sectionMap)
+                }
+
+            put("general", linkedMapOf("comentarios_generales" to overallComment))
+        }
+
+    private fun ChecklistSection.codeOrFallback(): String =
+        title
+            .trim()
+            .lowercase()
+            .replace("/", " ")
+            .replace(Regex("[^a-z0-9]+"), "_")
+            .trim('_')
 
     private fun Inspection.toFormSections(): List<InspectionFormSectionResponse> {
         val answersByQuestionId = answers.associateBy { it.question.id ?: 0L }

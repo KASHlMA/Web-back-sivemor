@@ -24,6 +24,9 @@ import com.sivemor.platform.service.MerCompatibilityService
 import com.sivemor.platform.service.PasswordGenerator
 import com.sivemor.platform.service.UserCredentialMailer
 import com.sivemor.platform.support.TestEntityFactory.client
+import com.sivemor.platform.support.TestEntityFactory.checklistQuestion
+import com.sivemor.platform.support.TestEntityFactory.checklistSection
+import com.sivemor.platform.support.TestEntityFactory.checklistTemplate
 import com.sivemor.platform.support.TestEntityFactory.cedis
 import com.sivemor.platform.support.TestEntityFactory.inspection
 import com.sivemor.platform.support.TestEntityFactory.inspectionAnswer
@@ -41,6 +44,8 @@ import io.mockk.every
 import io.mockk.impl.annotations.MockK
 import io.mockk.just
 import io.mockk.verify
+import org.apache.pdfbox.Loader
+import org.apache.pdfbox.text.PDFTextStripper
 import org.assertj.core.api.Assertions.assertThat
 import org.assertj.core.api.Assertions.assertThatThrownBy
 import org.junit.jupiter.api.BeforeEach
@@ -500,7 +505,35 @@ class AdminServiceTest {
 
     @Test
     fun `generateWebVerificationPdfReport returns a non empty pdf for synced verification`() {
-        val template = templateWithSection()
+        val template = checklistTemplate(sections = mutableListOf())
+        val sectionTitles = listOf(
+            "Luces",
+            "Llantas",
+            "Direccion",
+            "Aire Frenos",
+            "Motor y emisiones",
+            "Otros"
+        )
+        val sections = sectionTitles.mapIndexed { index, title ->
+            checklistSection(
+                id = (index + 1).toLong(),
+                template = template,
+                title = title,
+                displayOrder = index + 1,
+                questions = mutableListOf()
+            ).also { section ->
+                val question = checklistQuestion(
+                    id = (index + 1).toLong(),
+                    section = section,
+                    code = "Q_${index + 1}",
+                    displayOrder = 1
+                ).apply {
+                    prompt = "$title pregunta"
+                }
+                section.questions += question
+            }
+        }
+        template.sections += sections
         val section = template.sections.first()
         val question = section.questions.first()
         val region = region(id = 10L, name = "Centro")
@@ -538,10 +571,19 @@ class AdminServiceTest {
         every { evaluacionRepository.findByVerificacionIdAndArchivedFalse(80L) } returns null
 
         val pdf = adminService.generateWebVerificationPdfReport(80L)
+        val pdfText = Loader.loadPDF(pdf.content).use { document ->
+            PDFTextStripper().getText(document)
+        }
 
         assertThat(pdf.filename).contains("ABC123")
         assertThat(pdf.content).isNotEmpty
         assertThat(String(pdf.content.copyOfRange(0, 4))).isEqualTo("%PDF")
+        assertThat(pdfText).contains("Luces")
+        assertThat(pdfText).contains("Llantas")
+        assertThat(pdfText).contains("Direccion")
+        assertThat(pdfText).contains("Aire Frenos")
+        assertThat(pdfText).contains("Motor y emisiones")
+        assertThat(pdfText).contains("Otros")
     }
 
     @Test

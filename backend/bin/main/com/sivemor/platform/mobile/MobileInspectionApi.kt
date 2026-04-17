@@ -38,6 +38,7 @@ import jakarta.validation.constraints.Min
 import jakarta.validation.constraints.NotBlank
 import jakarta.validation.constraints.NotNull
 import jakarta.validation.constraints.Size
+import org.hibernate.Hibernate
 import org.springframework.format.annotation.DateTimeFormat
 import org.springframework.http.HttpStatus
 import org.springframework.http.MediaType
@@ -867,6 +868,7 @@ class MobileInspectionService(
     private fun requireAvailableInspection(technicianId: Long, inspectionId: Long): Inspection {
         val inspection = inspectionRepository.findDetailedById(inspectionId)
             ?: throw NotFoundException("Inspection $inspectionId was not found")
+        inspection.initializeDetails()
 
         if (inspection.archived ||
             inspection.technician.id != technicianId ||
@@ -875,6 +877,17 @@ class MobileInspectionService(
             throw ForbiddenException("Inspection draft is not available")
         }
         return inspection
+    }
+
+    private fun Inspection.initializeDetails() {
+        Hibernate.initialize(template.sections)
+        template.sections.forEach { Hibernate.initialize(it.questions) }
+        Hibernate.initialize(answers)
+        answers.forEach { Hibernate.initialize(it.question) }
+        Hibernate.initialize(sectionNotes)
+        sectionNotes.forEach { Hibernate.initialize(it.section) }
+        Hibernate.initialize(evidences)
+        evidences.forEach { Hibernate.initialize(it.section) }
     }
 
     private fun ChecklistTemplate.toChecklistResponse(): ChecklistTemplateResponse = ChecklistTemplateResponse(

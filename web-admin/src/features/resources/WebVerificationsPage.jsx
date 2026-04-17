@@ -271,7 +271,7 @@ function EvaluationDetailPage({ detailKey, detailId, loadDetail, backTo }) {
 
   useEffect(() => {
     if (query.data) {
-      setDraftFormSections(buildDraftSections(query.data.sections));
+      setDraftFormSections(buildDraftSections(query.data));
       setOverallComment(query.data.overallComment ?? "");
       setFeedbackMessage("");
     }
@@ -286,7 +286,7 @@ function EvaluationDetailPage({ detailKey, detailId, loadDetail, backTo }) {
       return api.put(`/admin/web-verifications/${query.data.verificacionId}`, payload);
     },
     onSuccess: async (response) => {
-      setDraftFormSections(buildDraftSections(response.sections));
+      setDraftFormSections(buildDraftSections(response));
       setOverallComment(response.overallComment ?? "");
       setFeedbackMessage("Cambios guardados correctamente.");
       await queryClient.invalidateQueries({ queryKey: [detailKey, detailId] });
@@ -501,7 +501,14 @@ function SummaryField({ label, value }) {
   );
 }
 
-function buildDraftSections(sectionsMap) {
+function buildDraftSections(detail) {
+  const sectionsMap = detail?.sections ?? {};
+  const formAnswersByCode = Object.fromEntries(
+    (detail?.formSections ?? []).flatMap((section) =>
+      (section.questions ?? []).map((question) => [question.code, question.answer])
+    )
+  );
+
   return FORM_SECTION_CONFIG.map((section) => ({
     sectionId: section.key,
     title: section.title,
@@ -509,7 +516,10 @@ function buildDraftSections(sectionsMap) {
       questionId: question.code,
       code: question.code,
       prompt: question.prompt,
-      answer: normalizeDraftValue(sectionsMap?.[section.key]?.[question.code])
+      type: question.type,
+      answer: normalizeDraftValue(
+        sectionsMap?.[section.key]?.[question.code] ?? formAnswersByCode?.[question.code]
+      )
     }))
   }));
 }

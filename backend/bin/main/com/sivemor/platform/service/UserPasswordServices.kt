@@ -3,10 +3,12 @@ package com.sivemor.platform.service
 import com.sivemor.platform.common.BadRequestException
 import com.sivemor.platform.config.AppMailProperties
 import com.sivemor.platform.domain.User
+import org.springframework.beans.factory.annotation.Value
 import org.springframework.mail.SimpleMailMessage
 import org.springframework.mail.javamail.JavaMailSender
 import org.springframework.stereotype.Service
 import java.security.SecureRandom
+import java.util.Locale
 
 interface PasswordGenerator {
     fun generate(length: Int = 14): String
@@ -48,12 +50,14 @@ interface UserCredentialMailer {
 @Service
 class SmtpUserCredentialMailer(
     private val mailSender: JavaMailSender,
-    private val mailProperties: AppMailProperties
+    private val mailProperties: AppMailProperties,
+    @Value("\${spring.mail.host:}") private val smtpHost: String
 ) : UserCredentialMailer {
     override fun sendNewPassword(user: User, generatedPassword: String) {
         if (!mailProperties.enabled) {
             throw BadRequestException("El envio de correos para contrasenas no esta habilitado")
         }
+        validateMailServer()
 
         val message = SimpleMailMessage().apply {
             from = mailProperties.from
@@ -71,5 +75,16 @@ class SmtpUserCredentialMailer(
         }
 
         mailSender.send(message)
+    }
+
+    private fun validateMailServer() {
+        val normalizedHost = smtpHost.trim().lowercase(Locale.ROOT)
+        val isTestInboxHost = normalizedHost in setOf("mailpit", "localhost", "127.0.0.1")
+        if (isTestInboxHost && !mailProperties.allowTestInbox) {
+            throw BadRequestException(
+                "El correo no se envio porque el sistema esta configurado con un servidor de pruebas. " +
+                    "Configura un SMTP real o habilita app.mail.allow-test-inbox solo para pruebas locales"
+            )
+        }
     }
 }

@@ -66,6 +66,13 @@ This workspace is the `sivemor-platform` repository. It contains:
    - Copy the returned `accessToken`
    - Paste it into Swagger UI via the `Authorize` button as a Bearer token
 
+## Email delivery
+
+- Password reset emails are only considered valid for real delivery when `MAIL_HOST` points to an actual SMTP provider.
+- The local Docker stack uses `mailpit` as a test inbox. That is useful for development, but it does not deliver messages to real recipients.
+- To keep the app from reporting a false success, `APP_MAIL_ALLOW_TEST_INBOX` now defaults to `false`. If `MAIL_HOST` is `mailpit`, `localhost`, or `127.0.0.1`, the reset action will fail with a clear error unless you explicitly set `APP_MAIL_ALLOW_TEST_INBOX=true` for local testing.
+- For real email delivery, configure at least `MAIL_HOST`, `MAIL_PORT`, `MAIL_PROTOCOL`, `MAIL_USERNAME`, `MAIL_PASSWORD`, and the TLS/SSL flags that match your provider.
+
 ## Seed users
 
 - Administrator

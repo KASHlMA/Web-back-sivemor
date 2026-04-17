@@ -26,12 +26,18 @@ spring:
     port: ${MAIL_PORT:1025}
     username: ${MAIL_USERNAME:}
     password: ${MAIL_PASSWORD:}
+    protocol: ${MAIL_PROTOCOL:smtp}
     properties:
       mail:
         smtp:
           auth: ${MAIL_SMTP_AUTH:false}
+          connectiontimeout: ${MAIL_SMTP_CONNECTION_TIMEOUT:5000}
+          timeout: ${MAIL_SMTP_TIMEOUT:5000}
+          writetimeout: ${MAIL_SMTP_WRITE_TIMEOUT:5000}
           starttls:
             enable: ${MAIL_SMTP_STARTTLS:false}
+          ssl:
+            enable: ${MAIL_SMTP_SSL_ENABLE:false}
   servlet:
     multipart:
       max-file-size: ${MAX_UPLOAD_SIZE:10MB}
@@ -57,6 +63,7 @@ app:
   mail:
     from: ${APP_MAIL_FROM:no-reply@sivemor.local}
     enabled: ${APP_MAIL_ENABLED:false}
+    allow-test-inbox: ${APP_MAIL_ALLOW_TEST_INBOX:false}
   security:
     jwt:
       issuer: ${JWT_ISSUER:sivemor-platform}

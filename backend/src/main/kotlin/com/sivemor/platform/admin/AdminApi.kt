@@ -52,6 +52,7 @@ import jakarta.validation.constraints.NotBlank
 import jakarta.validation.constraints.NotEmpty
 import jakarta.validation.constraints.NotNull
 import jakarta.validation.constraints.Size
+import org.hibernate.Hibernate
 import org.springframework.format.annotation.DateTimeFormat
 import org.springframework.http.HttpStatus
 import org.springframework.http.ResponseEntity
@@ -1273,18 +1274,27 @@ class AdminService(
 
         verificacionRepository.findAllByArchivedFalseOrderByFechaVerificacionDesc()
             .forEach { verificacion ->
-                verificationsByInspectionId[verificacion.inspection.id ?: 0L] = verificacion
+                val inspectionId = verificacion.inspection.id ?: 0L
+                val detailedInspection = inspectionRepository.findDetailedById(inspectionId)
+                verificationsByInspectionId[inspectionId] = if (detailedInspection != null &&
+                    detailedInspection.status == InspectionStatus.SUBMITTED
+                ) {
+                    detailedInspection.initializeDetails()
+                    merCompatibilityService.syncSubmittedInspection(detailedInspection)
+                } else {
+                    verificacion
+                }
             }
 
         inspectionRepository.findAllByStatusAndArchivedFalseOrderBySubmittedAtDesc(InspectionStatus.SUBMITTED)
             .forEach { inspection ->
                 val inspectionId = inspection.id ?: 0L
-                if (!verificationsByInspectionId.containsKey(inspectionId)) {
-                    val syncedVerification = merCompatibilityService.syncSubmittedInspection(
-                        inspectionRepository.findDetailedById(inspectionId) ?: inspection
-                    )
-                    verificationsByInspectionId[inspectionId] = syncedVerification
-                }
+                val detailedInspection = inspectionRepository.findDetailedById(inspectionId) ?: inspection
+                detailedInspection.initializeDetails()
+                val syncedVerification = merCompatibilityService.syncSubmittedInspection(
+                    detailedInspection
+                )
+                verificationsByInspectionId[inspectionId] = syncedVerification
             }
 
         return verificationsByInspectionId.values
@@ -1301,8 +1311,13 @@ class AdminService(
                     throw NotFoundException("Verification $id was not found")
                 }
             }
-        val evaluacion = evaluacionRepository.findByVerificacionIdAndArchivedFalse(id)
-        return verificacion.toEvaluationDetail(evaluacion)
+        val inspectionId = verificacion.inspection.id ?: throw NotFoundException("Verification $id has no inspection")
+        val detailedInspection = inspectionRepository.findDetailedById(inspectionId)
+            ?: throw NotFoundException("Inspection $inspectionId was not found")
+        detailedInspection.initializeDetails()
+        val syncedVerification = merCompatibilityService.syncSubmittedInspection(detailedInspection)
+        val evaluacion = evaluacionRepository.findByVerificacionIdAndArchivedFalse(syncedVerification.id ?: 0L)
+        return syncedVerification.toEvaluationDetail(evaluacion)
     }
 
     private fun com.sivemor.platform.domain.Verificacion.toWebVerificationListItem(): WebVerificationListItemResponse =
@@ -1920,6 +1935,17 @@ class AdminService(
     private fun parseIntValue(value: String?): Int? = parseDoubleValue(value)?.toInt()
 
     private fun normalizeText(value: String?): String? = value?.trim()?.takeIf { it.isNotEmpty() }
+
+    private fun Inspection.initializeDetails() {
+        Hibernate.initialize(template.sections)
+        template.sections.forEach { Hibernate.initialize(it.questions) }
+        Hibernate.initialize(answers)
+        answers.forEach { Hibernate.initialize(it.question) }
+        Hibernate.initialize(sectionNotes)
+        sectionNotes.forEach { Hibernate.initialize(it.section) }
+        Hibernate.initialize(evidences)
+        evidences.forEach { Hibernate.initialize(it.section) }
+    }
 
     private fun requireUser(id: Long): User =
         userRepository.findById(id).orElseThrow { NotFoundException("User $id was not found") }

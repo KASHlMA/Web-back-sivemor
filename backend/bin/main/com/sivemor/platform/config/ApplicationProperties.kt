@@ -18,5 +18,6 @@ data class CorsProperties(
 @ConfigurationProperties(prefix = "app.mail")
 data class AppMailProperties(
     var from: String = "no-reply@sivemor.local",
-    var enabled: Boolean = false
+    var enabled: Boolean = false,
+    var allowTestInbox: Boolean = false
 )

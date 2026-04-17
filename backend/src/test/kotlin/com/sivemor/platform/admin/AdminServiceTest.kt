@@ -602,6 +602,75 @@ class AdminServiceTest {
     }
 
     @Test
+    fun `updateWebVerificationDetail persists evaluation and inspection changes`() {
+        val template = templateWithSection()
+        val section = template.sections.first()
+        val question = section.questions.first()
+        val region = region(id = 10L, name = "Centro")
+        val client = client(id = 20L, region = region, name = "Cliente Demo")
+        val technician = user(id = 30L, role = Role.TECHNICIAN).apply { fullName = "Tecnico Demo" }
+        val order = verificationOrder(id = 40L, client = client, region = region, technician = technician)
+        val unit = orderUnit(id = 50L, order = order, vehicle = vehicle(id = 60L, client = client, plate = "ABC123"))
+        val inspection = inspection(
+            id = 70L,
+            order = order,
+            orderUnit = unit,
+            technician = technician,
+            template = template,
+            status = InspectionStatus.SUBMITTED,
+            overallResult = InspectionResult.PASS
+        ).apply {
+            submittedAt = Instant.parse("2030-01-05T00:00:00Z")
+            answers += inspectionAnswer(id = 71L, inspection = this, question = question, answerValue = AnswerValue.PASS)
+        }
+        val verification = com.sivemor.platform.domain.Verificacion().apply {
+            id = 80L
+            this.inspection = inspection
+            vehicleUnit = unit.vehicleUnit
+            verificationOrder = order
+            folioVerificacion = "FOLIO-80"
+            fechaVerificacion = Instant.parse("2030-01-05T00:00:00Z")
+            veredicto = VerificacionVeredicto.APROBADO
+        }
+        val evaluacion = com.sivemor.platform.domain.Evaluacion().apply {
+            id = 90L
+            verificacion = verification
+            lucesGalibo = "APROBADO"
+            comentariosGenerales = null
+            evidenceCount = 0
+        }
+
+        every { userRepository.findById(99L) } returns Optional.of(user(id = 99L, username = "admin", role = Role.ADMIN))
+        every { verificacionRepository.findById(80L) } returns Optional.of(verification)
+        every { evaluacionRepository.findByVerificacionIdAndArchivedFalse(80L) } returns evaluacion
+        every { evaluacionRepository.save(any()) } answers { firstArg() }
+        every { verificacionRepository.save(any()) } answers { firstArg() }
+        every { inspectionRepository.save(any()) } answers { firstArg() }
+
+        val response = adminService.updateWebVerificationDetail(
+            actorId = 99L,
+            id = 80L,
+            request = WebVerificationUpdateRequest(
+                sections = mapOf(
+                    "luces" to mapOf("luces_galibo" to "REPROBADO"),
+                    "general" to mapOf("comentarios_generales" to "No paso la revision")
+                )
+            )
+        )
+
+        assertThat(evaluacion.lucesGalibo).isEqualTo("REPROBADO")
+        assertThat(evaluacion.comentariosGenerales).isEqualTo("No paso la revision")
+        assertThat(verification.veredicto).isEqualTo(VerificacionVeredicto.REPROBADO)
+        assertThat(verification.overallComment).isEqualTo("No paso la revision")
+        assertThat(inspection.overallComment).isEqualTo("No paso la revision")
+        assertThat(inspection.overallResult).isEqualTo(InspectionResult.FAIL)
+        assertThat(response.overallComment).isEqualTo("No paso la revision")
+        verify { evaluacionRepository.save(evaluacion) }
+        verify { verificacionRepository.save(verification) }
+        verify { inspectionRepository.save(inspection) }
+    }
+
+    @Test
     fun `updateUser rejects archived users`() {
         val archived = user(id = 77L, archived = true)
         every { userRepository.findById(77L) } returns Optional.of(archived)

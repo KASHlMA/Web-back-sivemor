@@ -1383,6 +1383,10 @@ class AdminService(
         val left = 48f
         val lineHeight = 15f
         val maxWidth = page.mediaBox.width - (left * 2)
+        val sectionSpacing = 12f
+        val questionSpacing = 10f
+        val labelSpacing = 4f
+        val blockSpacing = 12f
 
         fun newPage() {
             stream.close()
@@ -1406,6 +1410,11 @@ class AdminService(
             stream.showText(text)
             stream.endText()
             y -= lineHeight
+        }
+
+        fun addVerticalSpace(space: Float) {
+            ensureSpace(kotlin.math.ceil(space / lineHeight).toInt().coerceAtLeast(1))
+            y -= space
         }
 
         fun wrap(text: String, fontSize: Float): List<String> {
@@ -1433,11 +1442,13 @@ class AdminService(
             val safeValue = value?.takeIf { it.isNotBlank() } ?: "-"
             val promptLines = wrap("$index. $prompt", 11f)
             val resultLines = wrap(safeValue, 11f)
-            ensureSpace(promptLines.size + resultLines.size + 2)
+            ensureSpace(promptLines.size + resultLines.size + 4)
             promptLines.forEach { line -> writeLine(line, 11f, false) }
+            addVerticalSpace(labelSpacing)
             writeLine("Resultado", 11f, true)
+            addVerticalSpace(labelSpacing)
             resultLines.forEach { line -> writeLine(line, 11f, false) }
-            y -= 4f
+            addVerticalSpace(blockSpacing)
         }
 
         fun formatMobileAnswer(value: String?): String? = when (value?.trim()?.uppercase()) {
@@ -1453,17 +1464,18 @@ class AdminService(
                 .replaceFirstChar { it.uppercase() }
 
         writeLine("Reporte de verificacion web", 16f, true)
-        y -= 4f
+        addVerticalSpace(sectionSpacing)
         if (detail.formSections.isNotEmpty()) {
             detail.formSections.forEach { section ->
                 writeLine(section.title, 12f, true)
+                addVerticalSpace(questionSpacing)
                 section.questions.forEachIndexed { index, question ->
                     val questionValue = question.comment?.takeIf { it.isNotBlank() }
                         ?: formatMobileAnswer(question.answer)?.takeIf { it.isNotBlank() }
                         ?: "Sin valor"
                     writeQuestionBlock(index + 1, question.prompt, questionValue)
                 }
-                y -= 4f
+                addVerticalSpace(sectionSpacing)
             }
         }
 
@@ -1526,6 +1538,9 @@ class AdminService(
         verificacion.overallComment = evaluacion.comentariosGenerales
         verificacion.inspection.overallComment = evaluacion.comentariosGenerales
         verificacion.inspection.overallResult = if (verdict == VerificacionVeredicto.APROBADO) InspectionResult.PASS else InspectionResult.FAIL
+        evaluacionRepository.save(evaluacion)
+        verificacionRepository.save(verificacion)
+        inspectionRepository.save(verificacion.inspection)
 
         logAction(
             actorId,

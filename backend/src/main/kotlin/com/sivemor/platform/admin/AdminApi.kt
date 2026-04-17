@@ -8,6 +8,7 @@ import com.sivemor.platform.domain.CedisRepository
 import com.sivemor.platform.domain.ClientCompany
 import com.sivemor.platform.domain.ClientCompanyRepository
 import com.sivemor.platform.domain.Inspection
+import com.sivemor.platform.domain.InspectionAnswer
 import com.sivemor.platform.domain.ChecklistSection
 import com.sivemor.platform.domain.InspectionRepository
 import com.sivemor.platform.domain.InspectionResult

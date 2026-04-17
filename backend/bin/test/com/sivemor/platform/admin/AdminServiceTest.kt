@@ -108,6 +108,7 @@ class AdminServiceTest {
     fun `createUser generates password and emails it`() {
         val actor = user(id = 99L, username = "admin", role = Role.ADMIN)
         every { userRepository.findByUsernameIgnoreCaseAndArchivedFalse("newuser") } returns null
+        every { userRepository.findByEmailIgnoreCaseAndArchivedFalse("newuser@example.com") } returns null
         every { userRepository.findById(99L) } returns Optional.of(actor)
         every { passwordGenerator.generate(any()) } returns "Temp1234!"
         every { passwordEncoder.encode("Temp1234!") } returns "encoded-temp"
@@ -133,6 +134,20 @@ class AdminServiceTest {
             )
         }.isInstanceOf(BadRequestException::class.java)
             .hasMessage("Username already exists")
+    }
+
+    @Test
+    fun `createUser rejects duplicate emails`() {
+        every { userRepository.findByUsernameIgnoreCaseAndArchivedFalse("newuser") } returns null
+        every { userRepository.findByEmailIgnoreCaseAndArchivedFalse("newuser@example.com") } returns user(id = 10L, username = "existing")
+
+        assertThatThrownBy {
+            adminService.createUser(
+                99L,
+                UserUpsertRequest("newuser", "newuser@example.com", "New User", Role.ADMIN)
+            )
+        }.isInstanceOf(BadRequestException::class.java)
+            .hasMessage("Email already exists")
     }
 
     @Test
@@ -599,6 +614,31 @@ class AdminServiceTest {
             )
         }.isInstanceOf(NotFoundException::class.java)
             .hasMessage("User 77 was not found")
+    }
+
+    @Test
+    fun `updateUser rejects duplicate email owned by another user`() {
+        val actor = user(id = 99L, username = "admin", role = Role.ADMIN)
+        val target = user(id = 77L, username = "target", role = Role.ADMIN).apply {
+            email = "target@example.com"
+            fullName = "Target User"
+        }
+        val existing = user(id = 88L, username = "existing", role = Role.ADMIN).apply {
+            email = "shared@example.com"
+        }
+        every { userRepository.findById(77L) } returns Optional.of(target)
+        every { userRepository.findByUsernameIgnoreCaseAndArchivedFalse("target") } returns target
+        every { userRepository.findByEmailIgnoreCaseAndArchivedFalse("shared@example.com") } returns existing
+        every { userRepository.findById(99L) } returns Optional.of(actor)
+
+        assertThatThrownBy {
+            adminService.updateUser(
+                99L,
+                77L,
+                UserUpsertRequest("target", "shared@example.com", "Target User", Role.ADMIN)
+            )
+        }.isInstanceOf(BadRequestException::class.java)
+            .hasMessage("Email already exists")
     }
 
     @Test

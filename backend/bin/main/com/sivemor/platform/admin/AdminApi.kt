@@ -8,6 +8,7 @@ import com.sivemor.platform.domain.CedisRepository
 import com.sivemor.platform.domain.ClientCompany
 import com.sivemor.platform.domain.ClientCompanyRepository
 import com.sivemor.platform.domain.Inspection
+import com.sivemor.platform.domain.InspectionAnswer
 import com.sivemor.platform.domain.ChecklistSection
 import com.sivemor.platform.domain.InspectionRepository
 import com.sivemor.platform.domain.InspectionResult
@@ -817,14 +818,20 @@ class AdminService(
 
     @Transactional
     fun createUser(actorId: Long, request: UserUpsertRequest): UserResponse {
-        if (userRepository.findByUsernameIgnoreCaseAndArchivedFalse(request.username.trim()) != null) {
+        val normalizedUsername = request.username.trim()
+        val normalizedEmail = request.email.trim().lowercase()
+
+        if (userRepository.findByUsernameIgnoreCaseAndArchivedFalse(normalizedUsername) != null) {
             throw BadRequestException("Username already exists")
+        }
+        if (userRepository.findByEmailIgnoreCaseAndArchivedFalse(normalizedEmail) != null) {
+            throw BadRequestException("Email already exists")
         }
 
         val generatedPassword = passwordGenerator.generate()
         val user = User().apply {
-            username = request.username.trim()
-            email = request.email.trim().lowercase()
+            username = normalizedUsername
+            email = normalizedEmail
             fullName = request.fullName.trim()
             role = request.role
             active = request.active ?: true
@@ -839,8 +846,19 @@ class AdminService(
     @Transactional
     fun updateUser(actorId: Long, id: Long, request: UserUpsertRequest): UserResponse {
         val user = requireUser(id)
-        user.username = request.username.trim()
-        user.email = request.email.trim().lowercase()
+        val normalizedUsername = request.username.trim()
+        val normalizedEmail = request.email.trim().lowercase()
+        val usernameOwner = userRepository.findByUsernameIgnoreCaseAndArchivedFalse(normalizedUsername)
+        if (usernameOwner != null && usernameOwner.id != user.id) {
+            throw BadRequestException("Username already exists")
+        }
+        val emailOwner = userRepository.findByEmailIgnoreCaseAndArchivedFalse(normalizedEmail)
+        if (emailOwner != null && emailOwner.id != user.id) {
+            throw BadRequestException("Email already exists")
+        }
+
+        user.username = normalizedUsername
+        user.email = normalizedEmail
         user.fullName = request.fullName.trim()
         user.role = request.role
         user.active = request.active ?: true
@@ -1888,7 +1906,7 @@ class AdminService(
                         .sortedBy { it.displayOrder }
                         .forEach { question ->
                             val answer = answersByQuestionId[question.id ?: 0L]
-                            sectionMap[question.code] = answer?.comment ?: answer?.answerValue?.name
+                            sectionMap[question.code] = answer.toLegacySectionValue()
                         }
 
                     sectionMap["comment"] = notesBySectionId[section.id ?: 0L]?.comment
@@ -1898,13 +1916,40 @@ class AdminService(
             put("general", linkedMapOf("comentarios_generales" to overallComment))
         }
 
-    private fun ChecklistSection.codeOrFallback(): String =
-        title
+    private fun InspectionAnswer?.toLegacySectionValue(): String? {
+        val commentValue = this?.comment?.trim()?.takeIf { it.isNotEmpty() }
+        if (commentValue != null) {
+            return commentValue
+        }
+
+        return when (this?.answerValue) {
+            AnswerValue.PASS -> "APROBADO"
+            AnswerValue.FAIL -> "REPROBADO"
+            AnswerValue.NA -> "NO_APLICA"
+            null -> null
+        }
+    }
+
+    private fun ChecklistSection.codeOrFallback(): String {
+        val normalizedTitle = title
             .trim()
             .lowercase()
             .replace("/", " ")
             .replace(Regex("[^a-z0-9]+"), "_")
             .trim('_')
+
+        // Keep the legacy section keys that the current web form expects so
+        // mobile-submitted inspections hydrate the existing UI without layout changes.
+        return when (normalizedTitle) {
+            "luces" -> "luces"
+            "llantas" -> "llantas"
+            "direccion_estructura_y_accesos" -> "direccion"
+            "sistema_de_aire_frenos" -> "aire_frenos"
+            "motor_y_emisiones" -> "motor_emisiones"
+            "otros" -> "otros"
+            else -> normalizedTitle
+        }
+    }
 
     private fun Inspection.toFormSections(): List<InspectionFormSectionResponse> {
         val answersByQuestionId = answers.associateBy { it.question.id ?: 0L }

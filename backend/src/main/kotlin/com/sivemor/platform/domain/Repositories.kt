@@ -131,6 +131,18 @@ interface InspectionRepository : JpaRepository<Inspection, Long> {
     ): Long
 
     fun countByVerificationOrderIdAndArchivedFalse(verificationOrderId: Long): Long
+
+    @EntityGraph(
+        attributePaths = [
+            "verificationOrder", "verificationOrder.clientCompany",
+            "orderUnit", "orderUnit.vehicleUnit",
+            "template", "template.sections", "template.sections.questions"
+        ]
+    )
+    fun findAllByTechnicianIdAndStatusAndArchivedFalseOrderBySubmittedAtDesc(
+        technicianId: Long,
+        status: InspectionStatus
+    ): List<Inspection>
 }
 
 interface PaymentRepository : JpaRepository<Payment, Long> {
@@ -168,3 +180,8 @@ interface EvaluacionRepository : JpaRepository<Evaluacion, Long> {
 }
 
 interface AuditLogRepository : JpaRepository<AuditLog, Long>
+
+interface ClientPricingRepository : JpaRepository<ClientPricing, Long> {
+    fun findAllByClientCompanyIdAndArchivedFalseOrderByMateria(clientCompanyId: Long): List<ClientPricing>
+    fun findByClientCompanyIdAndMateriaAndArchivedFalse(clientCompanyId: Long, materia: VerificacionMateria): ClientPricing?
+}

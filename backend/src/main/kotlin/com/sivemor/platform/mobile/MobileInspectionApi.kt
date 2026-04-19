@@ -200,6 +200,17 @@ data class SubmissionResponse(
     val submittedAt: Instant?
 )
 
+data class InspectionHistoryResponse(
+    val id: Long,
+    val orderNumber: String,
+    val vehiclePlate: String,
+    val clientCompanyName: String,
+    val submittedAt: Instant,
+    val overallComment: String?,
+    val verdict: String?,
+    val sections: List<InspectionSectionDraftResponse>
+)
+
 @RestController
 @Tag(name = "Mobile", description = "Technician mobile inspection endpoints")
 @SecurityRequirement(name = "bearerAuth")
@@ -346,6 +357,13 @@ class MobileInspectionController(
         @AuthenticationPrincipal principal: AppUserPrincipal,
         @PathVariable id: Long
     ): SubmissionResponse = mobileInspectionService.submitInspection(principal.id, id)
+
+    @Operation(summary = "List completed inspections for the authenticated technician")
+    @GetMapping("/inspections/history")
+    fun inspectionHistory(
+        @Parameter(hidden = true)
+        @AuthenticationPrincipal principal: AppUserPrincipal
+    ): List<InspectionHistoryResponse> = mobileInspectionService.listCompletedInspections(principal.id)
 }
 
 @org.springframework.stereotype.Service
@@ -984,6 +1002,60 @@ class MobileInspectionService(
             sections = sections
         )
     }
+
+    @Transactional(readOnly = true)
+    fun listCompletedInspections(technicianId: Long): List<InspectionHistoryResponse> =
+        inspectionRepository.findAllByTechnicianIdAndStatusAndArchivedFalseOrderBySubmittedAtDesc(
+            technicianId, InspectionStatus.SUBMITTED
+        ).map { inspection ->
+            inspection.initializeDetails()
+            val sections = inspection.template.sections
+                .filter { !it.archived }
+                .sortedBy { it.displayOrder }
+                .map { section ->
+                    val sectionAnswers = inspection.answers.filter { it.question.section.id == section.id }
+                    val note = inspection.sectionNotes.firstOrNull { it.section.id == section.id }?.comment
+                    val evidencesForSection = inspection.evidences.filter { it.section?.id == section.id }
+                    InspectionSectionDraftResponse(
+                        sectionId = section.id ?: 0L,
+                        title = section.title,
+                        description = section.description,
+                        displayOrder = section.displayOrder,
+                        note = note,
+                        questions = section.questions
+                            .filter { !it.archived }
+                            .sortedBy { it.displayOrder }
+                            .map { it.toChecklistQuestionResponse() },
+                        answers = sectionAnswers.map {
+                            InspectionQuestionAnswerResponse(
+                                questionId = it.question.id ?: 0L,
+                                answer = it.answerValue,
+                                comment = it.comment
+                            )
+                        },
+                        evidences = evidencesForSection.map {
+                            EvidenceResponse(
+                                id = it.id ?: 0L,
+                                sectionId = it.section?.id ?: 0L,
+                                filename = it.filename,
+                                mimeType = it.mimeType,
+                                capturedAt = it.capturedAt,
+                                comment = it.comment
+                            )
+                        }
+                    )
+                }
+            InspectionHistoryResponse(
+                id = inspection.id ?: 0L,
+                orderNumber = inspection.verificationOrder.orderNumber,
+                vehiclePlate = inspection.orderUnit.vehicleUnit.plate,
+                clientCompanyName = inspection.verificationOrder.clientCompany.name,
+                submittedAt = inspection.submittedAt ?: Instant.now(),
+                overallComment = inspection.overallComment,
+                verdict = inspection.overallResult?.name,
+                sections = sections
+            )
+        }
 
     private fun sha256(bytes: ByteArray): String {
         val digest = MessageDigest.getInstance("SHA-256").digest(bytes)

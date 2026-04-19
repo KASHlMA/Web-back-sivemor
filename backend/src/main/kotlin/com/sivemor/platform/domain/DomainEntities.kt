@@ -827,3 +827,19 @@ class Evaluacion : BaseEntity() {
     @Column(name = "evidence_count", nullable = false)
     var evidenceCount: Int = 0
 }
+
+@Entity
+@Table(name = "client_pricing")
+class ClientPricing : BaseEntity() {
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "client_company_id", nullable = false)
+    lateinit var clientCompany: ClientCompany
+
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false, length = 20)
+    lateinit var materia: VerificacionMateria
+
+    @Column(nullable = false, precision = 10, scale = 2)
+    var price: BigDecimal = BigDecimal.ZERO
+}
+

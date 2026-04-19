@@ -198,6 +198,83 @@ function ClientFormPage({ mode }) {
   );
 }
 
+const MATERIAS = ["MOTRIZ", "ARRASTRE", "GASOLINA", "HUMO"];
+
+function ClientPricingPanel({ clientId }) {
+  const queryClient = useQueryClient();
+  const [prices, setPrices] = useState({ MOTRIZ: "", ARRASTRE: "", GASOLINA: "", HUMO: "" });
+  const [saveError, setSaveError] = useState(null);
+  const [saved, setSaved] = useState(false);
+
+  const pricingQuery = useQuery({
+    queryKey: ["client-pricing", clientId],
+    queryFn: () => api.get(`/admin/clients/${clientId}/pricing`),
+    enabled: Boolean(clientId)
+  });
+
+  useEffect(() => {
+    if (!pricingQuery.data) return;
+    const map = { MOTRIZ: "", ARRASTRE: "", GASOLINA: "", HUMO: "" };
+    pricingQuery.data.forEach((item) => { map[item.materia] = String(item.price); });
+    setPrices(map);
+  }, [pricingQuery.data]);
+
+  const saveMutation = useMutation({
+    mutationFn: () =>
+      api.put(`/admin/clients/${clientId}/pricing`, {
+        items: MATERIAS.map((m) => ({ materia: m, price: parseFloat(prices[m] || "0") }))
+      }),
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({ queryKey: ["client-pricing", clientId] });
+      setSaved(true);
+      setSaveError(null);
+      setTimeout(() => setSaved(false), 3000);
+    },
+    onError: (err) => setSaveError(err instanceof Error ? err.message : "Error al guardar precios")
+  });
+
+  return (
+    <PagePanel>
+      <PageTitleBar title="Precios por tipo de verificacion" subtitle="Tarifa que se aplica a este cliente segun la materia de verificacion." />
+      {saveError && <div className="mx-5 mb-3 rounded-lg bg-red-50 px-4 py-3 text-sm text-red-700">{saveError}</div>}
+      {saved && <div className="mx-5 mb-3 rounded-lg bg-green-50 px-4 py-3 text-sm text-green-700">Precios guardados correctamente.</div>}
+      {pricingQuery.isLoading ? (
+        <div className="px-5 py-5 text-sm font-medium text-[var(--shell-text)]">Cargando precios...</div>
+      ) : (
+        <div className="px-5 py-5">
+          <div className="grid gap-4 md:grid-cols-2">
+            {MATERIAS.map((m) => (
+              <div key={m}>
+                <label className="field-label">{m}</label>
+                <div className="relative">
+                  <span className="pointer-events-none absolute inset-y-0 left-3 flex items-center text-sm text-[var(--shell-text)]/60">$</span>
+                  <input
+                    type="number"
+                    min="0"
+                    step="0.01"
+                    className="field-base pl-7"
+                    value={prices[m]}
+                    onChange={(e) => setPrices((p) => ({ ...p, [m]: e.target.value }))}
+                  />
+                </div>
+              </div>
+            ))}
+          </div>
+          <div className="mt-5 flex justify-end">
+            <PrimaryActionButton
+              type="button"
+              onClick={() => void saveMutation.mutateAsync()}
+              disabled={saveMutation.isPending}
+            >
+              {saveMutation.isPending ? "Guardando..." : "Guardar precios"}
+            </PrimaryActionButton>
+          </div>
+        </div>
+      )}
+    </PagePanel>
+  );
+}
+
 export function ClientDetailPage() {
   const navigate = useNavigate();
   const params = useParams({ strict: false });
@@ -280,6 +357,8 @@ export function ClientDetailPage() {
           ))}
         </div>
       </PagePanel>
+
+      <ClientPricingPanel clientId={clientId} />
     </div>
   );
 }

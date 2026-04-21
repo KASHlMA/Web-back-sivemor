@@ -300,15 +300,9 @@ export function VehiclesPage() {
         <div className="table-actions">
           <SecondaryActionButton
             type="button"
-            onClick={() => void navigate({ to: "/vehiculos/$id/editar", params: { id: String(row.id) } })}
+            onClick={() => void navigate({ to: "/vehiculos/$id", params: { id: String(row.id) } })}
           >
-            Editar informacion
-          </SecondaryActionButton>
-          <SecondaryActionButton
-            type="button"
-            onClick={() => void navigate({ to: "/vehiculos/$id/historial", params: { id: String(row.id) } })}
-          >
-            Ver historial
+            Ver informacion
           </SecondaryActionButton>
           <SecondaryActionButton type="button" onClick={() => requestDelete(row)}>
             Eliminar

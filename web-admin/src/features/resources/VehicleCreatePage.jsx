@@ -52,6 +52,104 @@ export function VehicleEditPage() {
   return <VehicleFormPage mode="edit" />;
 }
 
+export function VehicleDetailPage() {
+  const navigate = useNavigate();
+  const params = useParams({ strict: false });
+  const vehicleId = Number(params.id);
+
+  const clientsQuery = useQuery({ queryKey: ["clients-lookup"], queryFn: () => api.get("/admin/clients") });
+  const regionsQuery = useQuery({ queryKey: ["regions-lookup"], queryFn: () => api.get("/admin/regions") });
+  const vehiclesQuery = useQuery({ queryKey: ["vehicles-lookup"], queryFn: () => api.get("/admin/vehicles") });
+
+  const vehicle = useMemo(
+    () => (vehiclesQuery.data ?? []).find((v) => v.id === vehicleId) ?? null,
+    [vehiclesQuery.data, vehicleId]
+  );
+
+  const clientName = useMemo(
+    () => (clientsQuery.data ?? []).find((c) => c.id === vehicle?.clientCompanyId)?.name ?? "-",
+    [clientsQuery.data, vehicle]
+  );
+
+  const cedisName = useMemo(
+    () => (regionsQuery.data ?? []).find((r) => r.id === vehicle?.regionId)?.name ?? "-",
+    [regionsQuery.data, vehicle]
+  );
+
+  const isLoading = vehiclesQuery.isLoading || clientsQuery.isLoading || regionsQuery.isLoading;
+
+  if (isLoading) {
+    return (
+      <div className="space-y-6">
+        <PagePanel>
+          <PageTitleBar title="Detalle de vehiculo" />
+          <div className="px-5 py-5 text-sm font-medium text-[var(--shell-text)]">Cargando informacion del vehiculo...</div>
+        </PagePanel>
+      </div>
+    );
+  }
+
+  if (!vehicle) {
+    return (
+      <div className="space-y-6">
+        <PagePanel>
+          <PageTitleBar
+            title="Detalle de vehiculo"
+            actions={
+              <SecondaryActionButton type="button" onClick={() => void navigate({ to: "/vehiculos" })}>
+                Volver
+              </SecondaryActionButton>
+            }
+          />
+          <EmptyState title="No se encontro el vehiculo" description="Verifica que el registro exista e intenta nuevamente." />
+        </PagePanel>
+      </div>
+    );
+  }
+
+  const details = [
+    { label: "Numero de serie", value: vehicle.vin },
+    { label: "Placas", value: vehicle.plate },
+    { label: "Tipo", value: vehicle.category },
+    { label: "Marca", value: vehicle.brand },
+    { label: "Modelo", value: vehicle.model },
+    { label: "Cliente", value: clientName },
+    { label: "CEDIS", value: cedisName }
+  ];
+
+  return (
+    <div className="space-y-6">
+      <PagePanel>
+        <PageTitleBar
+          title="Detalle de vehiculo"
+          subtitle="Consulta la informacion registrada del vehiculo seleccionado."
+          actions={
+            <div className="action-group">
+              <SecondaryActionButton type="button" onClick={() => void navigate({ to: "/vehiculos/$id/editar", params: { id: String(vehicleId) } })}>
+                Editar informacion
+              </SecondaryActionButton>
+              <SecondaryActionButton type="button" onClick={() => void navigate({ to: "/vehiculos/$id/historial", params: { id: String(vehicleId) } })}>
+                Ver historial
+              </SecondaryActionButton>
+              <SecondaryActionButton type="button" onClick={() => void navigate({ to: "/vehiculos" })}>
+                Volver
+              </SecondaryActionButton>
+            </div>
+          }
+        />
+        <div className="grid gap-4 px-5 py-5 md:grid-cols-2">
+          {details.map((item) => (
+            <div key={item.label} className="rounded-xl border border-[var(--border)] bg-[#f8fbf4] px-4 py-4">
+              <p className="text-xs font-semibold uppercase tracking-[0.04em] text-[var(--shell-text)]/75">{item.label}</p>
+              <p className="mt-2 text-base font-semibold text-[var(--title)]">{item.value ?? "-"}</p>
+            </div>
+          ))}
+        </div>
+      </PagePanel>
+    </div>
+  );
+}
+
 function VehicleFormPage({ mode }) {
   const navigate = useNavigate();
   const queryClient = useQueryClient();

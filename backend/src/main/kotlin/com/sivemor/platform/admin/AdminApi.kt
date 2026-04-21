@@ -1509,32 +1509,160 @@ class AdminService(
             addVerticalSpace(blockSpacing)
         }
 
-        fun formatMobileAnswer(value: String?): String? = when (value?.trim()?.uppercase()) {
-            "PASS", "APROBADO" -> "Aprobado"
-            "FAIL", "REPROBADO" -> "Reprobado"
+        fun formatEvaluacionValue(value: String?): String = when (value?.trim()?.uppercase()) {
+            "APPROVED", "PASS", "APROBADO" -> "Aprobado"
+            "FAILED", "FAIL", "REPROBADO" -> "Reprobado"
             "NA", "NO_APLICA" -> "No aplica"
+            "LEFT_BURNT" -> "Izquierda fundida"
+            "RIGHT_BURNT" -> "Derecha fundida"
+            "BOTH_BURNT" -> "Ambas fundidas"
+            "ONE_BURNT" -> "1 fundida"
+            "TWO_BURNT" -> "2 fundidas"
+            "THREE_BURNT" -> "3 fundidas"
+            "LOOSE" -> "Flojo"
+            "BROKEN" -> "Roto"
+            "LEFT_DAMAGED" -> "Izquierdo roto o soldado"
+            "RIGHT_DAMAGED" -> "Derecho roto o soldado"
+            "BOTH_DAMAGED" -> "Ambos rotos o soldados"
+            "LEFT_LEAK" -> "Izquierda con fuga"
+            "RIGHT_LEAK" -> "Derecha con fuga"
+            "BOTH_LEAK" -> "Ambas con fuga"
+            "MISSING" -> "Faltante"
+            "HIT" -> "Golpeado"
+            "ONE_BROKEN" -> "1 rota"
+            "TWO_BROKEN" -> "2 rotas"
+            "NO_CUT" -> "No corta"
+            "LEAK" -> "Fuga"
+            "CRACKED" -> "Estrellado"
+            "ONE_BLADE_MISSING" -> "Falta 1 pluma"
+            "TWO_BLADES_MISSING" -> "Faltan 2 plumas"
+            "NOT_WORKING" -> "No funciona"
+            null, "" -> "Sin valor"
             else -> value
         }
 
         fun formatFieldLabel(value: String): String =
-            value
-                .replace("_", " ")
-                .replaceFirstChar { it.uppercase() }
+            value.replace("_", " ").replaceFirstChar { it.uppercase() }
+
+        data class PdfField(val code: String, val label: String, val numeric: Boolean = false)
+        data class PdfSection(val key: String, val title: String, val fields: List<PdfField>)
+
+        val pdfSectionConfig = listOf(
+            PdfSection("luces", "Luces", listOf(
+                PdfField("luces_galibo", "Luces galibo"),
+                PdfField("luces_altas", "Luces altas"),
+                PdfField("luces_bajas", "Luces bajas"),
+                PdfField("luces_demarcadoras_delanteras", "Luces demarcadoras delanteras"),
+                PdfField("luces_demarcadoras_traseras", "Luces demarcadoras traseras"),
+                PdfField("luces_indicadoras", "Luces indicadoras"),
+                PdfField("faro_izquierdo", "Faro izquierdo"),
+                PdfField("faro_derecho", "Faro derecho"),
+                PdfField("luces_direccionales_delanteras", "Luces direccionales delanteras"),
+                PdfField("luces_direccionales_traseras", "Luces direccionales traseras"),
+            )),
+            PdfSection("llantas", "Llantas", listOf(
+                PdfField("llantas_rines_delanteros", "Rines delanteros"),
+                PdfField("llantas_rines_traseros", "Rines traseros"),
+                PdfField("llantas_masas_delanteras", "Masas delanteras"),
+                PdfField("llantas_masas_traseras", "Masas traseras"),
+                PdfField("llantas_presion_delantera_izquierda", "Presion delantera izquierda (PSI)", true),
+                PdfField("llantas_presion_delantera_derecha", "Presion delantera derecha (PSI)", true),
+                PdfField("llantas_presion_trasera_izquierda_1", "Presion trasera izquierda 1 (PSI)", true),
+                PdfField("llantas_presion_trasera_izquierda_2", "Presion trasera izquierda 2 (PSI)", true),
+                PdfField("llantas_presion_trasera_derecha_1", "Presion trasera derecha 1 (PSI)", true),
+                PdfField("llantas_presion_trasera_derecha_2", "Presion trasera derecha 2 (PSI)", true),
+                PdfField("llantas_profundidad_delantera_izquierda", "Profundidad delantera izquierda (mm)", true),
+                PdfField("llantas_profundidad_delantera_derecha", "Profundidad delantera derecha (mm)", true),
+                PdfField("llantas_profundidad_trasera_izquierda_1", "Profundidad trasera izquierda 1 (mm)", true),
+                PdfField("llantas_profundidad_trasera_izquierda_2", "Profundidad trasera izquierda 2 (mm)", true),
+                PdfField("llantas_profundidad_trasera_derecha_1", "Profundidad trasera derecha 1 (mm)", true),
+                PdfField("llantas_profundidad_trasera_derecha_2", "Profundidad trasera derecha 2 (mm)", true),
+                PdfField("llantas_tuercas_delantera_izquierda", "Tuercas delantera izquierda"),
+                PdfField("llantas_tuercas_delantera_izquierda_faltantes", "Tuercas faltantes delantera izquierda", true),
+                PdfField("llantas_tuercas_delantera_izquierda_rotas", "Tuercas rotas delantera izquierda", true),
+                PdfField("llantas_tuercas_delantera_derecha", "Tuercas delantera derecha"),
+                PdfField("llantas_tuercas_delantera_derecha_faltantes", "Tuercas faltantes delantera derecha", true),
+                PdfField("llantas_tuercas_delantera_derecha_rotas", "Tuercas rotas delantera derecha", true),
+                PdfField("llantas_tuercas_trasera_izquierda", "Tuercas trasera izquierda"),
+                PdfField("llantas_tuercas_trasera_izquierda_faltantes", "Tuercas faltantes trasera izquierda", true),
+                PdfField("llantas_tuercas_trasera_izquierda_rotas", "Tuercas rotas trasera izquierda", true),
+                PdfField("llantas_tuercas_trasera_derecha", "Tuercas trasera derecha"),
+                PdfField("llantas_tuercas_trasera_derecha_faltantes", "Tuercas faltantes trasera derecha", true),
+                PdfField("llantas_tuercas_trasera_derecha_rotas", "Tuercas rotas trasera derecha", true),
+                PdfField("llantas_birlos_delantera_izquierda_count", "Birlos delantera izquierda (cantidad)", true),
+                PdfField("llantas_birlos_delantera_izquierda_selected", "Birlos delantera izquierda (presentes)"),
+                PdfField("llantas_birlos_delantera_derecha_count", "Birlos delantera derecha (cantidad)", true),
+                PdfField("llantas_birlos_delantera_derecha_selected", "Birlos delantera derecha (presentes)"),
+                PdfField("llantas_birlos_trasera_izquierda_count", "Birlos trasera izquierda (cantidad)", true),
+                PdfField("llantas_birlos_trasera_izquierda_selected", "Birlos trasera izquierda (presentes)"),
+                PdfField("llantas_birlos_trasera_derecha_count", "Birlos trasera derecha (cantidad)", true),
+                PdfField("llantas_birlos_trasera_derecha_selected", "Birlos trasera derecha (presentes)"),
+                PdfField("llantas_birlos_media_izquierda_count", "Birlos media izquierda (cantidad)", true),
+                PdfField("llantas_birlos_media_izquierda_selected", "Birlos media izquierda (presentes)"),
+                PdfField("llantas_birlos_media_derecha_count", "Birlos media derecha (cantidad)", true),
+                PdfField("llantas_birlos_media_derecha_selected", "Birlos media derecha (presentes)"),
+            )),
+            PdfSection("direccion", "Direccion, estructura y accesos", listOf(
+                PdfField("direccion_brazo_pitman", "Brazo pitman"),
+                PdfField("direccion_manijas_puertas", "Manijas de puertas"),
+                PdfField("direccion_chavetas", "Chavetas"),
+                PdfField("direccion_chavetas_faltantes", "Chavetas faltantes", true),
+            )),
+            PdfSection("aire_frenos", "Sistema de aire / frenos", listOf(
+                PdfField("aire_frenos_compresor", "Compresor"),
+                PdfField("aire_frenos_tanques_aire", "Tanques de aire"),
+                PdfField("aire_frenos_tiempo_carga_psi", "Tiempo de carga (PSI)", true),
+                PdfField("aire_frenos_tiempo_carga_tiempo", "Tiempo de carga (minutos)", true),
+            )),
+            PdfSection("motor_emisiones", "Motor y emisiones", listOf(
+                PdfField("motor_emisiones_humo", "Humo"),
+                PdfField("motor_emisiones_gobernado", "Gobernado"),
+            )),
+            PdfSection("otros", "Otros", listOf(
+                PdfField("otros_caja_direccion", "Caja direccion"),
+                PdfField("otros_deposito_aceite", "Deposito aceite"),
+                PdfField("otros_parabrisas", "Parabrisas"),
+                PdfField("otros_limpiaparabrisas", "Limpiaparabrisas"),
+                PdfField("otros_juego", "Huelgo"),
+                PdfField("otros_escape", "Escape"),
+            )),
+        )
 
         writeLine("Reporte de verificacion web", 16f, true)
         addVerticalSpace(sectionSpacing)
-        if (detail.formSections.isNotEmpty()) {
+        writeLine("Placa: ${detail.vehiclePlate.ifBlank { "-" }}   Empresa: ${detail.clientCompanyName.ifBlank { "-" }}", 11f)
+        addVerticalSpace(sectionSpacing)
+
+        val hasSectionsData = detail.sections.values.any { section -> section.values.any { it != null } }
+        if (hasSectionsData) {
+            pdfSectionConfig.forEach { section ->
+                val sectionData = detail.sections[section.key] ?: emptyMap()
+                val hasAnyValue = section.fields.any { field -> sectionData[field.code] != null }
+                if (!hasAnyValue) return@forEach
+                writeLine(section.title, 12f, true)
+                addVerticalSpace(questionSpacing)
+                section.fields.forEachIndexed { index, field ->
+                    val rawValue = sectionData[field.code]?.toString()
+                    if (rawValue.isNullOrBlank()) return@forEachIndexed
+                    val displayValue = if (field.numeric) rawValue else formatEvaluacionValue(rawValue)
+                    writeQuestionBlock(index + 1, field.label, displayValue)
+                }
+                addVerticalSpace(sectionSpacing)
+            }
+        } else if (detail.formSections.isNotEmpty()) {
             detail.formSections.forEach { section ->
                 writeLine(section.title, 12f, true)
                 addVerticalSpace(questionSpacing)
                 section.questions.forEachIndexed { index, question ->
                     val questionValue = question.comment?.takeIf { it.isNotBlank() }
-                        ?: formatMobileAnswer(question.answer)?.takeIf { it.isNotBlank() }
+                        ?: formatEvaluacionValue(question.answer).takeIf { it != "Sin valor" }
                         ?: "Sin valor"
                     writeQuestionBlock(index + 1, question.prompt, questionValue)
                 }
                 addVerticalSpace(sectionSpacing)
             }
+        } else {
+            writeLine("Sin datos de evaluacion registrados.", 11f)
         }
 
         stream.close()

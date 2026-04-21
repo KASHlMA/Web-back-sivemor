@@ -20,7 +20,7 @@ import {
   VerificationCenterDetailPage,
   VerificationCenterEditPage
 } from "./features/resources/VerificationCenterPages";
-import { VehicleCreatePage, VehicleEditPage } from "./features/resources/VehicleCreatePage";
+import { VehicleCreatePage, VehicleDetailPage, VehicleEditPage } from "./features/resources/VehicleCreatePage";
 import {
   VehicleHistoryPage
 } from "./features/resources/VehicleHistoryPage";
@@ -98,6 +98,12 @@ const vehicleCreateRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: "/vehiculos/nuevo",
   component: withProtection(VehicleCreatePage)
+});
+
+const vehicleDetailRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: "/vehiculos/$id",
+  component: withProtection(VehicleDetailPage)
 });
 
 const vehicleEditRoute = createRoute({
@@ -219,6 +225,7 @@ const routeTree = rootRoute.addChildren([
   vehiclesRoute,
   vehiclesAliasRoute,
   vehicleCreateRoute,
+  vehicleDetailRoute,
   vehicleEditRoute,
   vehicleHistoryRoute,
   verificationDetailRoute,

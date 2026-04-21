@@ -207,7 +207,9 @@ export function CedisDetailPage() {
       { label: "Nombre", value: cedisQuery.data?.name ?? "-" },
       { label: "Correo", value: cedisQuery.data?.email ?? "-" },
       { label: "Telefono", value: cedisQuery.data?.phone ?? "-" },
-      { label: "Telefono alternativo", value: cedisQuery.data?.alternatePhone ?? "-" }
+      { label: "Telefono alternativo", value: cedisQuery.data?.alternatePhone ?? "-" },
+      { label: "Direccion", value: cedisQuery.data?.address ?? "-" },
+      { label: "Encargado", value: cedisQuery.data?.manager ?? "-" }
     ],
     [cedisQuery.data]
   );

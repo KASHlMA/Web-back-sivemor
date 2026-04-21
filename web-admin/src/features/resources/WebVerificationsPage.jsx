@@ -13,27 +13,111 @@ import {
 } from "../../components/AdminPrimitives";
 import { api } from "../../lib/api";
 
-const ENUM_OPTIONS = [
-  { label: "Aprobado", value: "APROBADO" },
-  { label: "Reprobado", value: "REPROBADO" },
-  { label: "No aplica", value: "NO_APLICA" }
-];
+const OPT = {
+  generalLight: [
+    { value: "APPROVED", label: "Aprobado" },
+    { value: "LEFT_BURNT", label: "Lado izquierdo quemado" },
+    { value: "RIGHT_BURNT", label: "Lado derecho quemado" },
+    { value: "BOTH_BURNT", label: "Ambos quemados" }
+  ],
+  indicators: [
+    { value: "APPROVED", label: "Aprobado" },
+    { value: "ONE_BURNT", label: "Una quemada" },
+    { value: "TWO_BURNT", label: "Dos quemadas" },
+    { value: "THREE_BURNT", label: "Tres quemadas" }
+  ],
+  headlight: [
+    { value: "APPROVED", label: "Aprobado" },
+    { value: "LOOSE", label: "Suelto" },
+    { value: "BROKEN", label: "Roto" }
+  ],
+  rines: [
+    { value: "APPROVED", label: "Aprobado" },
+    { value: "LEFT_DAMAGED", label: "Rin izquierdo danado" },
+    { value: "RIGHT_DAMAGED", label: "Rin derecho danado" },
+    { value: "BOTH_DAMAGED", label: "Ambos danados" }
+  ],
+  masas: [
+    { value: "APPROVED", label: "Aprobado" },
+    { value: "LEFT_LEAK", label: "Fuga izquierda" },
+    { value: "RIGHT_LEAK", label: "Fuga derecha" },
+    { value: "BOTH_LEAK", label: "Ambas fugas" }
+  ],
+  tuercas: [
+    { value: "APPROVED", label: "Aprobado" },
+    { value: "BROKEN", label: "Rotas" },
+    { value: "MISSING", label: "Faltantes" }
+  ],
+  brazoPitman: [
+    { value: "APPROVED", label: "Aprobado" },
+    { value: "HIT", label: "Golpeado" }
+  ],
+  manijasPuertas: [
+    { value: "APPROVED", label: "Aprobado" },
+    { value: "ONE_BROKEN", label: "Una rota" },
+    { value: "TWO_BROKEN", label: "Dos rotas" }
+  ],
+  chavetas: [
+    { value: "APPROVED", label: "Aprobado" },
+    { value: "MISSING", label: "Faltantes" }
+  ],
+  compresor: [
+    { value: "APPROVED", label: "Aprobado" },
+    { value: "NO_CUT", label: "Sin corte" },
+    { value: "FAILED", label: "Falla" }
+  ],
+  tanquesAire: [
+    { value: "APPROVED", label: "Aprobado" },
+    { value: "FAILED", label: "Falla" }
+  ],
+  motorEmisiones: [
+    { value: "APPROVED", label: "Aprobado" },
+    { value: "FAILED", label: "Falla" }
+  ],
+  cajaDireccion: [
+    { value: "APPROVED", label: "Aprobado" },
+    { value: "LEAK", label: "Fuga" }
+  ],
+  depositoAceite: [
+    { value: "APPROVED", label: "Aprobado" },
+    { value: "LEAK", label: "Fuga" }
+  ],
+  parabrisas: [
+    { value: "APPROVED", label: "Aprobado" },
+    { value: "CRACKED", label: "Quebrado" }
+  ],
+  limpiaparabrisas: [
+    { value: "APPROVED", label: "Aprobado" },
+    { value: "ONE_BLADE_MISSING", label: "Una pluma faltante" },
+    { value: "TWO_BLADES_MISSING", label: "Dos plumas faltantes" },
+    { value: "NOT_WORKING", label: "No funciona" }
+  ],
+  juego: [
+    { value: "APPROVED", label: "Aprobado" },
+    { value: "FAILED", label: "Falla" }
+  ],
+  escape: [
+    { value: "APPROVED", label: "Aprobado" },
+    { value: "MISSING", label: "Faltante" },
+    { value: "BROKEN", label: "Roto" }
+  ]
+};
 
 const FORM_SECTION_CONFIG = [
   {
     key: "luces",
     title: "Luces",
     questions: [
-      { code: "luces_galibo", prompt: "Luces galibo" },
-      { code: "luces_altas", prompt: "Luces altas" },
-      { code: "luces_bajas", prompt: "Luces bajas" },
-      { code: "luces_demarcadoras_delanteras", prompt: "Luces demarcadoras delanteras" },
-      { code: "luces_demarcadoras_traseras", prompt: "Luces demarcadoras traseras" },
-      { code: "luces_indicadoras", prompt: "Luces indicadoras" },
-      { code: "faro_izquierdo", prompt: "Faro izquierdo" },
-      { code: "faro_derecho", prompt: "Faro derecho" },
-      { code: "luces_direccionales_delanteras", prompt: "Luces direccionales delanteras" },
-      { code: "luces_direccionales_traseras", prompt: "Luces direccionales traseras" }
+      { code: "luces_galibo", prompt: "Luces galibo", options: OPT.generalLight },
+      { code: "luces_altas", prompt: "Luces altas", options: OPT.generalLight },
+      { code: "luces_bajas", prompt: "Luces bajas", options: OPT.generalLight },
+      { code: "luces_demarcadoras_delanteras", prompt: "Luces demarcadoras delanteras", options: OPT.generalLight },
+      { code: "luces_demarcadoras_traseras", prompt: "Luces demarcadoras traseras", options: OPT.generalLight },
+      { code: "luces_indicadoras", prompt: "Luces indicadoras", options: OPT.indicators },
+      { code: "faro_izquierdo", prompt: "Faro izquierdo", options: OPT.headlight },
+      { code: "faro_derecho", prompt: "Faro derecho", options: OPT.headlight },
+      { code: "luces_direccionales_delanteras", prompt: "Luces direccionales delanteras", options: OPT.generalLight },
+      { code: "luces_direccionales_traseras", prompt: "Luces direccionales traseras", options: OPT.generalLight }
     ]
   },
   {
@@ -78,10 +162,10 @@ const FORM_SECTION_CONFIG = [
       }
     ],
     questions: [
-      { code: "llantas_rines_delanteros", prompt: "Llantas rines delanteros" },
-      { code: "llantas_rines_traseros", prompt: "Llantas rines traseros" },
-      { code: "llantas_masas_delanteras", prompt: "Llantas masas delanteras" },
-      { code: "llantas_masas_traseras", prompt: "Llantas masas traseras" },
+      { code: "llantas_rines_delanteros", prompt: "Llantas rines delanteros", options: OPT.rines },
+      { code: "llantas_rines_traseros", prompt: "Llantas rines traseros", options: OPT.rines },
+      { code: "llantas_masas_delanteras", prompt: "Llantas masas delanteras", options: OPT.masas },
+      { code: "llantas_masas_traseras", prompt: "Llantas masas traseras", options: OPT.masas },
       { code: "llantas_presion_delantera_izquierda", prompt: "Llantas presion delantera izquierda", type: "number" },
       { code: "llantas_presion_delantera_derecha", prompt: "Llantas presion delantera derecha", type: "number" },
       { code: "llantas_presion_trasera_izquierda_1", prompt: "Llantas presion trasera izquierda 1", type: "number" },
@@ -94,16 +178,16 @@ const FORM_SECTION_CONFIG = [
       { code: "llantas_profundidad_trasera_izquierda_2", prompt: "Llantas profundidad trasera izquierda 2", type: "number" },
       { code: "llantas_profundidad_trasera_derecha_1", prompt: "Llantas profundidad trasera derecha 1", type: "number" },
       { code: "llantas_profundidad_trasera_derecha_2", prompt: "Llantas profundidad trasera derecha 2", type: "number" },
-      { code: "llantas_tuercas_delantera_izquierda", prompt: "Llantas tuercas delantera izquierda" },
+      { code: "llantas_tuercas_delantera_izquierda", prompt: "Llantas tuercas delantera izquierda", options: OPT.tuercas },
       { code: "llantas_tuercas_delantera_izquierda_faltantes", prompt: "Tuercas faltantes delantera izquierda", type: "number" },
       { code: "llantas_tuercas_delantera_izquierda_rotas", prompt: "Tuercas rotas delantera izquierda", type: "number" },
-      { code: "llantas_tuercas_delantera_derecha", prompt: "Llantas tuercas delantera derecha" },
+      { code: "llantas_tuercas_delantera_derecha", prompt: "Llantas tuercas delantera derecha", options: OPT.tuercas },
       { code: "llantas_tuercas_delantera_derecha_faltantes", prompt: "Tuercas faltantes delantera derecha", type: "number" },
       { code: "llantas_tuercas_delantera_derecha_rotas", prompt: "Tuercas rotas delantera derecha", type: "number" },
-      { code: "llantas_tuercas_trasera_izquierda", prompt: "Llantas tuercas trasera izquierda" },
+      { code: "llantas_tuercas_trasera_izquierda", prompt: "Llantas tuercas trasera izquierda", options: OPT.tuercas },
       { code: "llantas_tuercas_trasera_izquierda_faltantes", prompt: "Tuercas faltantes trasera izquierda", type: "number" },
       { code: "llantas_tuercas_trasera_izquierda_rotas", prompt: "Tuercas rotas trasera izquierda", type: "number" },
-      { code: "llantas_tuercas_trasera_derecha", prompt: "Llantas tuercas trasera derecha" },
+      { code: "llantas_tuercas_trasera_derecha", prompt: "Llantas tuercas trasera derecha", options: OPT.tuercas },
       { code: "llantas_tuercas_trasera_derecha_faltantes", prompt: "Tuercas faltantes trasera derecha", type: "number" },
       { code: "llantas_tuercas_trasera_derecha_rotas", prompt: "Tuercas rotas trasera derecha", type: "number" }
     ]
@@ -112,9 +196,9 @@ const FORM_SECTION_CONFIG = [
     key: "direccion",
     title: "Direccion, estructura y accesos",
     questions: [
-      { code: "direccion_brazo_pitman", prompt: "Brazo pitman" },
-      { code: "direccion_manijas_puertas", prompt: "Manijas de puertas" },
-      { code: "direccion_chavetas", prompt: "Chavetas" },
+      { code: "direccion_brazo_pitman", prompt: "Brazo pitman", options: OPT.brazoPitman },
+      { code: "direccion_manijas_puertas", prompt: "Manijas de puertas", options: OPT.manijasPuertas },
+      { code: "direccion_chavetas", prompt: "Chavetas", options: OPT.chavetas },
       { code: "direccion_chavetas_faltantes", prompt: "En caso de que hagan falta chavetas", type: "number" }
     ]
   },
@@ -122,8 +206,8 @@ const FORM_SECTION_CONFIG = [
     key: "aire_frenos",
     title: "Sistema de aire / frenos",
     questions: [
-      { code: "aire_frenos_compresor", prompt: "Compresor" },
-      { code: "aire_frenos_tanques_aire", prompt: "Tanques de aire" },
+      { code: "aire_frenos_compresor", prompt: "Compresor", options: OPT.compresor },
+      { code: "aire_frenos_tanques_aire", prompt: "Tanques de aire", options: OPT.tanquesAire },
       { code: "aire_frenos_tiempo_carga_psi", prompt: "Tiempo de carga psi", type: "number" },
       { code: "aire_frenos_tiempo_carga_tiempo", prompt: "Tiempo de carga tiempo", type: "number" }
     ]
@@ -132,20 +216,20 @@ const FORM_SECTION_CONFIG = [
     key: "motor_emisiones",
     title: "Motor y emisiones",
     questions: [
-      { code: "motor_emisiones_humo", prompt: "Humo" },
-      { code: "motor_emisiones_gobernado", prompt: "Gobernado" }
+      { code: "motor_emisiones_humo", prompt: "Humo", options: OPT.motorEmisiones },
+      { code: "motor_emisiones_gobernado", prompt: "Gobernado", options: OPT.motorEmisiones }
     ]
   },
   {
     key: "otros",
     title: "Otros",
     questions: [
-      { code: "otros_caja_direccion", prompt: "Caja direccion" },
-      { code: "otros_deposito_aceite", prompt: "Deposito aceite" },
-      { code: "otros_parabrisas", prompt: "Parabrisas" },
-      { code: "otros_limpiaparabrisas", prompt: "Limpiaparabrisas" },
-      { code: "otros_juego", prompt: "Huelgo" },
-      { code: "otros_escape", prompt: "Escape" }
+      { code: "otros_caja_direccion", prompt: "Caja direccion", options: OPT.cajaDireccion },
+      { code: "otros_deposito_aceite", prompt: "Deposito aceite", options: OPT.depositoAceite },
+      { code: "otros_parabrisas", prompt: "Parabrisas", options: OPT.parabrisas },
+      { code: "otros_limpiaparabrisas", prompt: "Limpiaparabrisas", options: OPT.limpiaparabrisas },
+      { code: "otros_juego", prompt: "Huelgo", options: OPT.juego },
+      { code: "otros_escape", prompt: "Escape", options: OPT.escape }
     ]
   }
 ];

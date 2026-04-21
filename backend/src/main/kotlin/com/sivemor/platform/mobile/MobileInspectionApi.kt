@@ -8,6 +8,8 @@ import com.sivemor.platform.domain.ChecklistQuestion
 import com.sivemor.platform.domain.ChecklistSection
 import com.sivemor.platform.domain.ChecklistTemplate
 import com.sivemor.platform.domain.ChecklistTemplateRepository
+import com.sivemor.platform.domain.Evaluacion
+import com.sivemor.platform.domain.EvaluacionRepository
 import com.sivemor.platform.domain.Inspection
 import com.sivemor.platform.domain.InspectionAnswer
 import com.sivemor.platform.domain.InspectionEvidence
@@ -22,6 +24,7 @@ import com.sivemor.platform.domain.UserRepository
 import com.sivemor.platform.domain.VehicleCategory
 import com.sivemor.platform.domain.VehicleUnit
 import com.sivemor.platform.domain.VehicleUnitRepository
+import com.sivemor.platform.domain.VerificacionRepository
 import com.sivemor.platform.domain.VerificationOrderRepository
 import com.sivemor.platform.domain.VerificationOrderStatus
 import com.sivemor.platform.security.AppUserPrincipal
@@ -211,6 +214,83 @@ data class InspectionHistoryResponse(
     val sections: List<InspectionSectionDraftResponse>
 )
 
+data class MobileEvaluacionRequest(
+    val inspectionId: Long,
+    val lucesGalibo: String? = null,
+    val lucesAltas: String? = null,
+    val lucesBajas: String? = null,
+    val lucesDemarcadorasDelanteras: String? = null,
+    val lucesDemarcadorasTraseras: String? = null,
+    val lucesIndicadoras: String? = null,
+    val faroIzquierdo: String? = null,
+    val faroDerecho: String? = null,
+    val lucesDireccionalesDelanteras: String? = null,
+    val lucesDireccionalesTraseras: String? = null,
+    val llantasRinesDelanteros: String? = null,
+    val llantasRinesTraseros: String? = null,
+    val llantasMasasDelanteras: String? = null,
+    val llantasMasasTraseras: String? = null,
+    val llantasPresionDelanteraIzquierda: Double? = null,
+    val llantasPresionDelanteraDerecha: Double? = null,
+    val llantasPresionTraseraIzquierda1: Double? = null,
+    val llantasPresionTraseraIzquierda2: Double? = null,
+    val llantasPresionTraseraDerecha1: Double? = null,
+    val llantasPresionTraseraDerecha2: Double? = null,
+    val llantasProfundidadDelanteraIzquierda: Double? = null,
+    val llantasProfundidadDelanteraDerecha: Double? = null,
+    val llantasProfundidadTraseraIzquierda1: Double? = null,
+    val llantasProfundidadTraseraIzquierda2: Double? = null,
+    val llantasProfundidadTraseraDerecha1: Double? = null,
+    val llantasProfundidadTraseraDerecha2: Double? = null,
+    val llantasTuercasDelanteraIzquierda: String? = null,
+    val llantasTuercasDelanteraIzquierdaFaltantes: Int? = null,
+    val llantasTuercasDelanteraIzquierdaRotas: Int? = null,
+    val llantasTuercasDelanteraDerecha: String? = null,
+    val llantasTuercasDelanteraDerechaFaltantes: Int? = null,
+    val llantasTuercasDelanteraDerechaRotas: Int? = null,
+    val llantasTuercasTraseraIzquierda: String? = null,
+    val llantasTuercasTraseraIzquierdaFaltantes: Int? = null,
+    val llantasTuercasTraseraIzquierdaRotas: Int? = null,
+    val llantasTuercasTraseraDerecha: String? = null,
+    val llantasTuercasTraseraDerechaFaltantes: Int? = null,
+    val llantasTuercasTraseraDerechaRotas: Int? = null,
+    val llantasBirlosDelanteraIzquierdaCount: Int? = null,
+    val llantasBirlosDelanteraIzquierdaSelected: String? = null,
+    val llantasBirlosDelanteraDerechaCount: Int? = null,
+    val llantasBirlosDelanteraDerechaSelected: String? = null,
+    val llantasBirlosTraseraIzquierdaCount: Int? = null,
+    val llantasBirlosTraseraIzquierdaSelected: String? = null,
+    val llantasBirlosTraseraDerechaCount: Int? = null,
+    val llantasBirlosTraseraDerechaSelected: String? = null,
+    val llantasBirlosMediaIzquierdaCount: Int? = null,
+    val llantasBirlosMediaIzquierdaSelected: String? = null,
+    val llantasBirlosMediaDerechaCount: Int? = null,
+    val llantasBirlosMediaDerechaSelected: String? = null,
+    val direccionBrazoPitman: String? = null,
+    val direccionManijasPuertas: String? = null,
+    val direccionChavetas: String? = null,
+    val direccionChavetasFaltantes: Int? = null,
+    val aireFrenosCompresor: String? = null,
+    val aireFrenosTanquesAire: String? = null,
+    val aireFrenosTiempoCargaPsi: Double? = null,
+    val aireFrenosTiempoCargaTiempo: Double? = null,
+    val motorEmisionesHumo: String? = null,
+    val motorEmisionesGobernado: String? = null,
+    val otrosCajaDireccion: String? = null,
+    val otrosDepositoAceite: String? = null,
+    val otrosParabrisas: String? = null,
+    val otrosLimpiaparabrisas: String? = null,
+    val otrosJuego: String? = null,
+    val otrosEscape: String? = null,
+    val comentarioLuces: String? = null,
+    val comentarioLlantas: String? = null,
+    val comentarioDireccion: String? = null,
+    val comentarioAireFrenos: String? = null,
+    val comentarioMotorEmisiones: String? = null,
+    val comentarioOtros: String? = null,
+    val comentariosGenerales: String? = null,
+)
+
 @RestController
 @Tag(name = "Mobile", description = "Technician mobile inspection endpoints")
 @SecurityRequirement(name = "bearerAuth")
@@ -364,6 +444,17 @@ class MobileInspectionController(
         @Parameter(hidden = true)
         @AuthenticationPrincipal principal: AppUserPrincipal
     ): List<InspectionHistoryResponse> = mobileInspectionService.listCompletedInspections(principal.id)
+
+    @Operation(summary = "Submit evaluation data for a completed inspection")
+    @PostMapping("/evaluacion")
+    @ResponseStatus(HttpStatus.CREATED)
+    fun submitEvaluacion(
+        @Parameter(hidden = true)
+        @AuthenticationPrincipal principal: AppUserPrincipal,
+        @Valid @RequestBody request: MobileEvaluacionRequest
+    ) {
+        mobileInspectionService.saveEvaluacion(principal.id, request)
+    }
 }
 
 @org.springframework.stereotype.Service
@@ -378,6 +469,8 @@ class MobileInspectionService(
     private val userRepository: UserRepository,
     private val auditService: AuditService,
     private val merCompatibilityService: MerCompatibilityService,
+    private val verificacionRepository: VerificacionRepository,
+    private val evaluacionRepository: EvaluacionRepository,
     private val clock: Clock
 ) {
     @Transactional(readOnly = true)
@@ -1056,6 +1149,99 @@ class MobileInspectionService(
                 sections = sections
             )
         }
+
+    @Transactional
+    fun saveEvaluacion(technicianId: Long, request: MobileEvaluacionRequest) {
+        val inspection = inspectionRepository.findById(request.inspectionId)
+            .orElseThrow { NotFoundException("Inspection ${request.inspectionId} not found") }
+
+        if (inspection.technician.id != technicianId) throw ForbiddenException("Inspection not assigned to this technician")
+        if (inspection.status != InspectionStatus.SUBMITTED) throw BadRequestException("Inspection must be submitted before saving evaluation")
+
+        val verificacion = verificacionRepository.findByInspectionIdAndArchivedFalse(inspection.id ?: 0L)
+            ?: throw NotFoundException("Verificacion for inspection ${request.inspectionId} not found")
+
+        val evaluacion = evaluacionRepository.findByVerificacionIdAndArchivedFalse(verificacion.id ?: 0L)
+            ?: Evaluacion().apply { this.verificacion = verificacion }
+
+        evaluacion.apply {
+            lucesGalibo = request.lucesGalibo
+            lucesAltas = request.lucesAltas
+            lucesBajas = request.lucesBajas
+            lucesDemarcadorasDelanteras = request.lucesDemarcadorasDelanteras
+            lucesDemarcadorasTraseras = request.lucesDemarcadorasTraseras
+            lucesIndicadoras = request.lucesIndicadoras
+            faroIzquierdo = request.faroIzquierdo
+            faroDerecho = request.faroDerecho
+            lucesDireccionalesDelanteras = request.lucesDireccionalesDelanteras
+            lucesDireccionalesTraseras = request.lucesDireccionalesTraseras
+            llantasRinesDelanteros = request.llantasRinesDelanteros
+            llantasRinesTraseros = request.llantasRinesTraseros
+            llantasMasasDelanteras = request.llantasMasasDelanteras
+            llantasMasasTraseras = request.llantasMasasTraseras
+            llantasPresionDelanteraIzquierda = request.llantasPresionDelanteraIzquierda
+            llantasPresionDelanteraDerecha = request.llantasPresionDelanteraDerecha
+            llantasPresionTraseraIzquierda1 = request.llantasPresionTraseraIzquierda1
+            llantasPresionTraseraIzquierda2 = request.llantasPresionTraseraIzquierda2
+            llantasPresionTraseraDerecha1 = request.llantasPresionTraseraDerecha1
+            llantasPresionTraseraDerecha2 = request.llantasPresionTraseraDerecha2
+            llantasProfundidadDelanteraIzquierda = request.llantasProfundidadDelanteraIzquierda
+            llantasProfundidadDelanteraDerecha = request.llantasProfundidadDelanteraDerecha
+            llantasProfundidadTraseraIzquierda1 = request.llantasProfundidadTraseraIzquierda1
+            llantasProfundidadTraseraIzquierda2 = request.llantasProfundidadTraseraIzquierda2
+            llantasProfundidadTraseraDerecha1 = request.llantasProfundidadTraseraDerecha1
+            llantasProfundidadTraseraDerecha2 = request.llantasProfundidadTraseraDerecha2
+            llantasTuercasDelanteraIzquierda = request.llantasTuercasDelanteraIzquierda
+            llantasTuercasDelanteraIzquierdaFaltantes = request.llantasTuercasDelanteraIzquierdaFaltantes
+            llantasTuercasDelanteraIzquierdaRotas = request.llantasTuercasDelanteraIzquierdaRotas
+            llantasTuercasDelanteraDerecha = request.llantasTuercasDelanteraDerecha
+            llantasTuercasDelanteraDerechaFaltantes = request.llantasTuercasDelanteraDerechaFaltantes
+            llantasTuercasDelanteraDerechaRotas = request.llantasTuercasDelanteraDerechaRotas
+            llantasTuercasTraseraIzquierda = request.llantasTuercasTraseraIzquierda
+            llantasTuercasTraseraIzquierdaFaltantes = request.llantasTuercasTraseraIzquierdaFaltantes
+            llantasTuercasTraseraIzquierdaRotas = request.llantasTuercasTraseraIzquierdaRotas
+            llantasTuercasTraseraDerecha = request.llantasTuercasTraseraDerecha
+            llantasTuercasTraseraDerechaFaltantes = request.llantasTuercasTraseraDerechaFaltantes
+            llantasTuercasTraseraDerechaRotas = request.llantasTuercasTraseraDerechaRotas
+            llantasBirlosDelanteraIzquierdaCount = request.llantasBirlosDelanteraIzquierdaCount
+            llantasBirlosDelanteraIzquierdaSelected = request.llantasBirlosDelanteraIzquierdaSelected
+            llantasBirlosDelanteraDerechaCount = request.llantasBirlosDelanteraDerechaCount
+            llantasBirlosDelanteraDerechaSelected = request.llantasBirlosDelanteraDerechaSelected
+            llantasBirlosTraseraIzquierdaCount = request.llantasBirlosTraseraIzquierdaCount
+            llantasBirlosTraseraIzquierdaSelected = request.llantasBirlosTraseraIzquierdaSelected
+            llantasBirlosTraseraDerechaCount = request.llantasBirlosTraseraDerechaCount
+            llantasBirlosTraseraDerechaSelected = request.llantasBirlosTraseraDerechaSelected
+            llantasBirlosMediaIzquierdaCount = request.llantasBirlosMediaIzquierdaCount
+            llantasBirlosMediaIzquierdaSelected = request.llantasBirlosMediaIzquierdaSelected
+            llantasBirlosMediaDerechaCount = request.llantasBirlosMediaDerechaCount
+            llantasBirlosMediaDerechaSelected = request.llantasBirlosMediaDerechaSelected
+            direccionBrazoPitman = request.direccionBrazoPitman
+            direccionManijasPuertas = request.direccionManijasPuertas
+            direccionChavetas = request.direccionChavetas
+            direccionChavetasFaltantes = request.direccionChavetasFaltantes
+            aireFrenosCompresor = request.aireFrenosCompresor
+            aireFrenosTanquesAire = request.aireFrenosTanquesAire
+            aireFrenosTiempoCargaPsi = request.aireFrenosTiempoCargaPsi
+            aireFrenosTiempoCargaTiempo = request.aireFrenosTiempoCargaTiempo
+            motorEmisionesHumo = request.motorEmisionesHumo
+            motorEmisionesGobernado = request.motorEmisionesGobernado
+            otrosCajaDireccion = request.otrosCajaDireccion
+            otrosDepositoAceite = request.otrosDepositoAceite
+            otrosParabrisas = request.otrosParabrisas
+            otrosLimpiaparabrisas = request.otrosLimpiaparabrisas
+            otrosJuego = request.otrosJuego
+            otrosEscape = request.otrosEscape
+            comentarioLuces = request.comentarioLuces
+            comentarioLlantas = request.comentarioLlantas
+            comentarioDireccion = request.comentarioDireccion
+            comentarioAireFrenos = request.comentarioAireFrenos
+            comentarioMotorEmisiones = request.comentarioMotorEmisiones
+            comentarioOtros = request.comentarioOtros
+            comentariosGenerales = request.comentariosGenerales
+        }
+
+        evaluacionRepository.save(evaluacion)
+    }
 
     private fun sha256(bytes: ByteArray): String {
         val digest = MessageDigest.getInstance("SHA-256").digest(bytes)

@@ -57,8 +57,6 @@ export function VehicleDetailPage() {
   const params = useParams({ strict: false });
   const vehicleId = Number(params.id);
 
-  const clientsQuery = useQuery({ queryKey: ["clients-lookup"], queryFn: () => api.get("/admin/clients") });
-  const regionsQuery = useQuery({ queryKey: ["regions-lookup"], queryFn: () => api.get("/admin/regions") });
   const vehiclesQuery = useQuery({ queryKey: ["vehicles-lookup"], queryFn: () => api.get("/admin/vehicles") });
 
   const vehicle = useMemo(
@@ -66,17 +64,7 @@ export function VehicleDetailPage() {
     [vehiclesQuery.data, vehicleId]
   );
 
-  const clientName = useMemo(
-    () => (clientsQuery.data ?? []).find((c) => c.id === vehicle?.clientCompanyId)?.name ?? "-",
-    [clientsQuery.data, vehicle]
-  );
-
-  const cedisName = useMemo(
-    () => (regionsQuery.data ?? []).find((r) => r.id === vehicle?.regionId)?.name ?? "-",
-    [regionsQuery.data, vehicle]
-  );
-
-  const isLoading = vehiclesQuery.isLoading || clientsQuery.isLoading || regionsQuery.isLoading;
+  const isLoading = vehiclesQuery.isLoading;
 
   if (isLoading) {
     return (
@@ -113,8 +101,8 @@ export function VehicleDetailPage() {
     { label: "Tipo", value: vehicle.category },
     { label: "Marca", value: vehicle.brand },
     { label: "Modelo", value: vehicle.model },
-    { label: "Cliente", value: clientName },
-    { label: "CEDIS", value: cedisName }
+    { label: "Cliente", value: vehicle.clientCompanyName },
+    { label: "CEDIS", value: vehicle.regionName }
   ];
 
   return (

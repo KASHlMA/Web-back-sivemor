@@ -540,6 +540,11 @@ function EvaluationDetailPage({ detailKey, detailId, loadDetail, backTo }) {
 
   return (
     <div className="space-y-6">
+      {query.data && !canEdit && (
+        <div className="rounded-2xl border border-amber-200 bg-amber-50 px-5 py-4 text-sm font-medium text-amber-800">
+          Esta verificacion es de solo lectura porque no tiene una evaluacion editable vinculada. Los campos no se pueden modificar.
+        </div>
+      )}
       <PagePanel>
         <PageTitleBar
           title="Detalle de verificacion"

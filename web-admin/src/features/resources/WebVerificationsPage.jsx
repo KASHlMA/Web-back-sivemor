@@ -639,7 +639,7 @@ function EvaluationDetailPage({ detailKey, detailId, loadDetail, backTo }) {
                             disabled={!canEdit}
                           >
                             <option value="">Sin valor</option>
-                            {ENUM_OPTIONS.map((option) => (
+                            {(question.options ?? []).map((option) => (
                               <option key={option.value} value={option.value}>
                                 {option.label}
                               </option>
@@ -854,10 +854,12 @@ function buildDraftSections(detail) {
       code: question.code,
       prompt: question.prompt,
       type: question.type,
+      options: question.options,
       answer: normalizeDraftValue({
         value: sectionsMap?.[section.key]?.[question.code],
         fallbackQuestion: formAnswersByCode?.[question.code],
-        type: question.type
+        type: question.type,
+        options: question.options
       })
     }))
   }));
@@ -874,9 +876,13 @@ const QUESTION_CODE_ALIASES = {
   llantas_tuercas_trasera_derecha_rotas: ["llantas_tuercas_rotas_trasera_derecha"]
 };
 
-function normalizeDraftValue({ value, fallbackQuestion, type }) {
+function normalizeDraftValue({ value, fallbackQuestion, type, options }) {
   if (value !== null && value !== undefined && value !== "") {
-    return String(value);
+    const raw = String(value);
+    if (!options || options.some((o) => o.value === raw)) {
+      return raw;
+    }
+    return "";
   }
 
   if (!fallbackQuestion) {
@@ -887,7 +893,11 @@ function normalizeDraftValue({ value, fallbackQuestion, type }) {
     return fallbackQuestion.comment ?? "";
   }
 
-  return normalizeMobileEnumValue(fallbackQuestion.answer);
+  const mapped = normalizeMobileEnumValue(fallbackQuestion.answer);
+  if (options && !options.some((o) => o.value === mapped)) {
+    return "";
+  }
+  return mapped;
 }
 
 function normalizeMobileEnumValue(value) {

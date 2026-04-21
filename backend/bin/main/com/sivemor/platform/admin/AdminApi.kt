@@ -384,6 +384,20 @@ data class GeneratedPdfReport(
     val content: ByteArray
 )
 
+data class ClientPricingItemResponse(
+    val materia: String,
+    val price: BigDecimal
+)
+
+data class ClientPricingItemRequest(
+    @field:NotNull val materia: com.sivemor.platform.domain.VerificacionMateria,
+    @field:NotNull @field:DecimalMin("0.0") val price: BigDecimal
+)
+
+data class ClientPricingUpsertRequest(
+    @field:NotEmpty val items: List<ClientPricingItemRequest>
+)
+
 @RestController
 @Tag(name = "Admin", description = "Administrative management and reporting endpoints")
 @SecurityRequirement(name = "bearerAuth")
@@ -501,6 +515,20 @@ class AdminController(
         adminService.archiveClient(principal.id, id)
         return ResponseEntity.noContent().build()
     }
+
+    @Operation(summary = "Get pricing for a client")
+    @GetMapping("/clients/{id}/pricing")
+    fun clientPricing(@PathVariable id: Long): List<ClientPricingItemResponse> =
+        adminService.getClientPricing(id)
+
+    @Operation(summary = "Update pricing for a client")
+    @PutMapping("/clients/{id}/pricing")
+    fun updateClientPricing(
+        @Parameter(hidden = true)
+        @AuthenticationPrincipal principal: AppUserPrincipal,
+        @PathVariable id: Long,
+        @Valid @RequestBody request: ClientPricingUpsertRequest
+    ): List<ClientPricingItemResponse> = adminService.updateClientPricing(principal.id, id, request)
 
     @Operation(summary = "List vehicle units")
     @GetMapping("/vehicles")
@@ -811,7 +839,8 @@ class AdminService(
     private val auditService: AuditService,
     private val passwordGenerator: PasswordGenerator,
     private val userCredentialMailer: UserCredentialMailer,
-    private val merCompatibilityService: MerCompatibilityService
+    private val merCompatibilityService: MerCompatibilityService,
+    private val clientPricingRepository: com.sivemor.platform.domain.ClientPricingRepository
 ) {
     @Transactional(readOnly = true)
     fun listUsers(): List<UserResponse> = userRepository.findAllByArchivedFalseOrderByFullNameAsc().map { it.toResponse() }
@@ -955,6 +984,35 @@ class AdminService(
         val client = requireClient(id)
         client.archived = true
         logAction(actorId, "ARCHIVE_CLIENT", "CLIENT_COMPANY", client.id.toString(), mapOf("name" to client.name))
+    }
+
+    @Transactional(readOnly = true)
+    fun getClientPricing(clientId: Long): List<ClientPricingItemResponse> {
+        requireClient(clientId)
+        return clientPricingRepository.findAllByClientCompanyIdAndArchivedFalseOrderByMateria(clientId)
+            .map { ClientPricingItemResponse(materia = it.materia.name, price = it.price) }
+    }
+
+    @Transactional
+    fun updateClientPricing(actorId: Long, clientId: Long, request: ClientPricingUpsertRequest): List<ClientPricingItemResponse> {
+        val client = requireClient(clientId)
+        request.items.forEach { item ->
+            val existing = clientPricingRepository.findByClientCompanyIdAndMateriaAndArchivedFalse(clientId, item.materia)
+            if (existing != null) {
+                existing.price = item.price
+            } else {
+                clientPricingRepository.save(
+                    com.sivemor.platform.domain.ClientPricing().apply {
+                        clientCompany = client
+                        materia = item.materia
+                        price = item.price
+                    }
+                )
+            }
+        }
+        logAction(actorId, "UPDATE_CLIENT_PRICING", "CLIENT_COMPANY", clientId.toString(), null)
+        return clientPricingRepository.findAllByClientCompanyIdAndArchivedFalseOrderByMateria(clientId)
+            .map { ClientPricingItemResponse(materia = it.materia.name, price = it.price) }
     }
 
     @Transactional(readOnly = true)

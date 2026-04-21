@@ -69,8 +69,7 @@ function CedisFormPage({ mode }) {
 
   const createMutation = useMutation({
     mutationFn: (values) => {
-      const { address: _address, manager: _manager, ...payload } = values;
-      return mode === "edit" ? api.put(`/admin/cedis/${cedisId}`, payload) : api.post("/admin/cedis", payload);
+      return mode === "edit" ? api.put(`/admin/cedis/${cedisId}`, values) : api.post("/admin/cedis", values);
     },
     onSuccess: async () => {
       await queryClient.invalidateQueries({ queryKey: ["cedis"] });
